@@ -47,7 +47,6 @@ public class PayloadImpl implements Payload // some JDK shoutout
 
   public boolean equals(Object obj)
   {
-    System.out.println("equals: " + obj);
     final Payload rhs = (Payload) obj;
 
     return (data.equals(rhs.getData())) &&
