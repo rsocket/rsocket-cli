@@ -15,16 +15,15 @@ apply plugin: 'application'
 mainClassName = "io.reactivesocket.cli.Main"
 
 repositories {
+    mavenLocal()
     maven { url 'https://oss.jfrog.org/libs-snapshot' }
 }
 
 dependencies {
-    compile 'io.reactivesocket:reactivesocket:latest.release'
-    compile 'io.reactivesocket:reactivesocket-netty:latest.release'
-	compile 'org.reactivestreams:reactive-streams:1.0.0.final'
-	compile 'org.agrona:Agrona:0.4.13'
+    compile 'io.reactivesocket:reactivesocket-transport-websocket:0.2.2-SNAPSHOT'
+    compile 'io.reactivesocket:reactivesocket-transport-tcp:0.2.2-SNAPSHOT'
+    runtime 'org.slf4j:slf4j-simple:1.7.12'
 
-	testCompile 'io.reactivex:rxjava:2.0.0-DP0-20151003.214425-143'
 	testCompile 'junit:junit:4.12'
 	testCompile 'org.mockito:mockito-core:1.10.19'
 }
