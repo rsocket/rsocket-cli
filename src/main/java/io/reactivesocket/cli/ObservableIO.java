@@ -33,6 +33,7 @@ import java.util.concurrent.ThreadFactory;
 public class ObservableIO {
     /**
      * Return a publisher for consuming each line from System.in.
+     *
      * @param inputStream
      */
     public static Publisher<Payload> lines(InputStream inputStream) {
