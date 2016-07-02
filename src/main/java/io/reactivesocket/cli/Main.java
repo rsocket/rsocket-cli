@@ -15,7 +15,9 @@ package io.reactivesocket.cli;
 
 import io.airlift.airline.Arguments;
 import io.airlift.airline.Command;
+import io.airlift.airline.Help;
 import io.airlift.airline.Option;
+import io.airlift.airline.ParseException;
 import io.airlift.airline.SingleCommand;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.logging.LogLevel;
@@ -25,13 +27,14 @@ import io.reactivesocket.ConnectionSetupPayload;
 import io.reactivesocket.DefaultReactiveSocket;
 import io.reactivesocket.Payload;
 import io.reactivesocket.ReactiveSocket;
+import io.reactivesocket.internal.frame.ByteBufferUtil;
 import io.reactivesocket.transport.tcp.client.TcpReactiveSocketConnector;
 import io.reactivesocket.transport.websocket.client.ClientWebSocketDuplexConnection;
 import io.reactivex.netty.client.ClientState;
 import io.reactivex.netty.protocol.tcp.client.TcpClient;
 import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
-import rx.RxReactiveStreams;
+import rx.Completable;
+import rx.Observable;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -45,35 +48,40 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
+import static rx.RxReactiveStreams.*;
+
 /**
  * Simple command line tool to make a ReactiveSocket connection and send/receive elements.
  * <p>
  * Currently limited in features, only supports a text/line based approach, and only operates in
  * channel mode, with all lines from System.in sent on that channel.
  */
-@Command(name = Main.NAME, description = "A curl for social apis.")
+@Command(name = Main.NAME, description = "CLI for ReactiveSocket.")
 public class Main {
     static final String NAME = "reactivesocket-cli";
 
-    @Option(name = {"--sub"}, description = "Request Subscription")
+    @Option(name = "--sub", description = "Request Subscription")
     public boolean subscription;
 
-    @Option(name = {"--rr"}, description = "Request Response")
+    @Option(name = "--str", description = "Request Stream")
+    public boolean stream;
+
+    @Option(name = "--rr", description = "Request Response")
     public boolean requestResponse;
 
-    @Option(name = {"--fnf"}, description = "Fire and Forget")
+    @Option(name = "--fnf", description = "Fire and Forget")
     public boolean fireAndForget;
 
-    @Option(name = {"--channel"}, description = "Channel")
+    @Option(name = "--channel", description = "Channel")
     public boolean channel;
 
     @Option(name = {"-i", "--input"}, description = "Input File")
     public String input;
 
-    @Option(name = {"--debug"}, description = "Debug Output")
+    @Option(name = "--debug", description = "Debug Output")
     public boolean debug;
 
-    @Arguments(title = "arguments", description = "Endpoint URL")
+    @Arguments(title = "target", description = "Endpoint URL", required = true)
     public List<String> arguments = new ArrayList<>();
 
     public void run() throws IOException, URISyntaxException, InterruptedException {
@@ -86,53 +94,64 @@ public class Main {
 
             ReactiveSocket client = buildConnection(uri);
 
-            PrintSubscriber subscriber = new PrintSubscriber();
-
-            run(client, subscriber);
-
-            subscriber.await();
+            Completable run = run(client);
+            run.await();
         } finally {
             ClientState.defaultEventloopGroup().shutdownGracefully();
         }
     }
 
-    private void run(ReactiveSocket client, Subscriber<Payload> subscriber) throws FileNotFoundException {
+    private Completable run(ReactiveSocket client) throws FileNotFoundException {
+
         if (fireAndForget) {
-            // TODO clean up this shambolic generics failure
-            client.fireAndForget(singleInputPayload()).subscribe((Subscriber) subscriber);
-        } else if (requestResponse) {
-            client.requestResponse(singleInputPayload()).subscribe(subscriber);
-        } else if (channel) {
-            client.requestChannel(inputPublisher()).subscribe(subscriber);
-        } else { // subscription or default
-            client.requestSubscription(singleInputPayload()).subscribe(subscriber);
+            return toObservable(client.fireAndForget(singleInputPayload())).toCompletable();
         }
+
+        Observable<Payload> source;
+        if (requestResponse) {
+            source = toObservable(client.requestResponse(singleInputPayload()));
+        } else if (subscription) {
+            source = toObservable(client.requestSubscription(singleInputPayload()));
+        } else if (stream) {
+            source = toObservable(client.requestStream(singleInputPayload()));
+        } else {// Defaults to channel for interactive mode.
+            //TODO: We should have the mode as a group defaulting to channel?
+            if (!channel) {
+                System.out.println("Using request-channel interaction mode, choose an option to use a different mode.");
+            }
+            System.out.println("Type commands to send to the server.");
+            source = toObservable(client.requestChannel(inputPublisher()));
+        }
+
+        return source.map(Payload::getData)
+                     .map(ByteBufferUtil::toUtf8String)
+                     .doOnNext(System.out::println)
+                     .toCompletable();
     }
 
     private Publisher<Payload> inputPublisher() throws FileNotFoundException {
-        // TODO close properly
         InputStream is = input != null ? new FileInputStream(input) : System.in;
         return ObservableIO.lines(is);
     }
 
-    private PayloadImpl singleInputPayload() {
+    private static PayloadImpl singleInputPayload() {
         return new PayloadImpl(System.console().readLine(), "");
     }
 
     private static ReactiveSocket buildConnection(URI uri) {
         ConnectionSetupPayload setupPayload = ConnectionSetupPayload.create("", "");
 
-        if (uri.getScheme().equals("tcp")) {
+        if ("tcp".equals(uri.getScheme())) {
             Function<SocketAddress, TcpClient<ByteBuf, ByteBuf>> clientFactory =
                     socketAddress -> TcpClient.newClient(socketAddress).enableWireLogging("rs",
                             LogLevel.INFO);
-            return RxReactiveStreams.toObservable(
+            return toObservable(
                     TcpReactiveSocketConnector.create(setupPayload, Throwable::printStackTrace, clientFactory)
                             .connect(new InetSocketAddress(uri.getHost(), uri.getPort()))).toSingle()
                     .toBlocking()
                     .value();
-        } else if (uri.getScheme().equals("ws")) {
-            ClientWebSocketDuplexConnection duplexConnection = RxReactiveStreams.toObservable(
+        } else if ("ws".equals(uri.getScheme())) {
+            ClientWebSocketDuplexConnection duplexConnection = toObservable(
                     ClientWebSocketDuplexConnection.create(
                             InetSocketAddress.createUnresolved(uri.getHost(), uri.getPort()), "/rs",
                             ClientState.defaultEventloopGroup())).toBlocking().last();
@@ -145,11 +164,18 @@ public class Main {
     }
 
     private static Main fromArgs(String... args) {
-        return SingleCommand.singleCommand(Main.class).parse(args);
+        SingleCommand<Main> cmd = SingleCommand.singleCommand(Main.class);
+        try {
+            return cmd.parse(args);
+        } catch (ParseException e) {
+            System.out.println(e.getMessage());
+            Help.help(cmd.getCommandMetadata());
+            System.exit(-1);
+            return null;
+        }
     }
 
     public static void main(String... args) throws IOException, URISyntaxException, InterruptedException {
         fromArgs(args).run();
     }
-
 }

@@ -15,6 +15,7 @@
  */
 package io.reactivesocket.cli;
 
+import io.reactivesocket.Frame;
 import io.reactivesocket.Payload;
 
 import java.nio.ByteBuffer;
@@ -22,8 +23,12 @@ import java.nio.charset.StandardCharsets;
 
 public class PayloadImpl implements Payload // some JDK shoutout
 {
-    private ByteBuffer data;
-    private ByteBuffer metadata;
+    private final ByteBuffer data;
+    private final ByteBuffer metadata;
+
+    public PayloadImpl(final String data) {
+        this(data, null);
+    }
 
     public PayloadImpl(final String data, final String metadata) {
         if (null == data) {
@@ -44,18 +49,41 @@ public class PayloadImpl implements Payload // some JDK shoutout
         return ByteBuffer.wrap(bytes);
     }
 
-    public boolean equals(Object obj) {
-        final Payload rhs = (Payload) obj;
-
-        return (data.equals(rhs.getData())) &&
-                (metadata.equals(rhs.getMetadata()));
-    }
-
+    @Override
     public ByteBuffer getData() {
         return data;
     }
 
+    @Override
     public ByteBuffer getMetadata() {
         return metadata;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof PayloadImpl)) {
+            return false;
+        }
+
+        PayloadImpl payload = (PayloadImpl) o;
+
+        if (data != null? !data.equals(payload.data) : payload.data != null) {
+            return false;
+        }
+        if (metadata != null? !metadata.equals(payload.metadata) : payload.metadata != null) {
+            return false;
+        }
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = data != null? data.hashCode() : 0;
+        result = 31 * result + (metadata != null? metadata.hashCode() : 0);
+        return result;
     }
 }

@@ -17,54 +17,29 @@ package io.reactivesocket.cli;
 
 import io.reactivesocket.Payload;
 import org.reactivestreams.Publisher;
-import rx.Observer;
-import rx.RxReactiveStreams;
-import rx.Scheduler;
-import rx.internal.schedulers.CachedThreadScheduler;
-import rx.internal.util.RxThreadFactory;
-import rx.observables.SyncOnSubscribe;
+import rx.observables.StringObservable;
+import rx.schedulers.Schedulers;
 
-import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.concurrent.ThreadFactory;
 
-public class ObservableIO {
+import static rx.RxReactiveStreams.*;
+
+public final class ObservableIO {
+
+    private ObservableIO() {
+        // No instances.
+    }
+
     /**
      * Return a publisher for consuming each line from System.in.
      *
-     * @param inputStream
+     * @param inputStream to read.
      */
     public static Publisher<Payload> lines(InputStream inputStream) {
-        SyncOnSubscribe<BufferedReader, Payload> s = new SyncOnSubscribe<BufferedReader, Payload>() {
-            @Override
-            protected BufferedReader generateState() {
-                return new BufferedReader(new InputStreamReader(inputStream));
-            }
-
-            @Override
-            protected BufferedReader next(BufferedReader state, Observer<? super Payload> observer) {
-                try {
-                    String line = state.readLine();
-
-                    if (line == null) {
-                        observer.onCompleted();
-                    } else {
-                        observer.onNext(new PayloadImpl(line, ""));
-                    }
-                } catch (IOException e) {
-                    observer.onError(e);
-                }
-
-                return state;
-            }
-        };
-
-        ThreadFactory tf = new RxThreadFactory("system.in");
-        Scheduler scheduler = new CachedThreadScheduler(tf);
-        rx.Observable<Payload> o = rx.Observable.create(s).subscribeOn(scheduler);
-
-        return RxReactiveStreams.toPublisher(o);
+        return toPublisher(StringObservable.using(() -> new InputStreamReader(inputStream),
+                                                  stream -> StringObservable.from(stream))
+                                           .<Payload>map(PayloadImpl::new)
+                                           .subscribeOn(Schedulers.io()));
     }
 }
