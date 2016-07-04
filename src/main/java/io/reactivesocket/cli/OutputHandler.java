@@ -18,5 +18,5 @@ public interface OutputHandler {
 
     void info(String msg);
 
-    void error(String msg, Exception e);
+    void error(String msg, Throwable e);
 }

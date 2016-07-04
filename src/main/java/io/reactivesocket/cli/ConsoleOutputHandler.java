@@ -29,8 +29,12 @@ public class ConsoleOutputHandler implements OutputHandler {
     }
 
     @Override
-    public void error(String msg, Exception e) {
-        System.err.println(msg);
-        e.printStackTrace();
+    public void error(String msg, Throwable e) {
+        if (e instanceof UsageException) {
+            System.err.println(e.getMessage());
+        } else {
+            System.err.println(msg);
+            e.printStackTrace();
+        }
     }
 }

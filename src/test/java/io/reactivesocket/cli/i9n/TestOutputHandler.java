@@ -2,6 +2,7 @@ package io.reactivesocket.cli.i9n;
 
 import com.google.common.collect.Lists;
 import io.reactivesocket.cli.OutputHandler;
+import io.reactivesocket.cli.UsageException;
 
 import java.util.List;
 
@@ -20,8 +21,12 @@ public final class TestOutputHandler implements OutputHandler {
     }
 
     @Override
-    public void error(String msg, Exception e) {
-        stderr.add(msg + ": " + e.toString());
+    public void error(String msg, Throwable e) {
+        if (e instanceof UsageException) {
+            stderr.add(e.getMessage());
+        } else {
+            stderr.add(msg + ": " + e.toString());
+        }
     }
 
     @Override

@@ -85,8 +85,8 @@ public class Main {
 
             Completable run = run(client);
             run.await();
-        } catch (UsageException ua) {
-            outputHandler.info(ua.getMessage());
+        } catch (Exception e) {
+            outputHandler.error("error", e);
         } finally {
             ClientState.defaultEventloopGroup().shutdownGracefully();
         }
@@ -117,11 +117,14 @@ public class Main {
             return source.map(Payload::getData)
                     .map(ByteBufferUtil::toUtf8String)
                     .doOnNext(outputHandler::showOutput)
+                    .doOnError(e -> outputHandler.error("error from server", e))
+                    .onExceptionResumeNext(Observable.empty())
                     .toCompletable();
         } catch (Exception e) {
             outputHandler.error("error", e);
-            return Completable.complete();
         }
+
+        return Completable.complete();
     }
 
     private Publisher<Payload> inputPublisher() throws IOException {
@@ -130,7 +133,7 @@ public class Main {
         if (input == null) {
             is = System.in;
         } else if (input.startsWith("@")) {
-            is = new FileInputStream(input.substring(1));
+            is = new FileInputStream(inputFile());
         } else {
             is = new ByteArrayInputStream(input.getBytes(Charset.defaultCharset()));
         }
@@ -145,12 +148,22 @@ public class Main {
             Scanner in = new Scanner(System.in);
             inputString = in.nextLine();
         } else if (input.startsWith("@")) {
-            inputString = Files.toString(new File(input.substring(1)), StandardCharsets.UTF_8);
+            inputString = Files.toString(inputFile(), StandardCharsets.UTF_8);
         } else {
             inputString = input;
         }
 
         return new PayloadImpl(inputString, "");
+    }
+
+    private File inputFile() {
+        File file = new File(input.substring(1));
+
+        if (!file.isFile()) {
+            throw new UsageException("file not found: " + file);
+        }
+
+        return file;
     }
 
     private static Main fromArgs(String... args) {

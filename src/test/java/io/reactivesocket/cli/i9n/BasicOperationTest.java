@@ -20,7 +20,6 @@ import rx.RxReactiveStreams;
 import static io.reactivesocket.util.Unsafe.toSingleFuture;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 
 public class BasicOperationTest {
     private Main main = new Main();
@@ -106,6 +105,21 @@ public class BasicOperationTest {
     }
 
     @Test
+    public void requestResponseFromMissingFile() throws Exception {
+        main.requestResponse = true;
+        main.input = "@src/test/resources/goodbye.text";
+
+        requestHandlerBuilder.withRequestResponse(payload ->
+                RxReactiveStreams.toPublisher(Observable.just(reverse(payload)))).build();
+
+        expected.info("file not found: src/test/resources/goodbye.text");
+
+        run();
+
+        assertEquals(expected, output);
+    }
+
+    @Test
     public void requestResponseError() throws Exception {
         main.requestResponse = true;
         main.input = "Hello";
@@ -113,13 +127,9 @@ public class BasicOperationTest {
         requestHandlerBuilder.withRequestResponse(payload ->
                 RxReactiveStreams.toPublisher(Observable.error(new Exception("server failure")))).build();
 
-        try {
-            run();
-            fail();
-        } catch (RuntimeException re) {
-            // rethrown client side
-            assertEquals("server failure", re.getMessage());
-        }
+        expected.error("error from server", new RuntimeException("server failure"));
+
+        run();
 
         assertEquals(expected, output);
     }
@@ -141,12 +151,37 @@ public class BasicOperationTest {
         assertEquals(expected, output);
     }
 
+    @Test
+    public void subscriptionCompletedByFailure() throws Exception {
+        main.subscription = true;
+        main.input = "Hello";
+
+        Observable<Payload> observableOf3 = Observable.range(1, 3).map(i -> payload("i " + i));
+        Observable<Payload> failed = Observable.error(new Exception("failed"));
+
+        requestHandlerBuilder.withRequestSubscription(payload ->
+                RxReactiveStreams.toPublisher(observableOf3.concatWith(failed))).build();
+
+        expected.showOutput("i 1");
+        expected.showOutput("i 2");
+        expected.showOutput("i 3");
+        expected.error("error from server", new RuntimeException("failed"));
+
+        run();
+
+        assertEquals(expected, output);
+    }
+
     private void run() throws Exception {
         connect();
-        main.run(client).await(2, SECONDS);
+        main.run(client).await(5, SECONDS);
     }
 
     public static Payload reverse(Payload payload) {
-        return new PayloadImpl(new StringBuilder(ByteBufferUtil.toUtf8String(payload.getData())).reverse().toString());
+        return payload(new StringBuilder(ByteBufferUtil.toUtf8String(payload.getData())).reverse().toString());
+    }
+
+    public static Payload payload(String data) {
+        return new PayloadImpl(data);
     }
 }
