@@ -23,7 +23,7 @@ import rx.schedulers.Schedulers;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
-import static rx.RxReactiveStreams.*;
+import static rx.RxReactiveStreams.toPublisher;
 
 public final class ObservableIO {
 
@@ -38,8 +38,8 @@ public final class ObservableIO {
      */
     public static Publisher<Payload> lines(InputStream inputStream) {
         return toPublisher(StringObservable.using(() -> new InputStreamReader(inputStream),
-                                                  stream -> StringObservable.from(stream))
-                                           .<Payload>map(PayloadImpl::new)
-                                           .subscribeOn(Schedulers.io()));
+                stream -> StringObservable.from(stream))
+                .<Payload>map(PayloadImpl::new)
+                .subscribeOn(Schedulers.io()));
     }
 }

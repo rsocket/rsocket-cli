@@ -15,7 +15,6 @@
  */
 package io.reactivesocket.cli;
 
-import io.reactivesocket.Frame;
 import io.reactivesocket.Payload;
 
 import java.nio.ByteBuffer;
@@ -70,10 +69,10 @@ public class PayloadImpl implements Payload // some JDK shoutout
 
         PayloadImpl payload = (PayloadImpl) o;
 
-        if (data != null? !data.equals(payload.data) : payload.data != null) {
+        if (data != null ? !data.equals(payload.data) : payload.data != null) {
             return false;
         }
-        if (metadata != null? !metadata.equals(payload.metadata) : payload.metadata != null) {
+        if (metadata != null ? !metadata.equals(payload.metadata) : payload.metadata != null) {
             return false;
         }
 
@@ -82,8 +81,8 @@ public class PayloadImpl implements Payload // some JDK shoutout
 
     @Override
     public int hashCode() {
-        int result = data != null? data.hashCode() : 0;
-        result = 31 * result + (metadata != null? metadata.hashCode() : 0);
+        int result = data != null ? data.hashCode() : 0;
+        result = 31 * result + (metadata != null ? metadata.hashCode() : 0);
         return result;
     }
 }
