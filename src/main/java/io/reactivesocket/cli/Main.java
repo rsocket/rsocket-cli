@@ -13,48 +13,33 @@
  */
 package io.reactivesocket.cli;
 
-import io.airlift.airline.Arguments;
-import io.airlift.airline.Command;
-import io.airlift.airline.Help;
-import io.airlift.airline.Option;
-import io.airlift.airline.ParseException;
-import io.airlift.airline.SingleCommand;
-import io.netty.buffer.ByteBuf;
-import io.netty.handler.logging.LogLevel;
+import com.google.common.io.Files;
+import io.airlift.airline.*;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.util.internal.logging.Slf4JLoggerFactory;
-import io.reactivesocket.ConnectionSetupPayload;
-import io.reactivesocket.DefaultReactiveSocket;
 import io.reactivesocket.Payload;
 import io.reactivesocket.ReactiveSocket;
 import io.reactivesocket.internal.frame.ByteBufferUtil;
-import io.reactivesocket.transport.tcp.client.TcpReactiveSocketConnector;
-import io.reactivesocket.transport.websocket.client.ClientWebSocketDuplexConnection;
 import io.reactivex.netty.client.ClientState;
-import io.reactivex.netty.protocol.tcp.client.TcpClient;
 import org.reactivestreams.Publisher;
 import rx.Completable;
 import rx.Observable;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
+import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Function;
+import java.util.Scanner;
 
-import static rx.RxReactiveStreams.*;
+import static rx.RxReactiveStreams.toObservable;
 
 /**
  * Simple command line tool to make a ReactiveSocket connection and send/receive elements.
  * <p>
- * Currently limited in features, only supports a text/line based approach, and only operates in
- * channel mode, with all lines from System.in sent on that channel.
+ * Currently limited in features, only supports a text/line based approach.
  */
 @Command(name = Main.NAME, description = "CLI for ReactiveSocket.")
 public class Main {
@@ -75,7 +60,7 @@ public class Main {
     @Option(name = "--channel", description = "Channel")
     public boolean channel;
 
-    @Option(name = {"-i", "--input"}, description = "Input File")
+    @Option(name = {"-i", "--input"}, description = "String input or @path/to/file")
     public String input;
 
     @Option(name = "--debug", description = "Debug Output")
@@ -83,6 +68,10 @@ public class Main {
 
     @Arguments(title = "target", description = "Endpoint URL", required = true)
     public List<String> arguments = new ArrayList<>();
+
+    public ReactiveSocket client;
+
+    public OutputHandler outputHandler = new ConsoleOutputHandler();
 
     public void run() throws IOException, URISyntaxException, InterruptedException {
         System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", debug ? "debug" : "warn");
@@ -92,75 +81,89 @@ public class Main {
         try {
             URI uri = new URI(arguments.get(0));
 
-            ReactiveSocket client = buildConnection(uri);
+            client = ConnectionHelper.buildConnection(uri);
 
             Completable run = run(client);
             run.await();
+        } catch (Exception e) {
+            outputHandler.error("error", e);
         } finally {
             ClientState.defaultEventloopGroup().shutdownGracefully();
         }
     }
 
-    private Completable run(ReactiveSocket client) throws FileNotFoundException {
-
-        if (fireAndForget) {
-            return toObservable(client.fireAndForget(singleInputPayload())).toCompletable();
-        }
-
-        Observable<Payload> source;
-        if (requestResponse) {
-            source = toObservable(client.requestResponse(singleInputPayload()));
-        } else if (subscription) {
-            source = toObservable(client.requestSubscription(singleInputPayload()));
-        } else if (stream) {
-            source = toObservable(client.requestStream(singleInputPayload()));
-        } else {// Defaults to channel for interactive mode.
-            //TODO: We should have the mode as a group defaulting to channel?
-            if (!channel) {
-                System.out.println("Using request-channel interaction mode, choose an option to use a different mode.");
+    public Completable run(ReactiveSocket client) throws IOException {
+        try {
+            if (fireAndForget) {
+                return toObservable(client.fireAndForget(singleInputPayload())).toCompletable();
             }
-            System.out.println("Type commands to send to the server.");
-            source = toObservable(client.requestChannel(inputPublisher()));
+
+            Observable<Payload> source;
+            if (requestResponse) {
+                source = toObservable(client.requestResponse(singleInputPayload()));
+            } else if (subscription) {
+                source = toObservable(client.requestSubscription(singleInputPayload()));
+            } else if (stream) {
+                source = toObservable(client.requestStream(singleInputPayload()));
+            } else {// Defaults to channel for interactive mode.
+                //TODO: We should have the mode as a group defaulting to channel?
+                if (!channel) {
+                    outputHandler.info("Using request-channel interaction mode, choose an option to use a different mode.");
+                }
+                outputHandler.info("Type commands to send to the server.");
+                source = toObservable(client.requestChannel(inputPublisher()));
+            }
+
+            return source.map(Payload::getData)
+                    .map(ByteBufferUtil::toUtf8String)
+                    .doOnNext(outputHandler::showOutput)
+                    .doOnError(e -> outputHandler.error("error from server", e))
+                    .onExceptionResumeNext(Observable.empty())
+                    .toCompletable();
+        } catch (Exception e) {
+            outputHandler.error("error", e);
         }
 
-        return source.map(Payload::getData)
-                     .map(ByteBufferUtil::toUtf8String)
-                     .doOnNext(System.out::println)
-                     .toCompletable();
+        return Completable.complete();
     }
 
-    private Publisher<Payload> inputPublisher() throws FileNotFoundException {
-        InputStream is = input != null ? new FileInputStream(input) : System.in;
+    private Publisher<Payload> inputPublisher() throws IOException {
+        InputStream is;
+
+        if (input == null) {
+            is = System.in;
+        } else if (input.startsWith("@")) {
+            is = new FileInputStream(inputFile());
+        } else {
+            is = new ByteArrayInputStream(input.getBytes(Charset.defaultCharset()));
+        }
+
         return ObservableIO.lines(is);
     }
 
-    private static PayloadImpl singleInputPayload() {
-        return new PayloadImpl(System.console().readLine(), "");
+    private PayloadImpl singleInputPayload() throws IOException {
+        String inputString;
+
+        if (input == null) {
+            Scanner in = new Scanner(System.in);
+            inputString = in.nextLine();
+        } else if (input.startsWith("@")) {
+            inputString = Files.toString(inputFile(), StandardCharsets.UTF_8);
+        } else {
+            inputString = input;
+        }
+
+        return new PayloadImpl(inputString, "");
     }
 
-    private static ReactiveSocket buildConnection(URI uri) {
-        ConnectionSetupPayload setupPayload = ConnectionSetupPayload.create("", "");
+    private File inputFile() {
+        File file = new File(input.substring(1));
 
-        if ("tcp".equals(uri.getScheme())) {
-            Function<SocketAddress, TcpClient<ByteBuf, ByteBuf>> clientFactory =
-                    socketAddress -> TcpClient.newClient(socketAddress).enableWireLogging("rs",
-                            LogLevel.INFO);
-            return toObservable(
-                    TcpReactiveSocketConnector.create(setupPayload, Throwable::printStackTrace, clientFactory)
-                            .connect(new InetSocketAddress(uri.getHost(), uri.getPort()))).toSingle()
-                    .toBlocking()
-                    .value();
-        } else if ("ws".equals(uri.getScheme())) {
-            ClientWebSocketDuplexConnection duplexConnection = toObservable(
-                    ClientWebSocketDuplexConnection.create(
-                            InetSocketAddress.createUnresolved(uri.getHost(), uri.getPort()), "/rs",
-                            ClientState.defaultEventloopGroup())).toBlocking().last();
-
-            return DefaultReactiveSocket.fromClientConnection(duplexConnection, setupPayload,
-                    Throwable::printStackTrace);
-        } else {
-            throw new UnsupportedOperationException("uri unsupported: " + uri);
+        if (!file.isFile()) {
+            throw new UsageException("file not found: " + file);
         }
+
+        return file;
     }
 
     private static Main fromArgs(String... args) {
@@ -168,7 +171,7 @@ public class Main {
         try {
             return cmd.parse(args);
         } catch (ParseException e) {
-            System.out.println(e.getMessage());
+            System.err.println(e.getMessage());
             Help.help(cmd.getCommandMetadata());
             System.exit(-1);
             return null;
