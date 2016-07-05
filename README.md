@@ -21,6 +21,8 @@ $ ./build/install/reactivesocket-cli/bin/reactivesocket-cli tcp://localhost:8765
 
 ## Installing via Homebrew
 
+Use tab completion for help with specifying the operation type.
+
 ```
 $ brew install yschimke/tap/reactivesocket-cli
 $ reactivesocket-cli tcp://localhost:8765
