@@ -60,6 +60,9 @@ public class Main {
     @Option(name = "--channel", description = "Channel")
     public boolean channel;
 
+    @Option(name = "--metadata", description = "Metadata Push")
+    public boolean metadataPush;
+
     @Option(name = {"-i", "--input"}, description = "String input or @path/to/file")
     public String input;
 
@@ -96,6 +99,8 @@ public class Main {
         try {
             if (fireAndForget) {
                 return toObservable(client.fireAndForget(singleInputPayload())).toCompletable();
+            } else if (metadataPush) {
+                return toObservable(client.metadataPush(singleInputPayload())).toCompletable();
             }
 
             Observable<Payload> source;
@@ -105,7 +110,8 @@ public class Main {
                 source = toObservable(client.requestSubscription(singleInputPayload()));
             } else if (stream) {
                 source = toObservable(client.requestStream(singleInputPayload()));
-            } else {// Defaults to channel for interactive mode.
+            } else {
+                // Defaults to channel for interactive mode.
                 //TODO: We should have the mode as a group defaulting to channel?
                 if (!channel) {
                     outputHandler.info("Using request-channel interaction mode, choose an option to use a different mode.");
