@@ -5,6 +5,7 @@ import io.reactivesocket.ReactiveSocket;
 import io.reactivesocket.RequestHandler;
 import io.reactivesocket.cli.Main;
 import io.reactivesocket.cli.PayloadImpl;
+import io.reactivesocket.exceptions.InvalidRequestException;
 import io.reactivesocket.internal.frame.ByteBufferUtil;
 import io.reactivesocket.local.LocalClientReactiveSocketConnector;
 import io.reactivesocket.local.LocalServerReactiveSocketConnector;
@@ -55,11 +56,23 @@ public class BasicOperationTest {
     @After
     public void shutdown() {
         if (client != null) {
-            client.shutdown();
+            client.close();
         }
         if (server != null) {
-            server.shutdown();
+            server.close();
         }
+    }
+
+    @Test
+    public void metadataPush() throws Exception {
+        main.metadataPush = true;
+        main.input = "Hello";
+
+        requestHandlerBuilder.withMetadataPush(payload -> subscriber -> subscriber.onComplete()).build();
+
+        run();
+
+        assertEquals(expected, output);
     }
 
     @Test
@@ -127,7 +140,7 @@ public class BasicOperationTest {
         requestHandlerBuilder.withRequestResponse(payload ->
                 RxReactiveStreams.toPublisher(Observable.error(new Exception("server failure")))).build();
 
-        expected.error("error from server", new RuntimeException("server failure"));
+        expected.error("error from server", new InvalidRequestException("server failure"));
 
         run();
 
@@ -165,7 +178,7 @@ public class BasicOperationTest {
         expected.showOutput("i 1");
         expected.showOutput("i 2");
         expected.showOutput("i 3");
-        expected.error("error from server", new RuntimeException("failed"));
+        expected.error("error from server", new InvalidRequestException("failed"));
 
         run();
 
