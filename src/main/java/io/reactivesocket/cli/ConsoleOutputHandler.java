@@ -13,11 +13,18 @@
  */
 package io.reactivesocket.cli;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.net.ConnectException;
+
 /**
  * Normal output handler. Valid content responses sent to STDOUT for piping into other programs.
  * Informational messages to STDERR for user e.g. without extraneous logging prefixes.
  */
 public class ConsoleOutputHandler implements OutputHandler {
+    private static final Logger logger = LoggerFactory.getLogger(ConsoleOutputHandler.class);
+
     @Override
     public void showOutput(String s) {
         System.out.println(s);
@@ -30,11 +37,27 @@ public class ConsoleOutputHandler implements OutputHandler {
 
     @Override
     public void error(String msg, Throwable e) {
-        if (e instanceof UsageException) {
+        e = unwrap(e);
+        if (e instanceof ConnectException) {
+            logger.debug(msg, e);
+            System.err.println(e.getMessage());
+        } else if (e instanceof UsageException) {
+            logger.debug(msg, e);
             System.err.println(e.getMessage());
         } else {
             System.err.println(msg);
             e.printStackTrace();
         }
+    }
+
+    private Throwable unwrap(Throwable e) {
+        // check for propogation of non RuntimeExceptions
+        if (e.getClass() == RuntimeException.class) {
+            if (e.getCause() != null && e.getCause().toString().equals(e.getMessage())) {
+                return e.getCause();
+            }
+        }
+
+        return e;
     }
 }

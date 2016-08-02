@@ -71,12 +71,16 @@ public class Main {
 
     public ReactiveSocket client;
 
-    public OutputHandler outputHandler = new ConsoleOutputHandler();
+    public OutputHandler outputHandler;
 
     public void run() throws IOException, URISyntaxException, InterruptedException {
         System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", debug ? "debug" : "warn");
 
         InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE);
+
+        if (outputHandler == null) {
+            outputHandler = new ConsoleOutputHandler();
+        }
 
         try {
             URI uri = new URI(arguments.get(0));
