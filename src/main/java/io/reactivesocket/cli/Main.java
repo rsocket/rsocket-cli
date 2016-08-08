@@ -34,6 +34,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.IntStream.range;
 import static rx.RxReactiveStreams.toObservable;
 
 /**
@@ -69,6 +71,9 @@ public class Main {
     @Option(name = "--debug", description = "Debug Output")
     public boolean debug;
 
+    @Option(name = "--ops", description = "Operation Count")
+    public int operations = 1;
+
     @Arguments(title = "target", description = "Endpoint URL", required = true)
     public List<String> arguments = new ArrayList<>();
 
@@ -99,37 +104,9 @@ public class Main {
         }
     }
 
-    public Completable run(ReactiveSocket client) throws IOException {
+    public Completable run(ReactiveSocket client) {
         try {
-            if (fireAndForget) {
-                return toObservable(client.fireAndForget(singleInputPayload())).toCompletable();
-            } else if (metadataPush) {
-                return toObservable(client.metadataPush(singleInputPayload())).toCompletable();
-            }
-
-            Observable<Payload> source;
-            if (requestResponse) {
-                source = toObservable(client.requestResponse(singleInputPayload()));
-            } else if (subscription) {
-                source = toObservable(client.requestSubscription(singleInputPayload()));
-            } else if (stream) {
-                source = toObservable(client.requestStream(singleInputPayload()));
-            } else {
-                // Defaults to channel for interactive mode.
-                //TODO: We should have the mode as a group defaulting to channel?
-                if (!channel) {
-                    outputHandler.info("Using request-channel interaction mode, choose an option to use a different mode.");
-                }
-                outputHandler.info("Type commands to send to the server.");
-                source = toObservable(client.requestChannel(inputPublisher()));
-            }
-
-            return source.map(Payload::getData)
-                    .map(ByteBufferUtil::toUtf8String)
-                    .doOnNext(outputHandler::showOutput)
-                    .doOnError(e -> outputHandler.error("error from server", e))
-                    .onExceptionResumeNext(Observable.empty())
-                    .toCompletable();
+            return runAllOperations(client);
         } catch (Exception e) {
             outputHandler.error("error", e);
         }
@@ -137,13 +114,55 @@ public class Main {
         return Completable.complete();
     }
 
-    private Publisher<Payload> inputPublisher() throws IOException {
+    private Completable runAllOperations(ReactiveSocket client) {
+        List<Completable> l = range(0, operations).mapToObj(i -> runSingleOperation(client)).collect(toList());
+
+        return Completable.concat(l);
+    }
+
+    private Completable runSingleOperation(ReactiveSocket client) {
+        if (fireAndForget) {
+            return toObservable(client.fireAndForget(singleInputPayload())).toCompletable();
+        } else if (metadataPush) {
+            return toObservable(client.metadataPush(singleInputPayload())).toCompletable();
+        }
+
+        Observable<Payload> source;
+        if (requestResponse) {
+            source = toObservable(client.requestResponse(singleInputPayload()));
+        } else if (subscription) {
+            source = toObservable(client.requestSubscription(singleInputPayload()));
+        } else if (stream) {
+            source = toObservable(client.requestStream(singleInputPayload()));
+        } else {
+            // Defaults to channel for interactive mode.
+            //TODO: We should have the mode as a group defaulting to channel?
+            if (!channel) {
+                outputHandler.info("Using request-channel interaction mode, choose an option to use a different mode.");
+            }
+            outputHandler.info("Type commands to send to the server.");
+            source = toObservable(client.requestChannel(inputPublisher()));
+        }
+
+        return source.map(Payload::getData)
+                .map(ByteBufferUtil::toUtf8String)
+                .doOnNext(outputHandler::showOutput)
+                .doOnError(e -> outputHandler.error("error from server", e))
+                .onExceptionResumeNext(Observable.empty())
+                .toCompletable();
+    }
+
+    private Publisher<Payload> inputPublisher() {
         InputStream is;
 
         if (input == null) {
             is = System.in;
         } else if (input.startsWith("@")) {
-            is = new FileInputStream(inputFile());
+            try {
+                is = new FileInputStream(inputFile());
+            } catch (FileNotFoundException e) {
+                throw new UsageException(e.toString());
+            }
         } else {
             is = new ByteArrayInputStream(input.getBytes(Charset.defaultCharset()));
         }
@@ -151,14 +170,18 @@ public class Main {
         return ObservableIO.lines(is);
     }
 
-    private PayloadImpl singleInputPayload() throws IOException {
+    private PayloadImpl singleInputPayload() {
         String inputString;
 
         if (input == null) {
             Scanner in = new Scanner(System.in);
             inputString = in.nextLine();
         } else if (input.startsWith("@")) {
-            inputString = Files.toString(inputFile(), StandardCharsets.UTF_8);
+            try {
+                inputString = Files.toString(inputFile(), StandardCharsets.UTF_8);
+            } catch (IOException e) {
+                throw new UsageException(e.toString());
+            }
         } else {
             inputString = input;
         }
