@@ -17,11 +17,12 @@ import com.google.common.io.Files;
 import io.airlift.airline.*;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.util.internal.logging.Slf4JLoggerFactory;
-import io.reactivesocket.Payload;
-import io.reactivesocket.ReactiveSocket;
+import io.reactivesocket.*;
 import io.reactivesocket.internal.frame.ByteBufferUtil;
+import io.reactivesocket.util.PayloadImpl;
 import io.reactivex.netty.client.ClientState;
 import org.reactivestreams.Publisher;
+import org.slf4j.LoggerFactory;
 import rx.Completable;
 import rx.Observable;
 
@@ -65,6 +66,9 @@ public class Main {
     @Option(name = "--metadata", description = "Metadata Push")
     public boolean metadataPush;
 
+    @Option(name = "--server", description = "Start server instead of client")
+    public boolean server = false;
+
     @Option(name = {"-i", "--input"}, description = "String input or @path/to/file")
     public String input;
 
@@ -93,15 +97,34 @@ public class Main {
         try {
             URI uri = new URI(arguments.get(0));
 
-            client = ConnectionHelper.buildConnection(uri);
+            if (server) {
+                ConnectionSetupHandler setupHandler = (setupPayload, reactiveSocket) -> createServerRequestHandler(setupPayload);
 
-            Completable run = run(client);
-            run.await();
+                ConnectionHelper.startServer(uri, setupHandler);
+            } else {
+                client = ConnectionHelper.buildClientConnection(uri);
+
+                Completable run = run(client);
+                run.await();
+            }
         } catch (Exception e) {
             outputHandler.error("error", e);
         } finally {
             ClientState.defaultEventloopGroup().shutdownGracefully();
         }
+    }
+
+    public RequestHandler createServerRequestHandler(ConnectionSetupPayload setupPayload) {
+        // TODO nice toString
+        LoggerFactory.getLogger(Main.class).debug("setup payload " + setupPayload);
+
+        return new RequestHandler.Builder().withRequestSubscription(payload -> handleIncomingPayload(payload))
+                .withRequestStream(payload -> handleIncomingPayload(payload)).withRequestResponse(payload -> handleIncomingPayload(payload)).build();
+    }
+
+    private Publisher<Payload> handleIncomingPayload(Payload payload) {
+        outputHandler.showOutput(ByteBufferUtil.toUtf8String(payload.getData()));
+        return inputPublisher();
     }
 
     public Completable run(ReactiveSocket client) {
@@ -117,7 +140,7 @@ public class Main {
     private Completable runAllOperations(ReactiveSocket client) {
         List<Completable> l = range(0, operations).mapToObj(i -> runSingleOperation(client)).collect(toList());
 
-        return Completable.concat(l);
+        return Completable.merge(l);
     }
 
     private Completable runSingleOperation(ReactiveSocket client) {

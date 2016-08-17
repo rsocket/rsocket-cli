@@ -15,13 +15,13 @@ package io.reactivesocket.cli;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.logging.LogLevel;
-import io.reactivesocket.ConnectionSetupPayload;
-import io.reactivesocket.DefaultReactiveSocket;
-import io.reactivesocket.ReactiveSocket;
+import io.reactivesocket.*;
 import io.reactivesocket.transport.tcp.client.TcpReactiveSocketConnector;
+import io.reactivesocket.transport.tcp.server.TcpReactiveSocketServer;
 import io.reactivesocket.transport.websocket.client.ClientWebSocketDuplexConnection;
 import io.reactivex.netty.client.ClientState;
 import io.reactivex.netty.protocol.tcp.client.TcpClient;
+import io.reactivex.netty.protocol.tcp.server.TcpServer;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -31,7 +31,7 @@ import java.util.function.Function;
 import static rx.RxReactiveStreams.toObservable;
 
 public class ConnectionHelper {
-    public static ReactiveSocket buildConnection(URI uri) {
+    public static ReactiveSocket buildClientConnection(URI uri) {
         ConnectionSetupPayload setupPayload = ConnectionSetupPayload.create("", "", ConnectionSetupPayload.NO_FLAGS);
 
         if ("tcp".equals(uri.getScheme())) {
@@ -53,6 +53,22 @@ public class ConnectionHelper {
                     Throwable::printStackTrace);
         } else {
             throw new UnsupportedOperationException("uri unsupported: " + uri);
+        }
+    }
+
+    public static void startServer(URI uri, ConnectionSetupHandler setupHandler) {
+        if ("tcp".equals(uri.getScheme())) {
+            // TODO host also
+            TcpServer<ByteBuf, ByteBuf> tcpServer = TcpServer.newServer(uri.getPort()).enableWireLogging("bytes", LogLevel.DEBUG);
+            TcpReactiveSocketServer rsServer = TcpReactiveSocketServer.create(tcpServer);
+
+            TcpReactiveSocketServer.StartedServer server = rsServer.start(setupHandler, LeaseGovernor.UNLIMITED_LEASE_GOVERNOR);
+
+            System.err.println("Started server");
+
+            server.awaitShutdown();
+        } else {
+            throw new UnsupportedOperationException();
         }
     }
 }
