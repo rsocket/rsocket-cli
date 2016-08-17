@@ -22,6 +22,7 @@ import io.reactivesocket.transport.websocket.client.ClientWebSocketDuplexConnect
 import io.reactivex.netty.client.ClientState;
 import io.reactivex.netty.protocol.tcp.client.TcpClient;
 import io.reactivex.netty.protocol.tcp.server.TcpServer;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -58,17 +59,17 @@ public class ConnectionHelper {
 
     public static void startServer(URI uri, ConnectionSetupHandler setupHandler) {
         if ("tcp".equals(uri.getScheme())) {
-            // TODO host also
+            // TODO host also, so ipv4/ipv6 supported etc
             TcpServer<ByteBuf, ByteBuf> tcpServer = TcpServer.newServer(uri.getPort()).enableWireLogging("bytes", LogLevel.DEBUG);
             TcpReactiveSocketServer rsServer = TcpReactiveSocketServer.create(tcpServer);
 
-            TcpReactiveSocketServer.StartedServer server = rsServer.start(setupHandler, LeaseGovernor.UNLIMITED_LEASE_GOVERNOR);
+            TcpReactiveSocketServer.StartedServer server = rsServer.start(setupHandler, LeaseGovernor.NULL_LEASE_GOVERNOR);
 
-            System.err.println("Started server");
+            LoggerFactory.getLogger(Main.class).info("Started server");
 
             server.awaitShutdown();
         } else {
-            throw new UnsupportedOperationException();
+            throw new UnsupportedOperationException("uri unsupported: " + uri);
         }
     }
 }
