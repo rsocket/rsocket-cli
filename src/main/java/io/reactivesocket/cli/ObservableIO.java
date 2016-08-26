@@ -16,6 +16,7 @@
 package io.reactivesocket.cli;
 
 import io.reactivesocket.Payload;
+import io.reactivesocket.util.PayloadImpl;
 import org.reactivestreams.Publisher;
 import rx.observables.StringObservable;
 import rx.schedulers.Schedulers;
