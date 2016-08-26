@@ -32,7 +32,7 @@ import static rx.RxReactiveStreams.toObservable;
 
 public class ConnectionHelper {
     public static ReactiveSocket buildConnection(URI uri) {
-        ConnectionSetupPayload setupPayload = ConnectionSetupPayload.create("", "");
+        ConnectionSetupPayload setupPayload = ConnectionSetupPayload.create("", "", ConnectionSetupPayload.NO_FLAGS);
 
         if ("tcp".equals(uri.getScheme())) {
             Function<SocketAddress, TcpClient<ByteBuf, ByteBuf>> clientFactory =
