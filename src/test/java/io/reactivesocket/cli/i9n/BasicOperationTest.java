@@ -4,6 +4,7 @@ import io.reactivesocket.Payload;
 import io.reactivesocket.ReactiveSocket;
 import io.reactivesocket.RequestHandler;
 import io.reactivesocket.cli.Main;
+import io.reactivesocket.exceptions.ApplicationException;
 import io.reactivesocket.exceptions.InvalidRequestException;
 import io.reactivesocket.internal.frame.ByteBufferUtil;
 import io.reactivesocket.local.LocalClientReactiveSocketConnector;
@@ -140,7 +141,7 @@ public class BasicOperationTest {
         requestHandlerBuilder.withRequestResponse(payload ->
                 RxReactiveStreams.toPublisher(Observable.error(new Exception("server failure")))).build();
 
-        expected.error("error from server", new InvalidRequestException("server failure"));
+        expected.error("error from server", new ApplicationException("server failure"));
 
         run();
 
@@ -178,7 +179,7 @@ public class BasicOperationTest {
         expected.showOutput("i 1");
         expected.showOutput("i 2");
         expected.showOutput("i 3");
-        expected.error("error from server", new InvalidRequestException("failed"));
+        expected.error("error from server", new ApplicationException("failed"));
 
         run();
 
