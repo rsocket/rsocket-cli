@@ -51,12 +51,12 @@ public final class TestOutputHandler implements OutputHandler {
 
         if (!stdout.isEmpty()) {
             sb.append("STDOUT:\n");
-            stdout.forEach(s -> sb.append(s + "\n"));
+            stdout.forEach(s -> sb.append(s).append("\n"));
         }
 
         if (!stderr.isEmpty()) {
             sb.append("STDERR:\n");
-            stderr.forEach(s -> sb.append(s + "\n"));
+            stderr.forEach(s -> sb.append(s).append("\n"));
         }
 
         return sb.toString();
