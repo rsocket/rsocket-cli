@@ -1,37 +1,43 @@
 package io.reactivesocket.cli.i9n;
 
+import io.reactivesocket.AbstractReactiveSocket;
 import io.reactivesocket.Payload;
 import io.reactivesocket.ReactiveSocket;
-import io.reactivesocket.RequestHandler;
 import io.reactivesocket.cli.Main;
+import io.reactivesocket.client.ReactiveSocketClient;
 import io.reactivesocket.exceptions.ApplicationException;
-import io.reactivesocket.exceptions.InvalidRequestException;
-import io.reactivesocket.internal.frame.ByteBufferUtil;
-import io.reactivesocket.local.LocalClientReactiveSocketConnector;
-import io.reactivesocket.local.LocalServerReactiveSocketConnector;
+import io.reactivesocket.frame.ByteBufferUtil;
+import io.reactivesocket.lease.DisabledLeaseAcceptingSocket;
+import io.reactivesocket.local.LocalClient;
+import io.reactivesocket.local.LocalServer;
+import io.reactivesocket.reactivestreams.extensions.Px;
+import io.reactivesocket.server.ReactiveSocketServer;
+import io.reactivesocket.transport.TransportServer;
 import io.reactivesocket.util.PayloadImpl;
+import io.reactivex.Flowable;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
 import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
-import rx.Observable;
-import rx.RxReactiveStreams;
+import org.reactivestreams.Publisher;
 
-import static io.reactivesocket.util.Unsafe.toSingleFuture;
+import static io.reactivesocket.client.KeepAliveProvider.never;
+import static io.reactivesocket.client.SetupProvider.keepAlive;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
 
 public class BasicOperationTest {
     private Main main = new Main();
     private TestOutputHandler output = new TestOutputHandler();
-    private ReactiveSocket server;
+    private TransportServer.StartedServer server;
     private ReactiveSocket client;
 
     private TestOutputHandler expected = new TestOutputHandler();
 
-    private RequestHandler.Builder requestHandlerBuilder = new RequestHandler.Builder();
+    private ReactiveSocket requestHandler = new AbstractReactiveSocket() {
+    };
 
     private String testName;
 
@@ -45,13 +51,14 @@ public class BasicOperationTest {
     public void connect() throws Exception {
         main.outputHandler = output;
 
-        LocalServerReactiveSocketConnector.Config serverConfig =
-                new LocalServerReactiveSocketConnector.Config(testName, (payload, rs) -> requestHandlerBuilder.build());
-        server = toSingleFuture(LocalServerReactiveSocketConnector.INSTANCE.connect(serverConfig)).get(5, SECONDS);
+        LocalServer localServer = LocalServer.create("test-local-server-"
+                + testName);
 
-        LocalClientReactiveSocketConnector.Config clientConfig =
-                new LocalClientReactiveSocketConnector.Config(testName, "text", "text");
-        client = toSingleFuture(LocalClientReactiveSocketConnector.INSTANCE.connect(clientConfig)).get(5, SECONDS);
+        server = ReactiveSocketServer.create(localServer)
+                .start((setup, sendingSocket) -> new DisabledLeaseAcceptingSocket(requestHandler));
+
+        client = Flowable.fromPublisher(ReactiveSocketClient.create(LocalClient.create(localServer),
+                keepAlive(never()).disableLease()).connect()).blockingFirst();
     }
 
     @After
@@ -59,9 +66,10 @@ public class BasicOperationTest {
         if (client != null) {
             client.close();
         }
-        if (server != null) {
-            server.close();
-        }
+//        if (server != null) {
+//            server.shutdown();
+//            server.awaitShutdown(5, TimeUnit.SECONDS);
+//        }
     }
 
     @Test
@@ -69,7 +77,12 @@ public class BasicOperationTest {
         main.metadataPush = true;
         main.input = "Hello";
 
-        requestHandlerBuilder.withMetadataPush(payload -> subscriber -> subscriber.onComplete()).build();
+        requestHandler = new AbstractReactiveSocket() {
+            @Override
+            public Publisher<Void> metadataPush(Payload payload) {
+                return Px.empty();
+            }
+        };
 
         run();
 
@@ -81,7 +94,12 @@ public class BasicOperationTest {
         main.fireAndForget = true;
         main.input = "Hello";
 
-        requestHandlerBuilder.withRequestResponse(payload -> subscriber -> subscriber.onComplete()).build();
+        requestHandler = new AbstractReactiveSocket() {
+            @Override
+            public Publisher<Void> fireAndForget(Payload payload) {
+                return Px.empty();
+            }
+        };
 
         run();
 
@@ -93,8 +111,12 @@ public class BasicOperationTest {
         main.requestResponse = true;
         main.input = "Hello";
 
-        requestHandlerBuilder.withRequestResponse(payload ->
-                RxReactiveStreams.toPublisher(Observable.just(reverse(payload)))).build();
+        requestHandler = new AbstractReactiveSocket() {
+            @Override
+            public Publisher<Payload> requestResponse(Payload payload) {
+                return Px.just(reverse(ByteBufferUtil.toUtf8String(payload.getData())));
+            }
+        };
 
         expected.showOutput("olleH");
 
@@ -108,8 +130,12 @@ public class BasicOperationTest {
         main.requestResponse = true;
         main.input = "@src/test/resources/hello.text";
 
-        requestHandlerBuilder.withRequestResponse(payload ->
-                RxReactiveStreams.toPublisher(Observable.just(reverse(payload)))).build();
+        requestHandler = new AbstractReactiveSocket() {
+            @Override
+            public Publisher<Payload> requestResponse(Payload payload) {
+                return Px.just(reverse(ByteBufferUtil.toUtf8String(payload.getData())));
+            }
+        };
 
         expected.showOutput("!elif a morf olleH");
 
@@ -123,8 +149,12 @@ public class BasicOperationTest {
         main.requestResponse = true;
         main.input = "@src/test/resources/goodbye.text";
 
-        requestHandlerBuilder.withRequestResponse(payload ->
-                RxReactiveStreams.toPublisher(Observable.just(reverse(payload)))).build();
+        requestHandler = new AbstractReactiveSocket() {
+            @Override
+            public Publisher<Payload> requestResponse(Payload payload) {
+                return Px.just(reverse(ByteBufferUtil.toUtf8String(payload.getData())));
+            }
+        };
 
         expected.info("file not found: src/test/resources/goodbye.text");
 
@@ -138,10 +168,14 @@ public class BasicOperationTest {
         main.requestResponse = true;
         main.input = "Hello";
 
-        requestHandlerBuilder.withRequestResponse(payload ->
-                RxReactiveStreams.toPublisher(Observable.error(new Exception("server failure")))).build();
+        requestHandler = new AbstractReactiveSocket() {
+            @Override
+            public Publisher<Payload> requestResponse(Payload payload) {
+                return Px.error(new ApplicationException(new PayloadImpl("server failure")));
+            }
+        };
 
-        expected.error("error from server", new ApplicationException("server failure"));
+        expected.error("error from server", new ApplicationException(new PayloadImpl("server failure")));
 
         run();
 
@@ -153,8 +187,14 @@ public class BasicOperationTest {
         main.stream = true;
         main.input = "Hello";
 
-        requestHandlerBuilder.withRequestStream(payload ->
-                RxReactiveStreams.toPublisher(Observable.range(1, 3).map(i -> reverse(payload)))).build();
+        requestHandler = new AbstractReactiveSocket() {
+            @Override
+            public Publisher<Payload> requestStream(Payload payload) {
+                String s = ByteBufferUtil.toUtf8String(payload.getData());
+
+                return Px.from(Flowable.range(1, 3)).map(i -> reverse(s));
+            }
+        };
 
         expected.showOutput("olleH");
         expected.showOutput("olleH");
@@ -170,16 +210,18 @@ public class BasicOperationTest {
         main.subscription = true;
         main.input = "Hello";
 
-        Observable<Payload> observableOf3 = Observable.range(1, 3).map(i -> payload("i " + i));
-        Observable<Payload> failed = Observable.error(new Exception("failed"));
-
-        requestHandlerBuilder.withRequestSubscription(payload ->
-                RxReactiveStreams.toPublisher(observableOf3.concatWith(failed))).build();
+        requestHandler = new AbstractReactiveSocket() {
+            @Override
+            public Publisher<Payload> requestStream(Payload payload) {
+                String s = ByteBufferUtil.toUtf8String(payload.getData());
+                return Px.from(Flowable.range(1, 3)).map(i -> reverse(s)).concatWith(Px.error(new Exception("failed")));
+            }
+        };
 
         expected.showOutput("i 1");
         expected.showOutput("i 2");
         expected.showOutput("i 3");
-        expected.error("error from server", new ApplicationException("failed"));
+        expected.error("error from server", new ApplicationException(new PayloadImpl("failed")));
 
         run();
 
@@ -191,8 +233,8 @@ public class BasicOperationTest {
         main.run(client).await(5, SECONDS);
     }
 
-    public static Payload reverse(Payload payload) {
-        return payload(new StringBuilder(ByteBufferUtil.toUtf8String(payload.getData())).reverse().toString());
+    public static Payload reverse(String s) {
+        return payload(new StringBuilder(s).reverse().toString());
     }
 
     public static Payload payload(String data) {
