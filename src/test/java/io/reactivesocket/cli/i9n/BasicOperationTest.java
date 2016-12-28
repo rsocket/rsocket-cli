@@ -16,12 +16,15 @@ import io.reactivesocket.transport.TransportServer;
 import io.reactivesocket.util.PayloadImpl;
 import io.reactivex.Flowable;
 import org.junit.After;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
 import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 import org.reactivestreams.Publisher;
+
+import java.util.concurrent.TimeUnit;
 
 import static io.reactivesocket.client.KeepAliveProvider.never;
 import static io.reactivesocket.client.SetupProvider.keepAlive;
@@ -66,10 +69,10 @@ public class BasicOperationTest {
         if (client != null) {
             client.close();
         }
-//        if (server != null) {
-//            server.shutdown();
-//            server.awaitShutdown(5, TimeUnit.SECONDS);
-//        }
+        if (server != null) {
+            server.shutdown();
+            server.awaitShutdown(5, TimeUnit.SECONDS);
+        }
     }
 
     @Test
@@ -171,11 +174,11 @@ public class BasicOperationTest {
         requestHandler = new AbstractReactiveSocket() {
             @Override
             public Publisher<Payload> requestResponse(Payload payload) {
-                return Px.error(new ApplicationException(new PayloadImpl("server failure")));
+                return Px.error(new ApplicationException(payload("server failure")));
             }
         };
 
-        expected.error("error from server", new ApplicationException(new PayloadImpl("server failure")));
+        expected.error("error from server", new ApplicationException(payload("server failure")));
 
         run();
 
@@ -200,6 +203,9 @@ public class BasicOperationTest {
         expected.showOutput("olleH");
         expected.showOutput("olleH");
 
+        // TODO filter next_complete?
+        expected.showOutput("");
+
         run();
 
         assertEquals(expected, output);
@@ -212,16 +218,16 @@ public class BasicOperationTest {
 
         requestHandler = new AbstractReactiveSocket() {
             @Override
-            public Publisher<Payload> requestStream(Payload payload) {
+            public Publisher<Payload> requestSubscription(Payload payload) {
                 String s = ByteBufferUtil.toUtf8String(payload.getData());
-                return Px.from(Flowable.range(1, 3)).map(i -> reverse(s)).concatWith(Px.error(new Exception("failed")));
+                return Px.from(Flowable.range(1, 3)).map(i -> payload("i " + i)).concatWith(Px.error(new ApplicationException(new PayloadImpl("failed"))));
             }
         };
 
         expected.showOutput("i 1");
         expected.showOutput("i 2");
         expected.showOutput("i 3");
-        expected.error("error from server", new ApplicationException(new PayloadImpl("failed")));
+        expected.error("error from server", new ApplicationException(payload("failed")));
 
         run();
 

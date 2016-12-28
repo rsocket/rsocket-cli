@@ -275,7 +275,7 @@ public class Main {
         }
     }
 
-    public static void main(String... args) throws IOException, URISyntaxException, InterruptedException {
+    public static void main(String... args) throws Exception {
         fromArgs(args).run();
     }
 }
