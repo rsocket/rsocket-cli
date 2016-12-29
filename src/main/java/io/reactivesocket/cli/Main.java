@@ -13,28 +13,41 @@
  */
 package io.reactivesocket.cli;
 
+import com.google.common.base.Charsets;
+import com.google.common.io.CharSource;
 import com.google.common.io.Files;
 import io.airlift.airline.*;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.util.internal.logging.Slf4JLoggerFactory;
-import io.reactivesocket.*;
-import io.reactivesocket.internal.frame.ByteBufferUtil;
+import io.reactivesocket.AbstractReactiveSocket;
+import io.reactivesocket.ConnectionSetupPayload;
+import io.reactivesocket.Payload;
+import io.reactivesocket.ReactiveSocket;
+import io.reactivesocket.client.ReactiveSocketClient;
+import io.reactivesocket.frame.ByteBufferUtil;
+import io.reactivesocket.lease.DisabledLeaseAcceptingSocket;
+import io.reactivesocket.reactivestreams.extensions.Px;
+import io.reactivesocket.server.ReactiveSocketServer;
+import io.reactivesocket.transport.TransportServer;
 import io.reactivesocket.util.PayloadImpl;
+import io.reactivex.Flowable;
 import io.reactivex.netty.client.ClientState;
 import org.reactivestreams.Publisher;
 import org.slf4j.LoggerFactory;
 import rx.Completable;
 import rx.Observable;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
+import static io.reactivesocket.client.KeepAliveProvider.never;
+import static io.reactivesocket.client.SetupProvider.keepAlive;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 import static rx.RxReactiveStreams.toObservable;
@@ -67,7 +80,7 @@ public class Main {
     public boolean metadataPush;
 
     @Option(name = "--server", description = "Start server instead of client")
-    public boolean server = false;
+    public boolean serverMode = false;
 
     @Option(name = {"-i", "--input"}, description = "String input or @path/to/file")
     public String input;
@@ -84,6 +97,7 @@ public class Main {
     public ReactiveSocket client;
 
     public OutputHandler outputHandler;
+    private TransportServer.StartedServer server;
 
     public void run() throws IOException, URISyntaxException, InterruptedException {
         System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", debug ? "debug" : "warn");
@@ -97,12 +111,12 @@ public class Main {
         try {
             URI uri = new URI(arguments.get(0));
 
-            if (server) {
-                ConnectionSetupHandler setupHandler = (setupPayload, reactiveSocket) -> createServerRequestHandler(setupPayload);
-
-                ConnectionHelper.startServer(uri, setupHandler);
+            if (serverMode) {
+                server = ReactiveSocketServer.create(ConnectionHelper.buildServerConnection(uri))
+                        .start((setupPayload, reactiveSocket) -> new DisabledLeaseAcceptingSocket(createServerRequestHandler(setupPayload)));
             } else {
-                client = ConnectionHelper.buildClientConnection(uri);
+                client = Flowable.fromPublisher(ReactiveSocketClient.create(ConnectionHelper.buildClientConnection(uri),
+                        keepAlive(never()).disableLease()).connect()).blockingFirst();
 
                 Completable run = run(client);
                 run.await();
@@ -114,12 +128,43 @@ public class Main {
         }
     }
 
-    public RequestHandler createServerRequestHandler(ConnectionSetupPayload setupPayload) {
-        // TODO nice toString
+    public ReactiveSocket createServerRequestHandler(ConnectionSetupPayload setupPayload) {
         LoggerFactory.getLogger(Main.class).debug("setup payload " + setupPayload);
 
-        return new RequestHandler.Builder().withRequestSubscription(payload -> handleIncomingPayload(payload))
-                .withRequestStream(payload -> handleIncomingPayload(payload)).withRequestResponse(payload -> handleIncomingPayload(payload)).build();
+        return new AbstractReactiveSocket() {
+            @Override
+            public Publisher<Void> fireAndForget(Payload payload) {
+                outputHandler.showOutput(ByteBufferUtil.toUtf8String(payload.getData()));
+                return Px.empty();
+            }
+
+            @Override
+            public Publisher<Payload> requestResponse(Payload payload) {
+                return handleIncomingPayload(payload);
+            }
+
+            @Override
+            public Publisher<Payload> requestStream(Payload payload) {
+                return handleIncomingPayload(payload);
+            }
+
+            @Override
+            public Publisher<Payload> requestSubscription(Payload payload) {
+                return handleIncomingPayload(payload);
+            }
+
+            @Override
+            public Publisher<Payload> requestChannel(Publisher<Payload> payloads) {
+                // TODO implement channel functionality
+                return super.requestChannel(payloads);
+            }
+
+            @Override
+            public Publisher<Void> metadataPush(Payload payload) {
+                outputHandler.showOutput(ByteBufferUtil.toUtf8String(payload.getMetadata()));
+                return Px.empty();
+            }
+        };
     }
 
     private Publisher<Payload> handleIncomingPayload(Payload payload) {
@@ -176,18 +221,14 @@ public class Main {
     }
 
     private Publisher<Payload> inputPublisher() {
-        InputStream is;
+        CharSource is;
 
         if (input == null) {
-            is = System.in;
+            is = SystemInCharSource.INSTANCE;
         } else if (input.startsWith("@")) {
-            try {
-                is = new FileInputStream(inputFile());
-            } catch (FileNotFoundException e) {
-                throw new UsageException(e.toString());
-            }
+            is = Files.asCharSource(inputFile(), Charsets.UTF_8);
         } else {
-            is = new ByteArrayInputStream(input.getBytes(Charset.defaultCharset()));
+            is = CharSource.wrap(input);
         }
 
         return ObservableIO.lines(is);
@@ -234,7 +275,7 @@ public class Main {
         }
     }
 
-    public static void main(String... args) throws IOException, URISyntaxException, InterruptedException {
+    public static void main(String... args) throws Exception {
         fromArgs(args).run();
     }
 }

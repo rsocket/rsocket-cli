@@ -1,12 +1,9 @@
 buildscript {
-  repositories {
-      jcenter()
-   }
-
-  dependencies { classpath 'io.reactivesocket:gradle-nebula-plugin-reactivesocket:1.0.5' }
+  repositories { jcenter() }
+  dependencies { classpath 'io.reactivesocket:gradle-nebula-plugin-reactivesocket:1.0.6' }
 }
 
-description = 'ReactiveSocket: stream oriented messaging passing with Reactive Stream semantics.'
+description = 'ReactiveSocket CLI.'
 
 apply plugin: 'reactivesocket-project'
 apply plugin: 'java'
@@ -17,16 +14,16 @@ mainClassName = "io.reactivesocket.cli.Main"
 repositories {
     mavenLocal()
     maven { url 'https://oss.jfrog.org/libs-snapshot' }
+    maven { url 'https://dl.bintray.com/reactivesocket/ReactiveSocket' }
 }
 
 dependencies {
-    compile 'io.reactivesocket:reactivesocket-transport-websocket:0.2.3-SNAPSHOT'
-    compile 'io.reactivesocket:reactivesocket-transport-tcp:0.2.3-SNAPSHOT'
-    compile 'io.reactivesocket:reactivesocket-transport-local:0.2.3-SNAPSHOT'
-    compile 'io.reactivex:rxjava-string:1.1.0'
+    compile 'io.reactivesocket:reactivesocket-transport-tcp:0.5.0-SNAPSHOT'
+    compile 'io.reactivesocket:reactivesocket-transport-local:0.5.0-SNAPSHOT'
+    compile 'io.reactivex.rxjava2:rxjava:2.0.2'
 
     compile 'io.airlift:airline:0.7'
-    runtime 'org.slf4j:slf4j-simple:1.7.12'
+    runtime 'org.slf4j:slf4j-simple:1.7.21'
 
     testCompile 'junit:junit:4.12'
     testCompile 'org.mockito:mockito-core:1.10.19'

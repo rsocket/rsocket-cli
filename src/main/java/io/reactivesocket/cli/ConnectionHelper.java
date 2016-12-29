@@ -13,61 +13,27 @@
  */
 package io.reactivesocket.cli;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.handler.logging.LogLevel;
-import io.reactivesocket.*;
-import io.reactivesocket.transport.tcp.client.TcpReactiveSocketConnector;
-import io.reactivesocket.transport.tcp.server.TcpReactiveSocketServer;
-import io.reactivesocket.transport.websocket.client.ClientWebSocketDuplexConnection;
-import io.reactivex.netty.client.ClientState;
-import io.reactivex.netty.protocol.tcp.client.TcpClient;
-import io.reactivex.netty.protocol.tcp.server.TcpServer;
-import org.slf4j.LoggerFactory;
+import io.reactivesocket.transport.TransportClient;
+import io.reactivesocket.transport.TransportServer;
+import io.reactivesocket.transport.tcp.client.TcpTransportClient;
+import io.reactivesocket.transport.tcp.server.TcpTransportServer;
+import org.slf4j.event.Level;
 
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.net.URI;
-import java.util.function.Function;
-
-import static rx.RxReactiveStreams.toObservable;
 
 public class ConnectionHelper {
-    public static ReactiveSocket buildClientConnection(URI uri) {
-        ConnectionSetupPayload setupPayload = ConnectionSetupPayload.create("", "", ConnectionSetupPayload.NO_FLAGS);
-
+    public static TransportClient buildClientConnection(URI uri) {
         if ("tcp".equals(uri.getScheme())) {
-            Function<SocketAddress, TcpClient<ByteBuf, ByteBuf>> clientFactory =
-                    socketAddress -> TcpClient.newClient(socketAddress).enableWireLogging("rs",
-                            LogLevel.INFO);
-            return toObservable(
-                    TcpReactiveSocketConnector.create(setupPayload, Throwable::printStackTrace, clientFactory)
-                            .connect(new InetSocketAddress(uri.getHost(), uri.getPort()))).toSingle()
-                    .toBlocking()
-                    .value();
-        } else if ("ws".equals(uri.getScheme())) {
-            ClientWebSocketDuplexConnection duplexConnection = toObservable(
-                    ClientWebSocketDuplexConnection.create(
-                            InetSocketAddress.createUnresolved(uri.getHost(), uri.getPort()), "/rs",
-                            ClientState.defaultEventloopGroup())).toBlocking().last();
-
-            return DefaultReactiveSocket.fromClientConnection(duplexConnection, setupPayload,
-                    Throwable::printStackTrace);
+            return TcpTransportClient.create(new InetSocketAddress(uri.getHost(), uri.getPort())).logReactiveSocketFrames("rs", Level.INFO);
         } else {
             throw new UnsupportedOperationException("uri unsupported: " + uri);
         }
     }
 
-    public static void startServer(URI uri, ConnectionSetupHandler setupHandler) {
+    public static TransportServer buildServerConnection(URI uri) {
         if ("tcp".equals(uri.getScheme())) {
-            // TODO host also, so ipv4/ipv6 supported etc
-            TcpServer<ByteBuf, ByteBuf> tcpServer = TcpServer.newServer(uri.getPort()).enableWireLogging("bytes", LogLevel.DEBUG);
-            TcpReactiveSocketServer rsServer = TcpReactiveSocketServer.create(tcpServer);
-
-            TcpReactiveSocketServer.StartedServer server = rsServer.start(setupHandler, LeaseGovernor.NULL_LEASE_GOVERNOR);
-
-            LoggerFactory.getLogger(Main.class).info("Started server");
-
-            server.awaitShutdown();
+            return TcpTransportServer.create(new InetSocketAddress(uri.getHost(), uri.getPort())).logReactiveSocketFrames("rs", Level.INFO);
         } else {
             throw new UnsupportedOperationException("uri unsupported: " + uri);
         }

@@ -15,16 +15,12 @@
  */
 package io.reactivesocket.cli;
 
+import com.google.common.io.CharSource;
 import io.reactivesocket.Payload;
 import io.reactivesocket.util.PayloadImpl;
+import io.reactivex.Flowable;
+import io.reactivex.schedulers.Schedulers;
 import org.reactivestreams.Publisher;
-import rx.observables.StringObservable;
-import rx.schedulers.Schedulers;
-
-import java.io.InputStream;
-import java.io.InputStreamReader;
-
-import static rx.RxReactiveStreams.toPublisher;
 
 public final class ObservableIO {
 
@@ -37,10 +33,7 @@ public final class ObservableIO {
      *
      * @param inputStream to read.
      */
-    public static Publisher<Payload> lines(InputStream inputStream) {
-        return toPublisher(StringObservable.using(() -> new InputStreamReader(inputStream),
-                stream -> StringObservable.from(stream))
-                .<Payload>map(PayloadImpl::new)
-                .subscribeOn(Schedulers.io()));
+    public static Publisher<Payload> lines(CharSource inputStream) {
+        return Flowable.just(inputStream).flatMapIterable(s -> s.readLines()).map(l -> (Payload) new PayloadImpl(l)).subscribeOn(Schedulers.io());
     }
 }
