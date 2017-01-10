@@ -18,8 +18,8 @@ repositories {
 }
 
 dependencies {
-    compile 'io.reactivesocket:reactivesocket-transport-tcp:0.5.0-SNAPSHOT'
-    compile 'io.reactivesocket:reactivesocket-transport-local:0.5.0-SNAPSHOT'
+    compile 'io.reactivesocket:reactivesocket-transport-tcp:0.5.3-SNAPSHOT'
+    compile 'io.reactivesocket:reactivesocket-transport-local:0.5.3-SNAPSHOT'
     compile 'io.reactivex.rxjava2:rxjava:2.0.2'
 
     compile 'io.airlift:airline:0.7'
