@@ -25,7 +25,8 @@ Use tab completion for help with specifying the operation type.
 
 ```
 $ brew install yschimke/tap/reactivesocket-cli
-$ reactivesocket-cli tcp://localhost:8765
+$ reactivesocket-cli -i "I am a Server" --server tcp://localhost:8765 # window 1
+$ reactivesocket-cli --rr -i "I am a Client" tcp://localhost:8765 # window 2
 ```
 
 
