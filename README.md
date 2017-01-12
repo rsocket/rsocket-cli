@@ -19,7 +19,7 @@ $ gradle installDist
 $ ./build/install/reactivesocket-cli/bin/reactivesocket-cli tcp://localhost:8765
 ```
 
-## Installing via Homebrew
+## Installing via Homebrew (out of date)
 
 Use tab completion for help with specifying the operation type.
 
