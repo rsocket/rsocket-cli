@@ -114,6 +114,8 @@ public class Main {
             if (serverMode) {
                 server = ReactiveSocketServer.create(ConnectionHelper.buildServerConnection(uri))
                         .start((setupPayload, reactiveSocket) -> new DisabledLeaseAcceptingSocket(createServerRequestHandler(setupPayload)));
+
+                server.awaitShutdown();
             } else {
                 client = Flowable.fromPublisher(ReactiveSocketClient.create(ConnectionHelper.buildClientConnection(uri),
                         keepAlive(never()).disableLease()).connect()).blockingFirst();
