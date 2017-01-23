@@ -33,6 +33,7 @@ import io.reactivesocket.util.PayloadImpl;
 import io.reactivex.Flowable;
 import io.reactivex.netty.client.ClientState;
 import org.reactivestreams.Publisher;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rx.Completable;
 import rx.Observable;
@@ -99,8 +100,12 @@ public class Main {
     public OutputHandler outputHandler;
     private TransportServer.StartedServer server;
 
+    private Logger retainedLogger;
+
     public void run() throws IOException, URISyntaxException, InterruptedException {
         System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", debug ? "debug" : "warn");
+
+        retainedLogger = LoggerFactory.getLogger("");
 
         InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE);
 
