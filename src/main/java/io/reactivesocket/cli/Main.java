@@ -16,7 +16,12 @@ package io.reactivesocket.cli;
 import com.google.common.base.Charsets;
 import com.google.common.io.CharSource;
 import com.google.common.io.Files;
-import io.airlift.airline.*;
+import io.airlift.airline.Arguments;
+import io.airlift.airline.Command;
+import io.airlift.airline.Help;
+import io.airlift.airline.Option;
+import io.airlift.airline.ParseException;
+import io.airlift.airline.SingleCommand;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.util.internal.logging.Slf4JLoggerFactory;
 import io.reactivesocket.AbstractReactiveSocket;
@@ -61,6 +66,9 @@ import static rx.RxReactiveStreams.toObservable;
 @Command(name = Main.NAME, description = "CLI for ReactiveSocket.")
 public class Main {
     static final String NAME = "reactivesocket-cli";
+
+    @Option(name = {"-h", "--help"}, description = "Display help information")
+    public boolean help = false;
 
     @Option(name = "--sub", description = "Request Subscription")
     public boolean subscription;
