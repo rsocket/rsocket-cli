@@ -26,7 +26,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.util.internal.logging.Slf4JLoggerFactory;
 import io.reactivesocket.AbstractReactiveSocket;
 import io.reactivesocket.ConnectionSetupPayload;
-import io.reactivesocket.Frame;
 import io.reactivesocket.Payload;
 import io.reactivesocket.ReactiveSocket;
 import io.reactivesocket.client.KeepAliveProvider;
@@ -51,12 +50,12 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
@@ -101,7 +100,7 @@ public class Main {
     @Option(name = {"-m", "--metadata"}, description = "Metadata input string input or @path/to/file")
     public String metadata;
 
-    @Option(name = "--setup", description = "String input or @path/to/file for metadata")
+    @Option(name = "--setup", description = "String input or @path/to/file for setup metadata")
     public String setup;
 
     @Option(name = "--debug", description = "Debug Output")
@@ -122,8 +121,6 @@ public class Main {
     private TransportServer.StartedServer server;
 
     private Logger retainedLogger;
-
-    private String cachedMetadata;
 
     public void run() throws IOException, URISyntaxException, InterruptedException {
         System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", debug ? "debug" : "warn");
@@ -174,30 +171,20 @@ public class Main {
     }
 
     public Payload parseSetupPayload() {
-        return new Payload() {
-            @Override
-            public ByteBuffer getMetadata() {
-                return Frame.NULL_BYTEBUFFER;
+        String source = null;
+
+        if (setup.startsWith("@")) {
+            try {
+                source = Files.asCharSource(setupFile(), Charsets.UTF_8).read();
+            } catch (IOException e) {
+                LangUtil.rethrowUnchecked(e);
             }
 
-            @Override
-            public ByteBuffer getData() {
-                String source = null;
+        } else {
+            source = setup;
+        }
 
-                if (setup.startsWith("@")) {
-                    try {
-                        source = Files.asCharSource(setupFile(), Charsets.UTF_8).read();
-                    } catch (IOException e) {
-                        LangUtil.rethrowUnchecked(e);
-                    }
-
-                } else {
-                    source = setup;
-                }
-
-                return ByteBuffer.wrap(source.getBytes(Charsets.UTF_8));
-            }
-        };
+        return new PayloadImpl(source);
     }
 
     private File setupFile() {
@@ -302,14 +289,13 @@ public class Main {
             .toCompletable();
     }
 
-
     private Publisher<Payload> inputPublisher() {
         CharSource is;
 
         if (input == null) {
             is = SystemInCharSource.INSTANCE;
         } else if (input.startsWith("@")) {
-            is = Files.asCharSource(inputFile(), Charsets.UTF_8);
+            is = Files.asCharSource(inputFile(input), Charsets.UTF_8);
         } else {
             is = CharSource.wrap(input);
         }
@@ -317,47 +303,26 @@ public class Main {
         return ObservableIO.lines(is);
     }
 
-    private String getMetadata() {
-        synchronized (this) {
-            if (cachedMetadata == null) {
-                if (metadata == null) {
-                    cachedMetadata = "";
-                } else if (metadata.startsWith("@")) {
-                    try {
-                        cachedMetadata = Files.toString(new File(metadata.substring(1)), Charsets.UTF_8);
-                    } catch (IOException e) {
-                        LangUtil.rethrowUnchecked(e);
-                    }
-                } else {
-                    cachedMetadata = metadata;
-                }
-            }
-        }
+    private String getInputFromSource(String source, Supplier<String> nullHandler) {
+        String s;
 
-        return cachedMetadata;
-    }
-
-    private PayloadImpl singleInputPayload() {
-        String inputString;
-
-        if (input == null) {
-            Scanner in = new Scanner(System.in);
-            inputString = in.nextLine();
-        } else if (input.startsWith("@")) {
+        if (source == null) {
+            s = nullHandler.get();
+        } else if (source.startsWith("@")) {
             try {
-                inputString = Files.toString(inputFile(), StandardCharsets.UTF_8);
+                s = Files.toString(inputFile(source), StandardCharsets.UTF_8);
             } catch (IOException e) {
                 throw new UsageException(e.toString());
             }
         } else {
-            inputString = input;
+            s = source;
         }
 
-        return new PayloadImpl(inputString, getMetadata());
+        return s;
     }
 
-    private File inputFile() {
-        File file = new File(input.substring(1));
+    private File inputFile(String path) {
+        File file = new File(path.substring(1));
 
         if (!file.isFile()) {
             throw new UsageException("file not found: " + file);
@@ -365,6 +330,18 @@ public class Main {
 
         return file;
     }
+
+    private PayloadImpl singleInputPayload() {
+        String data = getInputFromSource(input, () -> {
+            Scanner in = new Scanner(System.in);
+            return in.nextLine();
+        });
+
+        String metadata = getInputFromSource(this.metadata, () -> "");
+
+        return new PayloadImpl(data, metadata);
+    }
+
 
     private static Main fromArgs(String... args) {
         SingleCommand<Main> cmd = SingleCommand.singleCommand(Main.class);
