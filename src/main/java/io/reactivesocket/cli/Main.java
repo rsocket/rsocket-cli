@@ -28,7 +28,9 @@ import io.reactivesocket.AbstractReactiveSocket;
 import io.reactivesocket.ConnectionSetupPayload;
 import io.reactivesocket.Payload;
 import io.reactivesocket.ReactiveSocket;
+import io.reactivesocket.client.KeepAliveProvider;
 import io.reactivesocket.client.ReactiveSocketClient;
+import io.reactivesocket.client.SetupProvider;
 import io.reactivesocket.frame.ByteBufferUtil;
 import io.reactivesocket.lease.DisabledLeaseAcceptingSocket;
 import io.reactivesocket.reactivestreams.extensions.Px;
@@ -48,12 +50,15 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
+import java.util.concurrent.TimeUnit;
 
-import static io.reactivesocket.client.KeepAliveProvider.never;
-import static io.reactivesocket.client.SetupProvider.keepAlive;
+import static io.reactivesocket.cli.TimeUtil.parseShortDuration;
+import static io.reactivex.Flowable.interval;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 import static rx.RxReactiveStreams.toObservable;
@@ -100,6 +105,9 @@ public class Main {
     @Option(name = "--ops", description = "Operation Count")
     public int operations = 1;
 
+    @Option(name = "--keepalive", description = "Keepalive period")
+    public String keepalive = null;
+
     @Arguments(title = "target", description = "Endpoint URL", required = true)
     public List<String> arguments = new ArrayList<>();
 
@@ -130,8 +138,10 @@ public class Main {
 
                 server.awaitShutdown();
             } else {
+                SetupProvider setupProvider = SetupProvider.keepAlive(keepAlive()).disableLease();
+
                 client = Flowable.fromPublisher(ReactiveSocketClient.create(ConnectionHelper.buildClientConnection(uri),
-                        keepAlive(never()).disableLease()).connect()).blockingFirst();
+                        setupProvider).connect()).blockingFirst();
 
                 Completable run = run(client);
                 run.await();
@@ -141,6 +151,15 @@ public class Main {
         } finally {
             ClientState.defaultEventloopGroup().shutdownGracefully();
         }
+    }
+
+    private KeepAliveProvider keepAlive() {
+        if (keepalive == null) {
+            return KeepAliveProvider.never();
+        }
+
+        Duration duration = parseShortDuration(keepalive);
+        return KeepAliveProvider.from((int) duration.toMillis(), interval(duration.toMillis(), MILLISECONDS));
     }
 
     public ReactiveSocket createServerRequestHandler(ConnectionSetupPayload setupPayload) {
