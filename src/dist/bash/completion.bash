@@ -22,7 +22,7 @@ _reactivesocket_complete()
   if [[ $cur == -* ]]; then
       # TODO parse help automatically
       #_reactivesocket_options=${_reactivesocket_options:=$(_parse_help reactivesocket-cli --help)}
-      _reactivesocket_options="--sub --str --rr --fnf --channel --metadata --ops -i --input --debug --server --keepalive -h --help"
+      _reactivesocket_options="--sub --str --rr --fnf --channel --metadataPush --ops -i --input --debug --server --keepalive -h --help -m --metadata --setup --timeout"
       COMPREPLY=( $( compgen -W "$_reactivesocket_options" -- "$cur" ) )
       return;
   fi

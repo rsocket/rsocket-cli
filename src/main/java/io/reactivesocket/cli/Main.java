@@ -39,6 +39,7 @@ import io.reactivesocket.transport.TransportServer;
 import io.reactivesocket.util.PayloadImpl;
 import io.reactivex.Flowable;
 import io.reactivex.netty.client.ClientState;
+import org.agrona.LangUtil;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,6 +56,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import static io.reactivesocket.cli.TimeUtil.parseShortDuration;
 import static io.reactivex.Flowable.interval;
@@ -90,7 +92,7 @@ public class Main {
     @Option(name = "--channel", description = "Channel")
     public boolean channel;
 
-    @Option(name = "--metadata", description = "Metadata Push")
+    @Option(name = "--metadataPush", description = "Metadata Push")
     public boolean metadataPush;
 
     @Option(name = "--server", description = "Start server instead of client")
@@ -99,12 +101,21 @@ public class Main {
     @Option(name = {"-i", "--input"}, description = "String input or @path/to/file")
     public String input;
 
+    @Option(name = {"-m", "--metadata"}, description = "Metadata input string input or @path/to/file")
+    public String metadata;
+
+    @Option(name = "--setup", description = "String input or @path/to/file for setup metadata")
+    public String setup;
+
     @Option(name = "--debug", description = "Debug Output")
     public boolean debug;
 
     @Option(name = "--ops", description = "Operation Count")
     public int operations = 1;
 
+    @Option(name = "--timeout", description = "Timeout in seconds")
+    public Long timeout;
+  
     @Option(name = "--keepalive", description = "Keepalive period")
     public String keepalive = null;
 
@@ -134,23 +145,63 @@ public class Main {
 
             if (serverMode) {
                 server = ReactiveSocketServer.create(ConnectionHelper.buildServerConnection(uri))
-                        .start((setupPayload, reactiveSocket) -> new DisabledLeaseAcceptingSocket(createServerRequestHandler(setupPayload)));
+                    .start((setupPayload, reactiveSocket) -> new DisabledLeaseAcceptingSocket(createServerRequestHandler(setupPayload)));
 
                 server.awaitShutdown();
             } else {
                 SetupProvider setupProvider = SetupProvider.keepAlive(keepAlive()).disableLease();
 
-                client = Flowable.fromPublisher(ReactiveSocketClient.create(ConnectionHelper.buildClientConnection(uri),
-                        setupProvider).connect()).blockingFirst();
+                if (setup != null) {
+                    setupProvider = setupProvider.setupPayload(parseSetupPayload());
+                }
+
+                client = Flowable
+                    .fromPublisher(
+                        ReactiveSocketClient
+                            .create(ConnectionHelper.buildClientConnection(uri), setupProvider)
+                            .connect())
+                    .blockingFirst();
 
                 Completable run = run(client);
-                run.await();
+
+                if (timeout != null) {
+                    run.await(timeout, TimeUnit.SECONDS);
+                } else {
+                    run.await();
+                }
             }
         } catch (Exception e) {
             outputHandler.error("error", e);
         } finally {
             ClientState.defaultEventloopGroup().shutdownGracefully();
         }
+    }
+
+    public Payload parseSetupPayload() {
+        String source = null;
+
+        if (setup.startsWith("@")) {
+            try {
+                source = Files.asCharSource(setupFile(), Charsets.UTF_8).read();
+            } catch (IOException e) {
+                LangUtil.rethrowUnchecked(e);
+            }
+
+        } else {
+            source = setup;
+        }
+
+        return new PayloadImpl(source);
+    }
+
+    private File setupFile() {
+        File file = new File(input.substring(1));
+
+        if (!file.isFile()) {
+            throw new UsageException("setup file not found: " + file);
+        }
+
+        return file;
     }
 
     private KeepAliveProvider keepAlive() {
@@ -247,11 +298,11 @@ public class Main {
         }
 
         return source.map(Payload::getData)
-                .map(ByteBufferUtil::toUtf8String)
-                .doOnNext(outputHandler::showOutput)
-                .doOnError(e -> outputHandler.error("error from server", e))
-                .onExceptionResumeNext(Observable.empty())
-                .toCompletable();
+            .map(ByteBufferUtil::toUtf8String)
+            .doOnNext(outputHandler::showOutput)
+            .doOnError(e -> outputHandler.error("error from server", e))
+            .onExceptionResumeNext(Observable.empty())
+            .toCompletable();
     }
 
     private Publisher<Payload> inputPublisher() {
@@ -260,7 +311,7 @@ public class Main {
         if (input == null) {
             is = SystemInCharSource.INSTANCE;
         } else if (input.startsWith("@")) {
-            is = Files.asCharSource(inputFile(), Charsets.UTF_8);
+            is = Files.asCharSource(inputFile(input), Charsets.UTF_8);
         } else {
             is = CharSource.wrap(input);
         }
@@ -268,27 +319,26 @@ public class Main {
         return ObservableIO.lines(is);
     }
 
-    private PayloadImpl singleInputPayload() {
-        String inputString;
+    private String getInputFromSource(String source, Supplier<String> nullHandler) {
+        String s;
 
-        if (input == null) {
-            Scanner in = new Scanner(System.in);
-            inputString = in.nextLine();
-        } else if (input.startsWith("@")) {
+        if (source == null) {
+            s = nullHandler.get();
+        } else if (source.startsWith("@")) {
             try {
-                inputString = Files.toString(inputFile(), StandardCharsets.UTF_8);
+                s = Files.toString(inputFile(source), StandardCharsets.UTF_8);
             } catch (IOException e) {
                 throw new UsageException(e.toString());
             }
         } else {
-            inputString = input;
+            s = source;
         }
 
-        return new PayloadImpl(inputString, "");
+        return s;
     }
 
-    private File inputFile() {
-        File file = new File(input.substring(1));
+    private File inputFile(String path) {
+        File file = new File(path.substring(1));
 
         if (!file.isFile()) {
             throw new UsageException("file not found: " + file);
@@ -296,6 +346,18 @@ public class Main {
 
         return file;
     }
+
+    private PayloadImpl singleInputPayload() {
+        String data = getInputFromSource(input, () -> {
+            Scanner in = new Scanner(System.in);
+            return in.nextLine();
+        });
+
+        String metadata = getInputFromSource(this.metadata, () -> "");
+
+        return new PayloadImpl(data, metadata);
+    }
+
 
     private static Main fromArgs(String... args) {
         SingleCommand<Main> cmd = SingleCommand.singleCommand(Main.class);
