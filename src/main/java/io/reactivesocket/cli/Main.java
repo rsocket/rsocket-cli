@@ -34,6 +34,8 @@ import io.reactivesocket.client.SetupProvider;
 import io.reactivesocket.frame.ByteBufferUtil;
 import io.reactivesocket.lease.DisabledLeaseAcceptingSocket;
 import io.reactivesocket.reactivestreams.extensions.Px;
+import io.reactivesocket.reactivestreams.extensions.internal.subscribers.CancellableSubscriberImpl;
+import io.reactivesocket.reactivestreams.extensions.internal.subscribers.Subscribers;
 import io.reactivesocket.server.ReactiveSocketServer;
 import io.reactivesocket.transport.TransportServer;
 import io.reactivesocket.util.PayloadImpl;
@@ -41,6 +43,7 @@ import io.reactivex.Flowable;
 import io.reactivex.netty.client.ClientState;
 import org.agrona.LangUtil;
 import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rx.Completable;
@@ -115,7 +118,7 @@ public class Main {
 
     @Option(name = "--timeout", description = "Timeout in seconds")
     public Long timeout;
-  
+
     @Option(name = "--keepalive", description = "Keepalive period")
     public String keepalive = null;
 
@@ -219,7 +222,7 @@ public class Main {
         return new AbstractReactiveSocket() {
             @Override
             public Publisher<Void> fireAndForget(Payload payload) {
-                outputHandler.showOutput(ByteBufferUtil.toUtf8String(payload.getData()));
+                showPayload(payload);
                 return Px.empty();
             }
 
@@ -240,8 +243,8 @@ public class Main {
 
             @Override
             public Publisher<Payload> requestChannel(Publisher<Payload> payloads) {
-                // TODO implement channel functionality
-                return super.requestChannel(payloads);
+                payloads.subscribe(printSubscriber());
+                return inputPublisher();
             }
 
             @Override
@@ -252,9 +255,17 @@ public class Main {
         };
     }
 
+    private CancellableSubscriberImpl<Payload> printSubscriber() {
+        return new CancellableSubscriberImpl<>(s -> s.request(Long.MAX_VALUE), null, p -> showPayload(p), e -> outputHandler.error("channel error", e), null);
+    }
+
     private Publisher<Payload> handleIncomingPayload(Payload payload) {
-        outputHandler.showOutput(ByteBufferUtil.toUtf8String(payload.getData()));
+        showPayload(payload);
         return inputPublisher();
+    }
+
+    private void showPayload(Payload payload) {
+        outputHandler.showOutput(ByteBufferUtil.toUtf8String(payload.getData()));
     }
 
     public Completable run(ReactiveSocket client) {
@@ -287,14 +298,12 @@ public class Main {
             source = toObservable(client.requestSubscription(singleInputPayload()));
         } else if (stream) {
             source = toObservable(client.requestStream(singleInputPayload()));
-        } else {
-            // Defaults to channel for interactive mode.
-            //TODO: We should have the mode as a group defaulting to channel?
-            if (!channel) {
-                outputHandler.info("Using request-channel interaction mode, choose an option to use a different mode.");
-            }
+        } else if (channel) {
             outputHandler.info("Type commands to send to the server.");
             source = toObservable(client.requestChannel(inputPublisher()));
+        } else {
+            outputHandler.info("Using passive client mode, choose an option to use a different mode.");
+            source = Observable.never();
         }
 
         return source.map(Payload::getData)
