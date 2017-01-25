@@ -51,12 +51,16 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
+import static io.reactivesocket.cli.TimeUtil.parseShortDuration;
+import static io.reactivex.Flowable.interval;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 import static rx.RxReactiveStreams.toObservable;
@@ -111,6 +115,9 @@ public class Main {
 
     @Option(name = "--timeout", description = "Timeout in seconds")
     public Long timeout;
+  
+    @Option(name = "--keepalive", description = "Keepalive period")
+    public String keepalive = null;
 
     @Arguments(title = "target", description = "Endpoint URL", required = true)
     public List<String> arguments = new ArrayList<>();
@@ -142,7 +149,7 @@ public class Main {
 
                 server.awaitShutdown();
             } else {
-                SetupProvider setupProvider = SetupProvider.keepAlive(KeepAliveProvider.never()).disableLease();
+                SetupProvider setupProvider = SetupProvider.keepAlive(keepAlive()).disableLease();
 
                 if (setup != null) {
                     setupProvider = setupProvider.setupPayload(parseSetupPayload());
@@ -195,6 +202,15 @@ public class Main {
         }
 
         return file;
+    }
+
+    private KeepAliveProvider keepAlive() {
+        if (keepalive == null) {
+            return KeepAliveProvider.never();
+        }
+
+        Duration duration = parseShortDuration(keepalive);
+        return KeepAliveProvider.from((int) duration.toMillis(), interval(duration.toMillis(), MILLISECONDS));
     }
 
     public ReactiveSocket createServerRequestHandler(ConnectionSetupPayload setupPayload) {

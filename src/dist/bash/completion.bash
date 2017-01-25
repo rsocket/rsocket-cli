@@ -10,6 +10,9 @@ _reactivesocket_complete()
 	_get_comp_words_by_ref -n : cur
 
   case $prev in
+        --sub | --str | --rr | --fnf | --channel | --metadata)
+            return
+            ;;
         --input|-i)
             _filedir
             return
@@ -19,7 +22,7 @@ _reactivesocket_complete()
   if [[ $cur == -* ]]; then
       # TODO parse help automatically
       #_reactivesocket_options=${_reactivesocket_options:=$(_parse_help reactivesocket-cli --help)}
-      _reactivesocket_options="--sub --rr --fnf --channel --metadata -i --input --debug --server -m --metadata --setup --timeout"
+      _reactivesocket_options="--sub --str --rr --fnf --channel --metadataPush --ops -i --input --debug --server --keepalive -h --help -m --metadata --setup --timeout"
       COMPREPLY=( $( compgen -W "$_reactivesocket_options" -- "$cur" ) )
       return;
   fi
