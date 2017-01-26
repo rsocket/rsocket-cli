@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2015 Netflix, Inc.
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,18 +22,22 @@ import io.reactivex.Flowable;
 import io.reactivex.schedulers.Schedulers;
 import org.reactivestreams.Publisher;
 
-public final class ObservableIO {
+public final class Publishers {
 
-    private ObservableIO() {
+    private Publishers() {
         // No instances.
     }
 
     /**
-     * Return a publisher for consuming each line from System.in.
+     * Return a publisher for consuming each line from the passed stream.
      *
      * @param inputStream to read.
      */
     public static Publisher<Payload> lines(CharSource inputStream) {
-        return Flowable.just(inputStream).flatMapIterable(s -> s.readLines()).map(l -> (Payload) new PayloadImpl(l)).subscribeOn(Schedulers.io());
+        return Flowable.just(inputStream)
+                       .flatMapIterable(s -> s.readLines())
+                       .onBackpressureBuffer()
+                       .map(l -> (Payload) new PayloadImpl(l))
+                       .subscribeOn(Schedulers.io());
     }
 }
