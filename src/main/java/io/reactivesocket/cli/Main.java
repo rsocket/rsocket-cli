@@ -299,7 +299,9 @@ public class Main {
         } else if (stream) {
             source = toObservable(client.requestStream(singleInputPayload()));
         } else if (channel) {
-            outputHandler.info("Type commands to send to the server.");
+            if (input == null) {
+                outputHandler.info("Type commands to send to the server.");
+            }
             source = toObservable(client.requestChannel(inputPublisher()));
         } else {
             outputHandler.info("Using passive client mode, choose an option to use a different mode.");
