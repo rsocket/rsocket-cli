@@ -37,7 +37,7 @@ public class BasicOperationTest {
     private TransportServer.StartedServer server;
     private ReactiveSocket client;
 
-    private TestOutputHandler expected = new TestOutputHandler();
+    private final TestOutputHandler expected = new TestOutputHandler();
 
     private ReactiveSocket requestHandler = new AbstractReactiveSocket() {
     };
@@ -46,6 +46,7 @@ public class BasicOperationTest {
 
     @Rule
     public TestRule watcher = new TestWatcher() {
+        @Override
         protected void starting(Description description) {
             testName = description.getMethodName();
         }
@@ -71,7 +72,7 @@ public class BasicOperationTest {
         }
         if (server != null) {
             server.shutdown();
-            server.awaitShutdown(5, TimeUnit.SECONDS);
+            server.awaitShutdown(5, SECONDS);
         }
     }
 
@@ -236,7 +237,7 @@ public class BasicOperationTest {
 
     private void run() throws Exception {
         connect();
-        main.run(client).await(5, SECONDS);
+        main.run(client).blockingAwait(5, SECONDS);
     }
 
     public static Payload reverse(String s) {

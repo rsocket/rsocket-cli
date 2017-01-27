@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2015 Netflix, Inc.
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
@@ -35,19 +35,15 @@ import io.reactivesocket.frame.ByteBufferUtil;
 import io.reactivesocket.lease.DisabledLeaseAcceptingSocket;
 import io.reactivesocket.reactivestreams.extensions.Px;
 import io.reactivesocket.reactivestreams.extensions.internal.subscribers.CancellableSubscriberImpl;
-import io.reactivesocket.reactivestreams.extensions.internal.subscribers.Subscribers;
 import io.reactivesocket.server.ReactiveSocketServer;
 import io.reactivesocket.transport.TransportServer;
 import io.reactivesocket.util.PayloadImpl;
+import io.reactivex.Completable;
 import io.reactivex.Flowable;
 import io.reactivex.netty.client.ClientState;
 import org.agrona.LangUtil;
 import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
-import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import rx.Completable;
-import rx.Observable;
 
 import java.io.File;
 import java.io.IOException;
@@ -58,15 +54,12 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
-import static io.reactivesocket.cli.TimeUtil.parseShortDuration;
-import static io.reactivex.Flowable.interval;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.IntStream.range;
-import static rx.RxReactiveStreams.toObservable;
+import static io.reactivesocket.cli.TimeUtil.*;
+import static java.util.concurrent.TimeUnit.*;
+import static java.util.stream.Collectors.*;
+import static java.util.stream.IntStream.*;
 
 /**
  * Simple command line tool to make a ReactiveSocket connection and send/receive elements.
@@ -78,7 +71,7 @@ public class Main {
     static final String NAME = "reactivesocket-cli";
 
     @Option(name = {"-h", "--help"}, description = "Display help information")
-    public boolean help = false;
+    public boolean help;
 
     @Option(name = "--sub", description = "Request Subscription")
     public boolean subscription;
@@ -99,7 +92,7 @@ public class Main {
     public boolean metadataPush;
 
     @Option(name = "--server", description = "Start server instead of client")
-    public boolean serverMode = false;
+    public boolean serverMode;
 
     @Option(name = {"-i", "--input"}, description = "String input or @path/to/file")
     public String input;
@@ -120,7 +113,7 @@ public class Main {
     public Long timeout;
 
     @Option(name = "--keepalive", description = "Keepalive period")
-    public String keepalive = null;
+    public String keepalive;
 
     @Arguments(title = "target", description = "Endpoint URL", required = true)
     public List<String> arguments = new ArrayList<>();
@@ -130,12 +123,8 @@ public class Main {
     public OutputHandler outputHandler;
     private TransportServer.StartedServer server;
 
-    private Logger retainedLogger;
-
     public void run() throws IOException, URISyntaxException, InterruptedException {
         System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", debug ? "debug" : "warn");
-
-        retainedLogger = LoggerFactory.getLogger("");
 
         InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE);
 
@@ -168,9 +157,9 @@ public class Main {
                 Completable run = run(client);
 
                 if (timeout != null) {
-                    run.await(timeout, TimeUnit.SECONDS);
+                    run.blockingAwait(timeout, SECONDS);
                 } else {
-                    run.await();
+                    run.blockingAwait();
                 }
             }
         } catch (Exception e) {
@@ -213,7 +202,7 @@ public class Main {
         }
 
         Duration duration = parseShortDuration(keepalive);
-        return KeepAliveProvider.from((int) duration.toMillis(), interval(duration.toMillis(), MILLISECONDS));
+        return KeepAliveProvider.from((int) duration.toMillis(), Flowable.interval(duration.toMillis(), MILLISECONDS));
     }
 
     public ReactiveSocket createServerRequestHandler(ConnectionSetupPayload setupPayload) {
@@ -286,34 +275,36 @@ public class Main {
 
     private Completable runSingleOperation(ReactiveSocket client) {
         if (fireAndForget) {
-            return toObservable(client.fireAndForget(singleInputPayload())).toCompletable();
-        } else if (metadataPush) {
-            return toObservable(client.metadataPush(singleInputPayload())).toCompletable();
+            return Flowable.fromPublisher(client.fireAndForget(singleInputPayload())).ignoreElements();
+        }
+        
+        if (metadataPush) {
+            return Flowable.fromPublisher(client.metadataPush(singleInputPayload())).ignoreElements();
         }
 
-        Observable<Payload> source;
+        Flowable<Payload> source;
         if (requestResponse) {
-            source = toObservable(client.requestResponse(singleInputPayload()));
+            source = Flowable.fromPublisher(client.requestResponse(singleInputPayload()));
         } else if (subscription) {
-            source = toObservable(client.requestSubscription(singleInputPayload()));
+            source = Flowable.fromPublisher(client.requestSubscription(singleInputPayload()));
         } else if (stream) {
-            source = toObservable(client.requestStream(singleInputPayload()));
+            source = Flowable.fromPublisher(client.requestStream(singleInputPayload()));
         } else if (channel) {
             if (input == null) {
                 outputHandler.info("Type commands to send to the server.");
             }
-            source = toObservable(client.requestChannel(inputPublisher()));
+            source = Flowable.fromPublisher(client.requestChannel(inputPublisher()));
         } else {
             outputHandler.info("Using passive client mode, choose an option to use a different mode.");
-            source = Observable.never();
+            source = Flowable.never();
         }
 
         return source.map(Payload::getData)
             .map(ByteBufferUtil::toUtf8String)
             .doOnNext(outputHandler::showOutput)
             .doOnError(e -> outputHandler.error("error from server", e))
-            .onExceptionResumeNext(Observable.empty())
-            .toCompletable();
+            .onExceptionResumeNext(Flowable.empty())
+            .ignoreElements();
     }
 
     private Publisher<Payload> inputPublisher() {
@@ -327,10 +318,10 @@ public class Main {
             is = CharSource.wrap(input);
         }
 
-        return ObservableIO.lines(is);
+        return Publishers.lines(is);
     }
 
-    private String getInputFromSource(String source, Supplier<String> nullHandler) {
+    private static String getInputFromSource(String source, Supplier<String> nullHandler) {
         String s;
 
         if (source == null) {
@@ -348,7 +339,7 @@ public class Main {
         return s;
     }
 
-    private File inputFile(String path) {
+    private static File inputFile(String path) {
         File file = new File(path.substring(1));
 
         if (!file.isFile()) {
