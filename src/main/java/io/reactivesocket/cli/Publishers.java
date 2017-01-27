@@ -39,11 +39,11 @@ public final class Publishers {
      * @param inputStream to read.
      */
     public static Publisher<Payload> lines(CharSource inputStream) {
-        return Flowable.fromPublisher(spiltInLines(inputStream))
+        return Flowable.fromPublisher(splitInLines(inputStream))
                        .map(l -> (Payload) new PayloadImpl(l));
     }
 
-    public static Publisher<String> spiltInLines(CharSource inputStream) {
+    public static Publisher<String> splitInLines(CharSource inputStream) {
         return Flowable.<String>fromPublisher(s -> {
             final AtomicBoolean cancelled = new AtomicBoolean();
             s.onSubscribe(new Subscription() {

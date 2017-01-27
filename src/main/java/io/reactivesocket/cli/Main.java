@@ -43,6 +43,7 @@ import io.reactivex.Flowable;
 import io.reactivex.netty.client.ClientState;
 import org.agrona.LangUtil;
 import org.reactivestreams.Publisher;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
@@ -123,8 +124,13 @@ public class Main {
     public OutputHandler outputHandler;
     private TransportServer.StartedServer server;
 
+    // avoid GC of the configured logger before we start using it
+    private Logger retainedLogger;
+
     public void run() throws IOException, URISyntaxException, InterruptedException {
         System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", debug ? "debug" : "warn");
+
+        retainedLogger = LoggerFactory.getLogger("");
 
         InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE);
 
