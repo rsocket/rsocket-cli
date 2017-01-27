@@ -16,11 +16,16 @@
 package io.reactivesocket.cli;
 
 import com.google.common.io.CharSource;
+import com.google.common.io.LineProcessor;
 import io.reactivesocket.Payload;
 import io.reactivesocket.util.PayloadImpl;
 import io.reactivex.Flowable;
 import io.reactivex.schedulers.Schedulers;
 import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscription;
+
+import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class Publishers {
 
@@ -34,10 +39,41 @@ public final class Publishers {
      * @param inputStream to read.
      */
     public static Publisher<Payload> lines(CharSource inputStream) {
-        return Flowable.just(inputStream)
-                       .flatMapIterable(s -> s.readLines())
-                       .onBackpressureBuffer()
-                       .map(l -> (Payload) new PayloadImpl(l))
-                       .subscribeOn(Schedulers.io());
+        return Flowable.fromPublisher(spiltInLines(inputStream))
+                       .map(l -> (Payload) new PayloadImpl(l));
+    }
+
+    public static Publisher<String> spiltInLines(CharSource inputStream) {
+        return Flowable.<String>fromPublisher(s -> {
+            final AtomicBoolean cancelled = new AtomicBoolean();
+            s.onSubscribe(new Subscription() {
+                @Override
+                public void request(long n) {
+                    //Always buffer on backpressure.
+                }
+
+                @Override
+                public void cancel() {
+                    cancelled.set(true);
+                }
+            });
+            try {
+                inputStream.readLines(new LineProcessor<Void>() {
+                    @Override
+                    public boolean processLine(String line) {
+                        s.onNext(line);
+                        return !cancelled.get();
+                    }
+
+                    @Override
+                    public Void getResult() {
+                        return null;
+                    }
+                });
+                s.onComplete();
+            } catch (IOException e) {
+                s.onError(e);
+            }
+        }).subscribeOn(Schedulers.io()).onBackpressureBuffer();
     }
 }
