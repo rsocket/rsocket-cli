@@ -10,11 +10,9 @@ _reactivesocket_complete()
 	_get_comp_words_by_ref -n : cur
 
   case $prev in
-        --sub | --str | --rr | --fnf | --channel | --metadata)
-            return
-            ;;
-        --input|-i)
-            _filedir
+        # options with an argument we don't currently help with, everything else is assumed to be handled
+        # below in case statement or has no arguments so drops through to the url handling near the end
+        -i | --input | --keepalive | -m | --metadata | --timeout | --setup)
             return
             ;;
   esac
