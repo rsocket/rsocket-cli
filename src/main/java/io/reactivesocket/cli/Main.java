@@ -74,9 +74,6 @@ public class Main {
     @Option(name = {"-h", "--help"}, description = "Display help information")
     public boolean help;
 
-    @Option(name = "--sub", description = "Request Subscription")
-    public boolean subscription;
-
     @Option(name = "--str", description = "Request Stream")
     public boolean stream;
 
@@ -232,11 +229,6 @@ public class Main {
             }
 
             @Override
-            public Publisher<Payload> requestSubscription(Payload payload) {
-                return handleIncomingPayload(payload);
-            }
-
-            @Override
             public Publisher<Payload> requestChannel(Publisher<Payload> payloads) {
                 payloads.subscribe(printSubscriber());
                 return inputPublisher();
@@ -291,8 +283,6 @@ public class Main {
         Flowable<Payload> source;
         if (requestResponse) {
             source = Flowable.fromPublisher(client.requestResponse(singleInputPayload()));
-        } else if (subscription) {
-            source = Flowable.fromPublisher(client.requestSubscription(singleInputPayload()));
         } else if (stream) {
             source = Flowable.fromPublisher(client.requestStream(singleInputPayload()));
         } else if (channel) {

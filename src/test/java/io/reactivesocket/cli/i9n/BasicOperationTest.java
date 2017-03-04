@@ -213,14 +213,13 @@ public class BasicOperationTest {
     }
 
     @Test
-    public void subscriptionCompletedByFailure() throws Exception {
-        main.subscription = true;
+    public void streamCompletedByFailure() throws Exception {
+        main.stream = true;
         main.input = "Hello";
 
         requestHandler = new AbstractReactiveSocket() {
             @Override
-            public Publisher<Payload> requestSubscription(Payload payload) {
-                String s = ByteBufferUtil.toUtf8String(payload.getData());
+            public Publisher<Payload> requestStream(Payload payload) {
                 return Px.from(Flowable.range(1, 3)).map(i -> payload("i " + i)).concatWith(Px.error(new ApplicationException(new PayloadImpl("failed"))));
             }
         };
