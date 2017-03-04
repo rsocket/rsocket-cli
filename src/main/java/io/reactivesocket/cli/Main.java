@@ -124,7 +124,7 @@ public class Main {
     // avoid GC of the configured logger before we start using it
     private Logger retainedLogger;
 
-    public void run() throws IOException, URISyntaxException, InterruptedException {
+    public void run() {
         System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", debug ? "debug" : "warn");
 
         retainedLogger = LoggerFactory.getLogger("");
@@ -243,7 +243,8 @@ public class Main {
     }
 
     private CancellableSubscriberImpl<Payload> printSubscriber() {
-        return new CancellableSubscriberImpl<>(s -> s.request(Long.MAX_VALUE), null, p -> showPayload(p), e -> outputHandler.error("channel error", e), null);
+        return new CancellableSubscriberImpl<>(s -> s.request(Long.MAX_VALUE), null,
+            this::showPayload, e -> outputHandler.error("channel error", e), null);
     }
 
     private Publisher<Payload> handleIncomingPayload(Payload payload) {
@@ -369,7 +370,7 @@ public class Main {
         }
     }
 
-    public static void main(String... args) throws Exception {
+    @SuppressWarnings("ConstantConditions") public static void main(String... args) throws Exception {
         fromArgs(args).run();
     }
 }

@@ -19,12 +19,13 @@ public class TimeUtil {
         long amount = Long.valueOf(match.group(1));
         String unit = match.group(2);
 
-        if (unit.equals("ms")) {
-            return Duration.ofMillis(amount);
-        } else if (unit.equals("s")) {
-            return Duration.ofSeconds(amount);
-        } else {
-            return Duration.ofMinutes(amount);
+        switch (unit) {
+            case "ms":
+                return Duration.ofMillis(amount);
+            case "s":
+                return Duration.ofSeconds(amount);
+            default:
+                return Duration.ofMinutes(amount);
         }
     }
 }
