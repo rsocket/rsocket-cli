@@ -22,12 +22,11 @@ import io.airlift.airline.Help;
 import io.airlift.airline.Option;
 import io.airlift.airline.ParseException;
 import io.airlift.airline.SingleCommand;
-import io.netty.util.internal.logging.InternalLoggerFactory;
-import io.netty.util.internal.logging.Slf4JLoggerFactory;
 import io.reactivesocket.AbstractReactiveSocket;
 import io.reactivesocket.ConnectionSetupPayload;
 import io.reactivesocket.Payload;
 import io.reactivesocket.ReactiveSocket;
+import io.reactivesocket.cli.util.LoggingUtil;
 import io.reactivesocket.client.KeepAliveProvider;
 import io.reactivesocket.client.ReactiveSocketClient;
 import io.reactivesocket.client.SetupProvider;
@@ -41,15 +40,15 @@ import io.reactivesocket.util.PayloadImpl;
 import io.reactivex.Completable;
 import io.reactivex.Flowable;
 import io.reactivex.netty.client.ClientState;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import org.agrona.LangUtil;
 import org.reactivestreams.Publisher;
-import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -67,6 +66,7 @@ import static java.util.stream.IntStream.*;
  * <p>
  * Currently limited in features, only supports a text/line based approach.
  */
+@SuppressWarnings({"WeakerAccess", "CanBeFinal", "unused"})
 @Command(name = Main.NAME, description = "CLI for ReactiveSocket.")
 public class Main {
     static final String NAME = "reactivesocket-cli";
@@ -74,8 +74,8 @@ public class Main {
     @Option(name = {"-h", "--help"}, description = "Display help information")
     public boolean help;
 
-    @Option(name = "--sub", description = "Request Subscription")
-    public boolean subscription;
+    @Option(name = {"-H", "--header"}, description = "Custom header to pass to server")
+    public List<String> headers;
 
     @Option(name = "--str", description = "Request Stream")
     public boolean stream;
@@ -101,6 +101,12 @@ public class Main {
     @Option(name = {"-m", "--metadata"}, description = "Metadata input string input or @path/to/file")
     public String metadata;
 
+    @Option(name = {"--metadataFormat"}, description = "Metadata Format", allowedValues = {"json", "cbor", "mime-type"})
+    public String metadataFormat = "json";
+
+    @Option(name = {"--dataFormat"}, description = "Data Format", allowedValues = {"json", "cbor", "mime-type"})
+    public String dataFormat = "binary";
+
     @Option(name = "--setup", description = "String input or @path/to/file for setup metadata")
     public String setup;
 
@@ -124,15 +130,8 @@ public class Main {
     public OutputHandler outputHandler;
     private TransportServer.StartedServer server;
 
-    // avoid GC of the configured logger before we start using it
-    private Logger retainedLogger;
-
-    public void run() throws IOException, URISyntaxException, InterruptedException {
-        System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", debug ? "debug" : "warn");
-
-        retainedLogger = LoggerFactory.getLogger("");
-
-        InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE);
+    public void run() {
+        LoggingUtil.configureLogging(debug);
 
         if (outputHandler == null) {
             outputHandler = new ConsoleOutputHandler();
@@ -147,11 +146,7 @@ public class Main {
 
                 server.awaitShutdown();
             } else {
-                SetupProvider setupProvider = SetupProvider.keepAlive(keepAlive()).disableLease();
-
-                if (setup != null) {
-                    setupProvider = setupProvider.setupPayload(parseSetupPayload());
-                }
+              SetupProvider setupProvider = buildSetupProvider();
 
                 client = Flowable
                     .fromPublisher(
@@ -175,7 +170,35 @@ public class Main {
         }
     }
 
-    public Payload parseSetupPayload() {
+  private SetupProvider buildSetupProvider() {
+    SetupProvider setupProvider = SetupProvider.keepAlive(keepAlive()).disableLease().metadataMimeType(standardMimeType(metadataFormat)).dataMimeType(standardMimeType(dataFormat));
+
+    if (setup != null) {
+        setupProvider = setupProvider.setupPayload(parseSetupPayload());
+    }
+    return setupProvider;
+  }
+
+  private String standardMimeType(String dataFormat) {
+      if (dataFormat == null) {
+        return "application/json";
+      }
+
+      switch (dataFormat) {
+        case "json":
+          return "application/json";
+        case "cbor":
+          return "application/cbor";
+        case "binary":
+          return "application/binary";
+        case "text":
+          return "text/plain";
+        default:
+          return "application/json";
+      }
+  }
+
+  public Payload parseSetupPayload() {
         String source = null;
 
         if (setup.startsWith("@")) {
@@ -232,11 +255,6 @@ public class Main {
             }
 
             @Override
-            public Publisher<Payload> requestSubscription(Payload payload) {
-                return handleIncomingPayload(payload);
-            }
-
-            @Override
             public Publisher<Payload> requestChannel(Publisher<Payload> payloads) {
                 payloads.subscribe(printSubscriber());
                 return inputPublisher();
@@ -251,7 +269,8 @@ public class Main {
     }
 
     private CancellableSubscriberImpl<Payload> printSubscriber() {
-        return new CancellableSubscriberImpl<>(s -> s.request(Long.MAX_VALUE), null, p -> showPayload(p), e -> outputHandler.error("channel error", e), null);
+        return new CancellableSubscriberImpl<>(s -> s.request(Long.MAX_VALUE), null,
+            this::showPayload, e -> outputHandler.error("channel error", e), null);
     }
 
     private Publisher<Payload> handleIncomingPayload(Payload payload) {
@@ -283,7 +302,7 @@ public class Main {
         if (fireAndForget) {
             return Flowable.fromPublisher(client.fireAndForget(singleInputPayload())).ignoreElements();
         }
-        
+
         if (metadataPush) {
             return Flowable.fromPublisher(client.metadataPush(singleInputPayload())).ignoreElements();
         }
@@ -291,8 +310,6 @@ public class Main {
         Flowable<Payload> source;
         if (requestResponse) {
             source = Flowable.fromPublisher(client.requestResponse(singleInputPayload()));
-        } else if (subscription) {
-            source = Flowable.fromPublisher(client.requestSubscription(singleInputPayload()));
         } else if (stream) {
             source = Flowable.fromPublisher(client.requestStream(singleInputPayload()));
         } else if (channel) {
@@ -324,7 +341,9 @@ public class Main {
             is = CharSource.wrap(input);
         }
 
-        return Publishers.lines(is);
+        byte[] metadata = buildMetadata();
+
+        return Publishers.lines(is, l -> metadata);
     }
 
     private static String getInputFromSource(String source, Supplier<String> nullHandler) {
@@ -361,11 +380,34 @@ public class Main {
             return in.nextLine();
         });
 
-        String metadata = getInputFromSource(this.metadata, () -> "");
+        byte[] metadata = buildMetadata();
 
-        return new PayloadImpl(data, metadata);
+        return new PayloadImpl(data.getBytes(StandardCharsets.UTF_8), metadata);
     }
 
+    private byte[] buildMetadata() {
+        if (this.metadata != null) {
+            if (this.headers != null) {
+                throw new UsageException("Can't specify headers and metadata");
+            }
+
+            return getInputFromSource(this.metadata, () -> "").getBytes(StandardCharsets.UTF_8);
+        } else if (this.headers != null) {
+            Map<String, String> headerMap = new LinkedHashMap<>();
+
+            if (headers != null) {
+                for (String header : headers) {
+                    String[] parts = header.split(":", 2);
+                    // TODO: consider better strategy than simple trim
+                    headerMap.put(parts[0].trim(), parts[1].trim());
+                }
+            }
+
+            return MetadataUtil.encodeMetadataMap(headerMap, standardMimeType(metadataFormat));
+        } else {
+            return new byte[0];
+        }
+    }
 
     private static Main fromArgs(String... args) {
         SingleCommand<Main> cmd = SingleCommand.singleCommand(Main.class);
@@ -379,7 +421,7 @@ public class Main {
         }
     }
 
-    public static void main(String... args) throws Exception {
+    @SuppressWarnings("ConstantConditions") public static void main(String... args) throws Exception {
         fromArgs(args).run();
     }
 }

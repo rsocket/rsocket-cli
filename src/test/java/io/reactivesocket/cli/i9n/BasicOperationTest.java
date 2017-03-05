@@ -16,15 +16,12 @@ import io.reactivesocket.transport.TransportServer;
 import io.reactivesocket.util.PayloadImpl;
 import io.reactivex.Flowable;
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
 import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 import org.reactivestreams.Publisher;
-
-import java.util.concurrent.TimeUnit;
 
 import static io.reactivesocket.client.KeepAliveProvider.never;
 import static io.reactivesocket.client.SetupProvider.keepAlive;
@@ -52,7 +49,7 @@ public class BasicOperationTest {
         }
     };
 
-    public void connect() throws Exception {
+    public void connect() {
         main.outputHandler = output;
 
         LocalServer localServer = LocalServer.create("test-local-server-"
@@ -213,14 +210,13 @@ public class BasicOperationTest {
     }
 
     @Test
-    public void subscriptionCompletedByFailure() throws Exception {
-        main.subscription = true;
+    public void streamCompletedByFailure() throws Exception {
+        main.stream = true;
         main.input = "Hello";
 
         requestHandler = new AbstractReactiveSocket() {
             @Override
-            public Publisher<Payload> requestSubscription(Payload payload) {
-                String s = ByteBufferUtil.toUtf8String(payload.getData());
+            public Publisher<Payload> requestStream(Payload payload) {
                 return Px.from(Flowable.range(1, 3)).map(i -> payload("i " + i)).concatWith(Px.error(new ApplicationException(new PayloadImpl("failed"))));
             }
         };

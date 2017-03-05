@@ -21,6 +21,8 @@ import io.reactivesocket.Payload;
 import io.reactivesocket.util.PayloadImpl;
 import io.reactivex.Flowable;
 import io.reactivex.schedulers.Schedulers;
+import java.nio.charset.StandardCharsets;
+import java.util.function.Function;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 
@@ -38,9 +40,9 @@ public final class Publishers {
      *
      * @param inputStream to read.
      */
-    public static Publisher<Payload> lines(CharSource inputStream) {
+    public static Publisher<Payload> lines(CharSource inputStream, Function<String, byte[]> metadataFn) {
         return Flowable.fromPublisher(splitInLines(inputStream))
-                       .map(l -> (Payload) new PayloadImpl(l));
+                       .map(l -> (Payload) new PayloadImpl(l.getBytes(StandardCharsets.UTF_8), metadataFn.apply(l)));
     }
 
     public static Publisher<String> splitInLines(CharSource inputStream) {

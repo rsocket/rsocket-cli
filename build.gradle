@@ -18,12 +18,15 @@ repositories {
 }
 
 dependencies {
-    compile 'io.reactivesocket:reactivesocket-transport-tcp:0.5.3-SNAPSHOT'
-    compile 'io.reactivesocket:reactivesocket-transport-local:0.5.3-SNAPSHOT'
+    compile 'io.reactivesocket:reactivesocket-transport-tcp:1.0.0-SNAPSHOT'
+    compile 'io.reactivesocket:reactivesocket-transport-local:1.0.0-SNAPSHOT'
+    compile 'io.reactivesocket:reactivesocket-mime-types:1.0.0-SNAPSHOT'
     compile 'io.reactivex.rxjava2:rxjava:2.0.2'
 
     compile 'io.airlift:airline:0.7'
-    runtime 'org.slf4j:slf4j-simple:1.7.21'
+    compile 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.8.7'
+    compile 'com.fasterxml.jackson.core:jackson-databind:2.8.7'
+    compile 'org.slf4j:slf4j-jdk14:1.7.24'
 
     testCompile 'junit:junit:4.12'
     testCompile 'org.mockito:mockito-core:1.10.19'

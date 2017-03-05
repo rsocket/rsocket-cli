@@ -15,12 +15,16 @@ _reactivesocket_complete()
         -i | --input | --keepalive | -m | --metadata | --timeout | --setup)
             return
             ;;
+        --metadataFormat | --dataFormat)
+            COMPREPLY=( $( compgen -W "text json cbor binary application/json application/cbor text/plain application/x-www-form-urlencoded application/x.reactivesocket.meta+cbor application/binary" -- "$cur" ) )
+            return
+            ;;
   esac
 
   if [[ $cur == -* ]]; then
       # TODO parse help automatically
       #_reactivesocket_options=${_reactivesocket_options:=$(_parse_help reactivesocket-cli --help)}
-      _reactivesocket_options="--sub --str --rr --fnf --channel --metadataPush --ops -i --input --debug --server --keepalive -h --help -m --metadata --setup --timeout"
+      _reactivesocket_options="--sub --str --rr --fnf --channel --metadataPush --ops -i --input --debug --server --keepalive -h --help -m --metadata --setup --timeout --metadataFormat --dataFormat"
       COMPREPLY=( $( compgen -W "$_reactivesocket_options" -- "$cur" ) )
       return;
   fi
