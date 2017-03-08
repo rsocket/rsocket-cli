@@ -32,8 +32,6 @@ import io.reactivesocket.client.ReactiveSocketClient;
 import io.reactivesocket.client.SetupProvider;
 import io.reactivesocket.frame.ByteBufferUtil;
 import io.reactivesocket.lease.DisabledLeaseAcceptingSocket;
-import io.reactivesocket.reactivestreams.extensions.Px;
-import io.reactivesocket.reactivestreams.extensions.internal.subscribers.CancellableSubscriberImpl;
 import io.reactivesocket.server.ReactiveSocketServer;
 import io.reactivesocket.transport.TransportServer;
 import io.reactivesocket.util.PayloadImpl;
@@ -43,7 +41,6 @@ import io.reactivex.netty.client.ClientState;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.agrona.LangUtil;
-import org.reactivestreams.Publisher;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
@@ -55,6 +52,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 import java.util.function.Supplier;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import static io.reactivesocket.cli.TimeUtil.*;
 import static java.util.concurrent.TimeUnit.*;
@@ -231,7 +230,7 @@ public class Main {
         }
 
         Duration duration = parseShortDuration(keepalive);
-        return KeepAliveProvider.from((int) duration.toMillis(), Flowable.interval(duration.toMillis(), MILLISECONDS));
+        return KeepAliveProvider.from((int) duration.toMillis(), Flux.interval(duration));
     }
 
     public ReactiveSocket createServerRequestHandler(ConnectionSetupPayload setupPayload) {
@@ -239,41 +238,44 @@ public class Main {
 
         return new AbstractReactiveSocket() {
             @Override
-            public Publisher<Void> fireAndForget(Payload payload) {
+            public Mono<Void> fireAndForget(Payload payload) {
                 showPayload(payload);
-                return Px.empty();
+                return Mono.empty();
             }
 
             @Override
-            public Publisher<Payload> requestResponse(Payload payload) {
+            public Mono<Payload> requestResponse(Payload payload) {
+                return handleIncomingPayload(payload).single();
+            }
+
+            @Override
+            public Flux<Payload> requestStream(Payload payload) {
                 return handleIncomingPayload(payload);
             }
 
             @Override
-            public Publisher<Payload> requestStream(Payload payload) {
-                return handleIncomingPayload(payload);
-            }
+            public Flux<Payload> requestChannel(Publisher<Payload> payloads) {
+                //payloads.subscribe(printSubscriber());
+                payloads.subscribe(s -> {
 
-            @Override
-            public Publisher<Payload> requestChannel(Publisher<Payload> payloads) {
-                payloads.subscribe(printSubscriber());
+                });
                 return inputPublisher();
             }
 
             @Override
-            public Publisher<Void> metadataPush(Payload payload) {
+            public Mono<Void> metadataPush(Payload payload) {
                 outputHandler.showOutput(ByteBufferUtil.toUtf8String(payload.getMetadata()));
-                return Px.empty();
+                return Mono.empty();
             }
         };
     }
 
-    private CancellableSubscriberImpl<Payload> printSubscriber() {
+    private Subscriber<Payload> printSubscriber() {
         return new CancellableSubscriberImpl<>(s -> s.request(Long.MAX_VALUE), null,
             this::showPayload, e -> outputHandler.error("channel error", e), null);
     }
 
-    private Publisher<Payload> handleIncomingPayload(Payload payload) {
+    private Flux<Payload> handleIncomingPayload(Payload payload) {
         showPayload(payload);
         return inputPublisher();
     }
@@ -330,7 +332,7 @@ public class Main {
             .ignoreElements();
     }
 
-    private Publisher<Payload> inputPublisher() {
+    private Flux<Payload> inputPublisher() {
         CharSource is;
 
         if (input == null) {
