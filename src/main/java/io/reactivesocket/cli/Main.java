@@ -160,8 +160,6 @@ public class Main {
             }
         } catch (Exception e) {
             outputHandler.error("error", e);
-        } finally {
-//            ClientState.defaultEventloopGroup().shutdownGracefully();
         }
     }
 

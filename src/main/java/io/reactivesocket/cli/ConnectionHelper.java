@@ -26,7 +26,6 @@ public class ConnectionHelper {
     public static TransportClient buildClientConnection(URI uri) {
         if ("tcp".equals(uri.getScheme())) {
             return TcpTransportClient.create(TcpClient.create(uri.getHost(), uri.getPort()));
-//                    .logReactiveSocketFrames("rs", Level.INFO);
         } else {
             throw new UnsupportedOperationException("uri unsupported: " + uri);
         }
@@ -35,7 +34,6 @@ public class ConnectionHelper {
     public static TransportServer buildServerConnection(URI uri) {
         if ("tcp".equals(uri.getScheme())) {
             return TcpTransportServer.create(TcpServer.create(uri.getHost(), uri.getPort()));
-//            .logReactiveSocketFrames("rs", Level.INFO);
         } else {
             throw new UnsupportedOperationException("uri unsupported: " + uri);
         }
