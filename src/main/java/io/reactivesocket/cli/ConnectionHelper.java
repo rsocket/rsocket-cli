@@ -15,17 +15,18 @@ package io.reactivesocket.cli;
 
 import io.reactivesocket.transport.TransportClient;
 import io.reactivesocket.transport.TransportServer;
-import io.reactivesocket.transport.tcp.client.TcpTransportClient;
-import io.reactivesocket.transport.tcp.server.TcpTransportServer;
-import org.slf4j.event.Level;
+import io.reactivesocket.transport.netty.client.TcpTransportClient;
+import io.reactivesocket.transport.netty.server.TcpTransportServer;
+import reactor.ipc.netty.tcp.TcpClient;
+import reactor.ipc.netty.tcp.TcpServer;
 
-import java.net.InetSocketAddress;
 import java.net.URI;
 
 public class ConnectionHelper {
     public static TransportClient buildClientConnection(URI uri) {
         if ("tcp".equals(uri.getScheme())) {
-            return TcpTransportClient.create(new InetSocketAddress(uri.getHost(), uri.getPort())).logReactiveSocketFrames("rs", Level.INFO);
+            return TcpTransportClient.create(TcpClient.create(uri.getHost(), uri.getPort()));
+//                    .logReactiveSocketFrames("rs", Level.INFO);
         } else {
             throw new UnsupportedOperationException("uri unsupported: " + uri);
         }
@@ -33,7 +34,8 @@ public class ConnectionHelper {
 
     public static TransportServer buildServerConnection(URI uri) {
         if ("tcp".equals(uri.getScheme())) {
-            return TcpTransportServer.create(new InetSocketAddress(uri.getHost(), uri.getPort())).logReactiveSocketFrames("rs", Level.INFO);
+            return TcpTransportServer.create(TcpServer.create(uri.getHost(), uri.getPort()));
+//            .logReactiveSocketFrames("rs", Level.INFO);
         } else {
             throw new UnsupportedOperationException("uri unsupported: " + uri);
         }
