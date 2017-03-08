@@ -10,7 +10,6 @@ import io.reactivesocket.frame.ByteBufferUtil;
 import io.reactivesocket.lease.DisabledLeaseAcceptingSocket;
 import io.reactivesocket.local.LocalClient;
 import io.reactivesocket.local.LocalServer;
-import io.reactivesocket.reactivestreams.extensions.Px;
 import io.reactivesocket.server.ReactiveSocketServer;
 import io.reactivesocket.transport.TransportServer;
 import io.reactivesocket.util.PayloadImpl;
@@ -21,7 +20,10 @@ import org.junit.Test;
 import org.junit.rules.TestRule;
 import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
-import org.reactivestreams.Publisher;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+import java.time.Duration;
 
 import static io.reactivesocket.client.KeepAliveProvider.never;
 import static io.reactivesocket.client.SetupProvider.keepAlive;
@@ -80,8 +82,8 @@ public class BasicOperationTest {
 
         requestHandler = new AbstractReactiveSocket() {
             @Override
-            public Publisher<Void> metadataPush(Payload payload) {
-                return Px.empty();
+            public Mono<Void> metadataPush(Payload payload) {
+                return Mono.empty();
             }
         };
 
@@ -97,8 +99,8 @@ public class BasicOperationTest {
 
         requestHandler = new AbstractReactiveSocket() {
             @Override
-            public Publisher<Void> fireAndForget(Payload payload) {
-                return Px.empty();
+            public Mono<Void> fireAndForget(Payload payload) {
+                return Mono.empty();
             }
         };
 
@@ -114,8 +116,8 @@ public class BasicOperationTest {
 
         requestHandler = new AbstractReactiveSocket() {
             @Override
-            public Publisher<Payload> requestResponse(Payload payload) {
-                return Px.just(reverse(ByteBufferUtil.toUtf8String(payload.getData())));
+            public Mono<Payload> requestResponse(Payload payload) {
+                return Mono.just(reverse(ByteBufferUtil.toUtf8String(payload.getData())));
             }
         };
 
@@ -133,8 +135,8 @@ public class BasicOperationTest {
 
         requestHandler = new AbstractReactiveSocket() {
             @Override
-            public Publisher<Payload> requestResponse(Payload payload) {
-                return Px.just(reverse(ByteBufferUtil.toUtf8String(payload.getData())));
+            public Mono<Payload> requestResponse(Payload payload) {
+                return Mono.just(reverse(ByteBufferUtil.toUtf8String(payload.getData())));
             }
         };
 
@@ -152,8 +154,8 @@ public class BasicOperationTest {
 
         requestHandler = new AbstractReactiveSocket() {
             @Override
-            public Publisher<Payload> requestResponse(Payload payload) {
-                return Px.just(reverse(ByteBufferUtil.toUtf8String(payload.getData())));
+            public Mono<Payload> requestResponse(Payload payload) {
+                return Mono.just(reverse(ByteBufferUtil.toUtf8String(payload.getData())));
             }
         };
 
@@ -171,8 +173,8 @@ public class BasicOperationTest {
 
         requestHandler = new AbstractReactiveSocket() {
             @Override
-            public Publisher<Payload> requestResponse(Payload payload) {
-                return Px.error(new ApplicationException(payload("server failure")));
+            public Mono<Payload> requestResponse(Payload payload) {
+                return Mono.error(new ApplicationException(payload("server failure")));
             }
         };
 
@@ -190,10 +192,10 @@ public class BasicOperationTest {
 
         requestHandler = new AbstractReactiveSocket() {
             @Override
-            public Publisher<Payload> requestStream(Payload payload) {
+            public Flux<Payload> requestStream(Payload payload) {
                 String s = ByteBufferUtil.toUtf8String(payload.getData());
 
-                return Px.from(Flowable.range(1, 3)).map(i -> reverse(s));
+                return Flux.range(1, 3).map(i -> reverse(s));
             }
         };
 
@@ -216,8 +218,8 @@ public class BasicOperationTest {
 
         requestHandler = new AbstractReactiveSocket() {
             @Override
-            public Publisher<Payload> requestStream(Payload payload) {
-                return Px.from(Flowable.range(1, 3)).map(i -> payload("i " + i)).concatWith(Px.error(new ApplicationException(new PayloadImpl("failed"))));
+            public Flux<Payload> requestStream(Payload payload) {
+                return Flux.range(1, 3).map(i -> payload("i " + i)).concatWith(Mono.error(new ApplicationException(new PayloadImpl("failed"))));
             }
         };
 
@@ -233,7 +235,7 @@ public class BasicOperationTest {
 
     private void run() throws Exception {
         connect();
-        main.run(client).blockingAwait(5, SECONDS);
+        main.run(client).block(Duration.ofSeconds(5));
     }
 
     public static Payload reverse(String s) {

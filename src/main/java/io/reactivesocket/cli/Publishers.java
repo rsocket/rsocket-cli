@@ -47,25 +47,10 @@ public final class Publishers {
     }
 
     public static Flux<String> splitInLines(CharSource inputStream) {
-        return Flux.generate(c -> {
-            try {
-                inputStream.readLines(new LineProcessor<Void>() {
-                    @Override
-                    public boolean processLine(String line) {
-                        c.next(line);
-                        // TODO handle cancellation
-                        return true;
-                    }
-
-                    @Override
-                    public Void getResult() {
-                        return null;
-                    }
-                });
-                c.complete();
-            } catch (IOException e) {
-                c.error(e);
-            }
-        });
+        try {
+            return Flux.fromStream(inputStream.openBufferedStream().lines());
+        } catch (IOException e) {
+            return Flux.error(e);
+        }
     }
 }

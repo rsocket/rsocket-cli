@@ -4,6 +4,7 @@ import com.google.common.io.CharSource;
 import io.reactivesocket.cli.Publishers;
 import io.reactivex.subscribers.TestSubscriber;
 import org.junit.Test;
+import org.reactivestreams.Subscriber;
 
 public class PublishersTest {
 
