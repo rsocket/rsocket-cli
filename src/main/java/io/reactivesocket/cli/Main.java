@@ -32,14 +32,9 @@ import io.reactivesocket.client.ReactiveSocketClient;
 import io.reactivesocket.client.SetupProvider;
 import io.reactivesocket.frame.ByteBufferUtil;
 import io.reactivesocket.lease.DisabledLeaseAcceptingSocket;
-import io.reactivesocket.reactivestreams.extensions.Px;
-import io.reactivesocket.reactivestreams.extensions.internal.subscribers.CancellableSubscriberImpl;
 import io.reactivesocket.server.ReactiveSocketServer;
 import io.reactivesocket.transport.TransportServer;
 import io.reactivesocket.util.PayloadImpl;
-import io.reactivex.Completable;
-import io.reactivex.Flowable;
-import io.reactivex.netty.client.ClientState;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.agrona.LangUtil;
@@ -55,6 +50,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 import java.util.function.Supplier;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import static io.reactivesocket.cli.TimeUtil.*;
 import static java.util.concurrent.TimeUnit.*;
@@ -148,25 +145,21 @@ public class Main {
             } else {
               SetupProvider setupProvider = buildSetupProvider();
 
-                client = Flowable
-                    .fromPublisher(
+                client = Mono.from(
                         ReactiveSocketClient
                             .create(ConnectionHelper.buildClientConnection(uri), setupProvider)
-                            .connect())
-                    .blockingFirst();
+                            .connect()).block();
 
-                Completable run = run(client);
+                Mono<Void> run = run(client);
 
                 if (timeout != null) {
-                    run.blockingAwait(timeout, SECONDS);
+                    run.block(Duration.ofSeconds(timeout));
                 } else {
-                    run.blockingAwait();
+                    run.block();
                 }
             }
         } catch (Exception e) {
             outputHandler.error("error", e);
-        } finally {
-            ClientState.defaultEventloopGroup().shutdownGracefully();
         }
     }
 
@@ -231,7 +224,7 @@ public class Main {
         }
 
         Duration duration = parseShortDuration(keepalive);
-        return KeepAliveProvider.from((int) duration.toMillis(), Flowable.interval(duration.toMillis(), MILLISECONDS));
+        return KeepAliveProvider.from((int) duration.toMillis(), Flux.interval(duration));
     }
 
     public ReactiveSocket createServerRequestHandler(ConnectionSetupPayload setupPayload) {
@@ -239,41 +232,36 @@ public class Main {
 
         return new AbstractReactiveSocket() {
             @Override
-            public Publisher<Void> fireAndForget(Payload payload) {
+            public Mono<Void> fireAndForget(Payload payload) {
                 showPayload(payload);
-                return Px.empty();
+                return Mono.empty();
             }
 
             @Override
-            public Publisher<Payload> requestResponse(Payload payload) {
+            public Mono<Payload> requestResponse(Payload payload) {
+                return handleIncomingPayload(payload).single();
+            }
+
+            @Override
+            public Flux<Payload> requestStream(Payload payload) {
                 return handleIncomingPayload(payload);
             }
 
             @Override
-            public Publisher<Payload> requestStream(Payload payload) {
-                return handleIncomingPayload(payload);
-            }
-
-            @Override
-            public Publisher<Payload> requestChannel(Publisher<Payload> payloads) {
-                payloads.subscribe(printSubscriber());
+            public Flux<Payload> requestChannel(Publisher<Payload> payloads) {
+                Flux.from(payloads).subscribe(p -> showPayload(p), e -> outputHandler.error("channel error", e));
                 return inputPublisher();
             }
 
             @Override
-            public Publisher<Void> metadataPush(Payload payload) {
+            public Mono<Void> metadataPush(Payload payload) {
                 outputHandler.showOutput(ByteBufferUtil.toUtf8String(payload.getMetadata()));
-                return Px.empty();
+                return Mono.empty();
             }
         };
     }
 
-    private CancellableSubscriberImpl<Payload> printSubscriber() {
-        return new CancellableSubscriberImpl<>(s -> s.request(Long.MAX_VALUE), null,
-            this::showPayload, e -> outputHandler.error("channel error", e), null);
-    }
-
-    private Publisher<Payload> handleIncomingPayload(Payload payload) {
+    private Flux<Payload> handleIncomingPayload(Payload payload) {
         showPayload(payload);
         return inputPublisher();
     }
@@ -282,55 +270,51 @@ public class Main {
         outputHandler.showOutput(ByteBufferUtil.toUtf8String(payload.getData()));
     }
 
-    public Completable run(ReactiveSocket client) {
+    public Mono<Void> run(ReactiveSocket client) {
         try {
             return runAllOperations(client);
         } catch (Exception e) {
             outputHandler.error("error", e);
         }
 
-        return Completable.complete();
+        return Mono.empty();
     }
 
-    private Completable runAllOperations(ReactiveSocket client) {
-        List<Completable> l = range(0, operations).mapToObj(i -> runSingleOperation(client)).collect(toList());
-
-        return Completable.merge(l);
+    private Mono<Void> runAllOperations(ReactiveSocket client) {
+        return Flux.range(0, operations).flatMap(i -> runSingleOperation(client)).then();
     }
 
-    private Completable runSingleOperation(ReactiveSocket client) {
+    private Mono<Void> runSingleOperation(ReactiveSocket client) {
         if (fireAndForget) {
-            return Flowable.fromPublisher(client.fireAndForget(singleInputPayload())).ignoreElements();
+            return client.fireAndForget(singleInputPayload()).ignoreElement();
         }
 
         if (metadataPush) {
-            return Flowable.fromPublisher(client.metadataPush(singleInputPayload())).ignoreElements();
+            return client.metadataPush(singleInputPayload()).ignoreElement();
         }
 
-        Flowable<Payload> source;
+        Flux<Payload> source;
         if (requestResponse) {
-            source = Flowable.fromPublisher(client.requestResponse(singleInputPayload()));
+            source = client.requestResponse(singleInputPayload()).flux();
         } else if (stream) {
-            source = Flowable.fromPublisher(client.requestStream(singleInputPayload()));
+            source = client.requestStream(singleInputPayload());
         } else if (channel) {
             if (input == null) {
                 outputHandler.info("Type commands to send to the server.");
             }
-            source = Flowable.fromPublisher(client.requestChannel(inputPublisher()));
+            source = client.requestChannel(inputPublisher());
         } else {
             outputHandler.info("Using passive client mode, choose an option to use a different mode.");
-            source = Flowable.never();
+            source = Flux.never();
         }
 
         return source.map(Payload::getData)
             .map(ByteBufferUtil::toUtf8String)
             .doOnNext(outputHandler::showOutput)
-            .doOnError(e -> outputHandler.error("error from server", e))
-            .onExceptionResumeNext(Flowable.empty())
-            .ignoreElements();
+            .doOnError(e -> outputHandler.error("error from server", e)).then();
     }
 
-    private Publisher<Payload> inputPublisher() {
+    private Flux<Payload> inputPublisher() {
         CharSource is;
 
         if (input == null) {

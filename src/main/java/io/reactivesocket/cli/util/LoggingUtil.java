@@ -41,6 +41,7 @@ public class LoggingUtil {
       getLogger("io.netty").setLevel(Level.INFO);
       getLogger("io.reactivex").setLevel(Level.FINE);
       getLogger("io.reactivesocket").setLevel(Level.FINEST);
+      getLogger("reactor.ipc.netty").setLevel(Level.FINEST);
     } else {
       getLogger("").setLevel(Level.SEVERE);
       getLogger("io.netty").setLevel(Level.SEVERE);
