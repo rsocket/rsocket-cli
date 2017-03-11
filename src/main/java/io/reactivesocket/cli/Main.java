@@ -54,9 +54,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import static io.reactivesocket.cli.TimeUtil.*;
-import static java.util.concurrent.TimeUnit.*;
-import static java.util.stream.Collectors.*;
-import static java.util.stream.IntStream.*;
 
 /**
  * Simple command line tool to make a ReactiveSocket connection and send/receive elements.
@@ -66,346 +63,359 @@ import static java.util.stream.IntStream.*;
 @SuppressWarnings({"WeakerAccess", "CanBeFinal", "unused"})
 @Command(name = Main.NAME, description = "CLI for ReactiveSocket.")
 public class Main {
-    static final String NAME = "reactivesocket-cli";
+  static final String NAME = "reactivesocket-cli";
 
-    @Option(name = {"-h", "--help"}, description = "Display help information")
-    public boolean help;
+  @Option(name = {"-h", "--help"}, description = "Display help information")
+  public boolean help;
 
-    @Option(name = {"-H", "--header"}, description = "Custom header to pass to server")
-    public List<String> headers;
+  @Option(name = {"-H", "--header"}, description = "Custom header to pass to server")
+  public List<String> headers;
 
-    @Option(name = "--str", description = "Request Stream")
-    public boolean stream;
+  @Option(name = "--str", description = "Request Stream")
+  public boolean stream;
 
-    @Option(name = "--rr", description = "Request Response")
-    public boolean requestResponse;
+  @Option(name = "--rr", description = "Request Response")
+  public boolean requestResponse;
 
-    @Option(name = "--fnf", description = "Fire and Forget")
-    public boolean fireAndForget;
+  @Option(name = "--fnf", description = "Fire and Forget")
+  public boolean fireAndForget;
 
-    @Option(name = "--channel", description = "Channel")
-    public boolean channel;
+  @Option(name = "--channel", description = "Channel")
+  public boolean channel;
 
-    @Option(name = "--metadataPush", description = "Metadata Push")
-    public boolean metadataPush;
+  @Option(name = "--metadataPush", description = "Metadata Push")
+  public boolean metadataPush;
 
-    @Option(name = "--server", description = "Start server instead of client")
-    public boolean serverMode;
+  @Option(name = "--server", description = "Start server instead of client")
+  public boolean serverMode;
 
-    @Option(name = {"-i", "--input"}, description = "String input or @path/to/file")
-    public String input;
+  @Option(name = {"-i", "--input"}, description = "String input or @path/to/file")
+  public String input;
 
-    @Option(name = {"-m", "--metadata"}, description = "Metadata input string input or @path/to/file")
-    public String metadata;
+  @Option(name = {"-m", "--metadata"}, description = "Metadata input string input or @path/to/file")
+  public String metadata;
 
-    @Option(name = {"--metadataFormat"}, description = "Metadata Format", allowedValues = {"json", "cbor", "mime-type"})
-    public String metadataFormat = "json";
+  @Option(name = {"--metadataFormat"}, description = "Metadata Format", allowedValues = {"json",
+      "cbor", "mime-type"})
+  public String metadataFormat = "json";
 
-    @Option(name = {"--dataFormat"}, description = "Data Format", allowedValues = {"json", "cbor", "mime-type"})
-    public String dataFormat = "binary";
+  @Option(name = {"--dataFormat"}, description = "Data Format", allowedValues = {"json", "cbor",
+      "mime-type"})
+  public String dataFormat = "binary";
 
-    @Option(name = "--setup", description = "String input or @path/to/file for setup metadata")
-    public String setup;
+  @Option(name = "--setup", description = "String input or @path/to/file for setup metadata")
+  public String setup;
 
-    @Option(name = "--debug", description = "Debug Output")
-    public boolean debug;
+  @Option(name = "--debug", description = "Debug Output")
+  public boolean debug;
 
-    @Option(name = "--ops", description = "Operation Count")
-    public int operations = 1;
+  @Option(name = "--ops", description = "Operation Count")
+  public int operations = 1;
 
-    @Option(name = "--timeout", description = "Timeout in seconds")
-    public Long timeout;
+  @Option(name = "--timeout", description = "Timeout in seconds")
+  public Long timeout;
 
-    @Option(name = "--keepalive", description = "Keepalive period")
-    public String keepalive;
+  @Option(name = "--keepalive", description = "Keepalive period")
+  public String keepalive;
 
-    @Arguments(title = "target", description = "Endpoint URL", required = true)
-    public List<String> arguments = new ArrayList<>();
+  @Arguments(title = "target", description = "Endpoint URL", required = true)
+  public List<String> arguments = new ArrayList<>();
 
-    public ReactiveSocket client;
+  public ReactiveSocket client;
 
-    public OutputHandler outputHandler;
-    private TransportServer.StartedServer server;
+  public OutputHandler outputHandler;
+  private TransportServer.StartedServer server;
 
-    public void run() {
-        LoggingUtil.configureLogging(debug);
+  public void run() {
+    LoggingUtil.configureLogging(debug);
 
-        if (outputHandler == null) {
-            outputHandler = new ConsoleOutputHandler();
-        }
-
-        try {
-            URI uri = new URI(arguments.get(0));
-
-            if (serverMode) {
-                server = ReactiveSocketServer.create(ConnectionHelper.buildServerConnection(uri))
-                    .start((setupPayload, reactiveSocket) -> new DisabledLeaseAcceptingSocket(createServerRequestHandler(setupPayload)));
-
-                server.awaitShutdown();
-            } else {
-              SetupProvider setupProvider = buildSetupProvider();
-
-                client = Mono.from(
-                        ReactiveSocketClient
-                            .create(ConnectionHelper.buildClientConnection(uri), setupProvider)
-                            .connect()).block();
-
-                Mono<Void> run = run(client);
-
-                if (timeout != null) {
-                    run.block(Duration.ofSeconds(timeout));
-                } else {
-                    run.block();
-                }
-            }
-        } catch (Exception e) {
-            outputHandler.error("error", e);
-        }
+    if (outputHandler == null) {
+      outputHandler = new ConsoleOutputHandler();
     }
 
+    try {
+      URI uri = new URI(arguments.get(0));
+
+      if (serverMode) {
+        server = ReactiveSocketServer.create(ConnectionHelper.buildServerConnection(uri))
+            .start((setupPayload, reactiveSocket) -> new DisabledLeaseAcceptingSocket(
+                createServerRequestHandler(setupPayload)));
+
+        server.awaitShutdown();
+      } else {
+        SetupProvider setupProvider = buildSetupProvider();
+
+        client = Mono.from(
+            ReactiveSocketClient
+                .create(ConnectionHelper.buildClientConnection(uri), setupProvider)
+                .connect()).block();
+
+        Flux<Void> run = run(client);
+
+        if (timeout != null) {
+          run.blockLast(Duration.ofSeconds(timeout));
+        } else {
+          run.blockLast();
+        }
+      }
+    } catch (Exception e) {
+      handleError(e);
+    }
+  }
+
   private SetupProvider buildSetupProvider() {
-    SetupProvider setupProvider = SetupProvider.keepAlive(keepAlive()).disableLease().metadataMimeType(standardMimeType(metadataFormat)).dataMimeType(standardMimeType(dataFormat));
+    SetupProvider setupProvider = SetupProvider.keepAlive(keepAlive())
+        .disableLease()
+        .metadataMimeType(standardMimeType(metadataFormat))
+        .dataMimeType(standardMimeType(dataFormat));
 
     if (setup != null) {
-        setupProvider = setupProvider.setupPayload(parseSetupPayload());
+      setupProvider = setupProvider.setupPayload(parseSetupPayload());
     }
     return setupProvider;
   }
 
   private String standardMimeType(String dataFormat) {
-      if (dataFormat == null) {
-        return "application/json";
-      }
+    if (dataFormat == null) {
+      return "application/json";
+    }
 
-      switch (dataFormat) {
-        case "json":
-          return "application/json";
-        case "cbor":
-          return "application/cbor";
-        case "binary":
-          return "application/binary";
-        case "text":
-          return "text/plain";
-        default:
-          return "application/json";
-      }
+    switch (dataFormat) {
+      case "json":
+        return "application/json";
+      case "cbor":
+        return "application/cbor";
+      case "binary":
+        return "application/binary";
+      case "text":
+        return "text/plain";
+      default:
+        return "application/json";
+    }
   }
 
   public Payload parseSetupPayload() {
-        String source = null;
+    String source = null;
 
-        if (setup.startsWith("@")) {
-            try {
-                source = Files.asCharSource(setupFile(), Charsets.UTF_8).read();
-            } catch (IOException e) {
-                LangUtil.rethrowUnchecked(e);
-            }
-
-        } else {
-            source = setup;
-        }
-
-        return new PayloadImpl(source);
+    if (setup.startsWith("@")) {
+      try {
+        source = Files.asCharSource(setupFile(), Charsets.UTF_8).read();
+      } catch (IOException e) {
+        LangUtil.rethrowUnchecked(e);
+      }
+    } else {
+      source = setup;
     }
 
-    private File setupFile() {
-        File file = new File(input.substring(1));
+    return new PayloadImpl(source);
+  }
 
-        if (!file.isFile()) {
-            throw new UsageException("setup file not found: " + file);
-        }
+  private File setupFile() {
+    File file = new File(input.substring(1));
 
-        return file;
+    if (!file.isFile()) {
+      throw new UsageException("setup file not found: " + file);
     }
 
-    private KeepAliveProvider keepAlive() {
-        if (keepalive == null) {
-            return KeepAliveProvider.never();
-        }
+    return file;
+  }
 
-        Duration duration = parseShortDuration(keepalive);
-        return KeepAliveProvider.from((int) duration.toMillis(), Flux.interval(duration));
+  private KeepAliveProvider keepAlive() {
+    if (keepalive == null) {
+      return KeepAliveProvider.never();
     }
 
-    public ReactiveSocket createServerRequestHandler(ConnectionSetupPayload setupPayload) {
-        LoggerFactory.getLogger(Main.class).debug("setup payload " + setupPayload);
+    Duration duration = parseShortDuration(keepalive);
+    return KeepAliveProvider.from((int) duration.toMillis(), Flux.interval(duration));
+  }
 
-        return new AbstractReactiveSocket() {
-            @Override
-            public Mono<Void> fireAndForget(Payload payload) {
-                showPayload(payload);
-                return Mono.empty();
-            }
+  public ReactiveSocket createServerRequestHandler(ConnectionSetupPayload setupPayload) {
+    LoggerFactory.getLogger(Main.class).debug("setup payload " + setupPayload);
 
-            @Override
-            public Mono<Payload> requestResponse(Payload payload) {
-                return handleIncomingPayload(payload).single();
-            }
-
-            @Override
-            public Flux<Payload> requestStream(Payload payload) {
-                return handleIncomingPayload(payload);
-            }
-
-            @Override
-            public Flux<Payload> requestChannel(Publisher<Payload> payloads) {
-                Flux.from(payloads).subscribe(p -> showPayload(p), e -> outputHandler.error("channel error", e));
-                return inputPublisher();
-            }
-
-            @Override
-            public Mono<Void> metadataPush(Payload payload) {
-                outputHandler.showOutput(ByteBufferUtil.toUtf8String(payload.getMetadata()));
-                return Mono.empty();
-            }
-        };
-    }
-
-    private Flux<Payload> handleIncomingPayload(Payload payload) {
+    return new AbstractReactiveSocket() {
+      @Override
+      public Mono<Void> fireAndForget(Payload payload) {
         showPayload(payload);
-        return inputPublisher();
-    }
-
-    private void showPayload(Payload payload) {
-        outputHandler.showOutput(ByteBufferUtil.toUtf8String(payload.getData()));
-    }
-
-    public Mono<Void> run(ReactiveSocket client) {
-        try {
-            return runAllOperations(client);
-        } catch (Exception e) {
-            outputHandler.error("error", e);
-        }
-
         return Mono.empty();
+      }
+
+      @Override
+      public Mono<Payload> requestResponse(Payload payload) {
+        return handleIncomingPayload(payload).single();
+      }
+
+      @Override
+      public Flux<Payload> requestStream(Payload payload) {
+        return handleIncomingPayload(payload);
+      }
+
+      @Override
+      public Flux<Payload> requestChannel(Publisher<Payload> payloads) {
+        Flux.from(payloads)
+            .subscribe(p -> showPayload(p), e -> outputHandler.error("channel error", e));
+        return inputPublisher();
+      }
+
+      @Override
+      public Mono<Void> metadataPush(Payload payload) {
+        outputHandler.showOutput(ByteBufferUtil.toUtf8String(payload.getMetadata()));
+        return Mono.empty();
+      }
+    };
+  }
+
+  private Flux<Payload> handleIncomingPayload(Payload payload) {
+    showPayload(payload);
+    return inputPublisher();
+  }
+
+  private void showPayload(Payload payload) {
+    outputHandler.showOutput(ByteBufferUtil.toUtf8String(payload.getData()));
+  }
+
+  public Flux<Void> run(ReactiveSocket client) {
+    try {
+      return runAllOperations(client);
+    } catch (Exception e) {
+      handleError(e);
     }
 
-    private Mono<Void> runAllOperations(ReactiveSocket client) {
-        return Flux.range(0, operations).flatMap(i -> runSingleOperation(client)).then();
-    }
+    return Flux.empty();
+  }
 
-    private Mono<Void> runSingleOperation(ReactiveSocket client) {
-        if (fireAndForget) {
-            return client.fireAndForget(singleInputPayload()).ignoreElement();
-        }
+  private void handleError(Throwable e) {
+    outputHandler.error("error", e);
+  }
 
-        if (metadataPush) {
-            return client.metadataPush(singleInputPayload()).ignoreElement();
-        }
+  private Flux<Void> runAllOperations(ReactiveSocket client) {
+    return Flux.range(0, operations).flatMap(i -> runSingleOperation(client));
+  }
 
-        Flux<Payload> source;
-        if (requestResponse) {
-            source = client.requestResponse(singleInputPayload()).flux();
-        } else if (stream) {
-            source = client.requestStream(singleInputPayload());
-        } else if (channel) {
-            if (input == null) {
-                outputHandler.info("Type commands to send to the server.");
-            }
-            source = client.requestChannel(inputPublisher());
-        } else {
-            outputHandler.info("Using passive client mode, choose an option to use a different mode.");
-            source = Flux.never();
-        }
+  private Flux<Void> runSingleOperation(ReactiveSocket client) {
+    try {
+      Flux<Payload> source;
 
-        return source.map(Payload::getData)
-            .map(ByteBufferUtil::toUtf8String)
-            .doOnNext(outputHandler::showOutput)
-            .doOnError(e -> outputHandler.error("error from server", e)).then();
-    }
-
-    private Flux<Payload> inputPublisher() {
-        CharSource is;
-
+      if (fireAndForget) {
+        source = client.fireAndForget(singleInputPayload()).thenMany(Flux.empty());
+      } else if (metadataPush) {
+        source = client.metadataPush(singleInputPayload()).thenMany(Flux.empty());
+      } else if (requestResponse) {
+        source = client.requestResponse(singleInputPayload()).flux();
+      } else if (stream) {
+        source = client.requestStream(singleInputPayload());
+      } else if (channel) {
         if (input == null) {
-            is = SystemInCharSource.INSTANCE;
-        } else if (input.startsWith("@")) {
-            is = Files.asCharSource(inputFile(input), Charsets.UTF_8);
-        } else {
-            is = CharSource.wrap(input);
+          outputHandler.info("Type commands to send to the server.");
         }
+        source = client.requestChannel(inputPublisher());
+      } else {
+        outputHandler.info(
+            "Using passive client mode, choose an option to use a different mode.");
+        source = Flux.never();
+      }
 
-        byte[] metadata = buildMetadata();
+      return source.map(Payload::getData)
+          .map(ByteBufferUtil::toUtf8String)
+          .doOnNext(outputHandler::showOutput)
+          .doOnError(e -> outputHandler.error("error from server", e))
+          .onErrorResumeWith(e -> Flux.empty()).thenMany(Flux.empty());
+    } catch (Exception ex) {
+      return Flux.<Void>error(ex).doOnError(e -> outputHandler.error("error before query", e)).onErrorResumeWith(e -> Flux.empty());
+    }
+  }
 
-        return Publishers.lines(is, l -> metadata);
+  private Flux<Payload> inputPublisher() {
+    CharSource is;
+
+    if (input == null) {
+      is = SystemInCharSource.INSTANCE;
+    } else if (input.startsWith("@")) {
+      is = Files.asCharSource(inputFile(input), Charsets.UTF_8);
+    } else {
+      is = CharSource.wrap(input);
     }
 
-    private static String getInputFromSource(String source, Supplier<String> nullHandler) {
-        String s;
+    byte[] metadata = buildMetadata();
 
-        if (source == null) {
-            s = nullHandler.get();
-        } else if (source.startsWith("@")) {
-            try {
-                s = Files.toString(inputFile(source), StandardCharsets.UTF_8);
-            } catch (IOException e) {
-                throw new UsageException(e.toString());
-            }
-        } else {
-            s = source;
+    return Publishers.lines(is, l -> metadata);
+  }
+
+  private static String getInputFromSource(String source, Supplier<String> nullHandler) {
+    String s;
+
+    if (source == null) {
+      s = nullHandler.get();
+    } else if (source.startsWith("@")) {
+      try {
+        s = Files.toString(inputFile(source), StandardCharsets.UTF_8);
+      } catch (IOException e) {
+        throw new UsageException(e.toString());
+      }
+    } else {
+      s = source;
+    }
+
+    return s;
+  }
+
+  private static File inputFile(String path) {
+    File file = new File(path.substring(1));
+
+    if (!file.isFile()) {
+      throw new UsageException("file not found: " + file);
+    }
+
+    return file;
+  }
+
+  private PayloadImpl singleInputPayload() {
+    String data = getInputFromSource(input, () -> {
+      Scanner in = new Scanner(System.in);
+      return in.nextLine();
+    });
+
+    byte[] metadata = buildMetadata();
+
+    return new PayloadImpl(data.getBytes(StandardCharsets.UTF_8), metadata);
+  }
+
+  private byte[] buildMetadata() {
+    if (this.metadata != null) {
+      if (this.headers != null) {
+        throw new UsageException("Can't specify headers and metadata");
+      }
+
+      return getInputFromSource(this.metadata, () -> "").getBytes(StandardCharsets.UTF_8);
+    } else if (this.headers != null) {
+      Map<String, String> headerMap = new LinkedHashMap<>();
+
+      if (headers != null) {
+        for (String header : headers) {
+          String[] parts = header.split(":", 2);
+          // TODO: consider better strategy than simple trim
+          headerMap.put(parts[0].trim(), parts[1].trim());
         }
+      }
 
-        return s;
+      return MetadataUtil.encodeMetadataMap(headerMap, standardMimeType(metadataFormat));
+    } else {
+      return new byte[0];
     }
+  }
 
-    private static File inputFile(String path) {
-        File file = new File(path.substring(1));
-
-        if (!file.isFile()) {
-            throw new UsageException("file not found: " + file);
-        }
-
-        return file;
+  private static Main fromArgs(String... args) {
+    SingleCommand<Main> cmd = SingleCommand.singleCommand(Main.class);
+    try {
+      return cmd.parse(args);
+    } catch (ParseException e) {
+      System.err.println(e.getMessage());
+      Help.help(cmd.getCommandMetadata());
+      System.exit(-1);
+      return null;
     }
+  }
 
-    private PayloadImpl singleInputPayload() {
-        String data = getInputFromSource(input, () -> {
-            Scanner in = new Scanner(System.in);
-            return in.nextLine();
-        });
-
-        byte[] metadata = buildMetadata();
-
-        return new PayloadImpl(data.getBytes(StandardCharsets.UTF_8), metadata);
-    }
-
-    private byte[] buildMetadata() {
-        if (this.metadata != null) {
-            if (this.headers != null) {
-                throw new UsageException("Can't specify headers and metadata");
-            }
-
-            return getInputFromSource(this.metadata, () -> "").getBytes(StandardCharsets.UTF_8);
-        } else if (this.headers != null) {
-            Map<String, String> headerMap = new LinkedHashMap<>();
-
-            if (headers != null) {
-                for (String header : headers) {
-                    String[] parts = header.split(":", 2);
-                    // TODO: consider better strategy than simple trim
-                    headerMap.put(parts[0].trim(), parts[1].trim());
-                }
-            }
-
-            return MetadataUtil.encodeMetadataMap(headerMap, standardMimeType(metadataFormat));
-        } else {
-            return new byte[0];
-        }
-    }
-
-    private static Main fromArgs(String... args) {
-        SingleCommand<Main> cmd = SingleCommand.singleCommand(Main.class);
-        try {
-            return cmd.parse(args);
-        } catch (ParseException e) {
-            System.err.println(e.getMessage());
-            Help.help(cmd.getCommandMetadata());
-            System.exit(-1);
-            return null;
-        }
-    }
-
-    @SuppressWarnings("ConstantConditions") public static void main(String... args) throws Exception {
-        fromArgs(args).run();
-    }
+  @SuppressWarnings("ConstantConditions") public static void main(String... args) throws Exception {
+    fromArgs(args).run();
+  }
 }
