@@ -150,12 +150,12 @@ public class Main {
                 .create(ConnectionHelper.buildClientConnection(uri), setupProvider)
                 .connect()).block();
 
-        Mono<Void> run = run(client);
+        Flux<Void> run = run(client);
 
         if (timeout != null) {
-          run.block(Duration.ofSeconds(timeout));
+          run.blockLast(Duration.ofSeconds(timeout));
         } else {
-          run.block();
+          run.blockLast();
         }
       }
     } catch (Exception e) {
@@ -273,38 +273,33 @@ public class Main {
     outputHandler.showOutput(ByteBufferUtil.toUtf8String(payload.getData()));
   }
 
-  public Mono<Void> run(ReactiveSocket client) {
+  public Flux<Void> run(ReactiveSocket client) {
     try {
       return runAllOperations(client);
     } catch (Exception e) {
       handleError(e);
     }
 
-    return Mono.empty();
+    return Flux.empty();
   }
 
   private void handleError(Throwable e) {
     outputHandler.error("error", e);
   }
 
-  private Mono<Void> runAllOperations(ReactiveSocket client) {
-    return Flux.range(0, operations).flatMap(i -> runSingleOperation(client).flux().doOnError(e -> {
-      handleError(e);
-    }).onErrorResumeWith(e -> Flux.empty())).then();
+  private Flux<Void> runAllOperations(ReactiveSocket client) {
+    return Flux.range(0, operations).flatMap(i -> runSingleOperation(client));
   }
 
-  private Mono<Void> runSingleOperation(ReactiveSocket client) {
+  private Flux<Void> runSingleOperation(ReactiveSocket client) {
     try {
-      if (fireAndForget) {
-        return client.fireAndForget(singleInputPayload()).ignoreElement();
-      }
-
-      if (metadataPush) {
-        return client.metadataPush(singleInputPayload()).ignoreElement();
-      }
-
       Flux<Payload> source;
-      if (requestResponse) {
+
+      if (fireAndForget) {
+        source = client.fireAndForget(singleInputPayload()).thenMany(Flux.empty());
+      } else if (metadataPush) {
+        source = client.metadataPush(singleInputPayload()).thenMany(Flux.empty());
+      } else if (requestResponse) {
         source = client.requestResponse(singleInputPayload()).flux();
       } else if (stream) {
         source = client.requestStream(singleInputPayload());
@@ -322,9 +317,10 @@ public class Main {
       return source.map(Payload::getData)
           .map(ByteBufferUtil::toUtf8String)
           .doOnNext(outputHandler::showOutput)
-          .doOnError(e -> outputHandler.error("error from server", e)).then();
-    } catch (Exception e) {
-      return Mono.error(e);
+          .doOnError(e -> outputHandler.error("error from server", e))
+          .onErrorResumeWith(e -> Flux.empty()).thenMany(Flux.empty());
+    } catch (Exception ex) {
+      return Flux.<Void>error(ex).doOnError(e -> outputHandler.error("error before query", e)).onErrorResumeWith(e -> Flux.empty());
     }
   }
 

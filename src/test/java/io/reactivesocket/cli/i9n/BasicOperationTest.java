@@ -31,218 +31,220 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
 
 public class BasicOperationTest {
-    private Main main = new Main();
-    private TestOutputHandler output = new TestOutputHandler();
-    private TransportServer.StartedServer server;
-    private ReactiveSocket client;
+  private Main main = new Main();
+  private TestOutputHandler output = new TestOutputHandler();
+  private TransportServer.StartedServer server;
+  private ReactiveSocket client;
 
-    private final TestOutputHandler expected = new TestOutputHandler();
+  private final TestOutputHandler expected = new TestOutputHandler();
 
-    private ReactiveSocket requestHandler = new AbstractReactiveSocket() {
+  private ReactiveSocket requestHandler = new AbstractReactiveSocket() {
+  };
+
+  private String testName;
+
+  @Rule
+  public TestRule watcher = new TestWatcher() {
+    @Override
+    protected void starting(Description description) {
+      testName = description.getMethodName();
+    }
+  };
+
+  public void connect() {
+    main.outputHandler = output;
+
+    LocalServer localServer = LocalServer.create("test-local-server-"
+        + testName);
+
+    server = ReactiveSocketServer.create(localServer)
+        .start((setup, sendingSocket) -> new DisabledLeaseAcceptingSocket(requestHandler));
+
+    client = Flowable.fromPublisher(ReactiveSocketClient.create(LocalClient.create(localServer),
+        keepAlive(never()).disableLease()).connect()).blockingFirst();
+  }
+
+  @After
+  public void shutdown() {
+    //if (client != null) {
+    //    client.close();
+    //}
+    //if (server != null) {
+    //    server.shutdown();
+    //    server.awaitShutdown(5, SECONDS);
+    //}
+  }
+
+  @Test
+  public void metadataPush() throws Exception {
+    main.metadataPush = true;
+    main.input = "Hello";
+
+    requestHandler = new AbstractReactiveSocket() {
+      @Override
+      public Mono<Void> metadataPush(Payload payload) {
+        return Mono.empty();
+      }
     };
 
-    private String testName;
+    run();
 
-    @Rule
-    public TestRule watcher = new TestWatcher() {
-        @Override
-        protected void starting(Description description) {
-            testName = description.getMethodName();
-        }
+    assertEquals(expected, output);
+  }
+
+  @Test
+  public void fireAndForget() throws Exception {
+    main.fireAndForget = true;
+    main.input = "Hello";
+
+    requestHandler = new AbstractReactiveSocket() {
+      @Override
+      public Mono<Void> fireAndForget(Payload payload) {
+        return Mono.empty();
+      }
     };
 
-    public void connect() {
-        main.outputHandler = output;
+    run();
 
-        LocalServer localServer = LocalServer.create("test-local-server-"
-                + testName);
+    assertEquals(expected, output);
+  }
 
-        server = ReactiveSocketServer.create(localServer)
-                .start((setup, sendingSocket) -> new DisabledLeaseAcceptingSocket(requestHandler));
+  @Test
+  public void requestResponse() throws Exception {
+    main.requestResponse = true;
+    main.input = "Hello";
 
-        client = Flowable.fromPublisher(ReactiveSocketClient.create(LocalClient.create(localServer),
-                keepAlive(never()).disableLease()).connect()).blockingFirst();
-    }
+    requestHandler = new AbstractReactiveSocket() {
+      @Override
+      public Mono<Payload> requestResponse(Payload payload) {
+        return Mono.just(reverse(ByteBufferUtil.toUtf8String(payload.getData())));
+      }
+    };
 
-    @After
-    public void shutdown() {
-        //if (client != null) {
-        //    client.close();
-        //}
-        //if (server != null) {
-        //    server.shutdown();
-        //    server.awaitShutdown(5, SECONDS);
-        //}
-    }
+    expected.showOutput("olleH");
 
-    @Test
-    public void metadataPush() throws Exception {
-        main.metadataPush = true;
-        main.input = "Hello";
+    run();
 
-        requestHandler = new AbstractReactiveSocket() {
-            @Override
-            public Mono<Void> metadataPush(Payload payload) {
-                return Mono.empty();
-            }
-        };
+    assertEquals(expected, output);
+  }
 
-        run();
+  @Test
+  public void requestResponseFromFile() throws Exception {
+    main.requestResponse = true;
+    main.input = "@src/test/resources/hello.text";
 
-        assertEquals(expected, output);
-    }
+    requestHandler = new AbstractReactiveSocket() {
+      @Override
+      public Mono<Payload> requestResponse(Payload payload) {
+        return Mono.just(reverse(ByteBufferUtil.toUtf8String(payload.getData())));
+      }
+    };
 
-    @Test
-    public void fireAndForget() throws Exception {
-        main.fireAndForget = true;
-        main.input = "Hello";
+    expected.showOutput("!elif a morf olleH");
 
-        requestHandler = new AbstractReactiveSocket() {
-            @Override
-            public Mono<Void> fireAndForget(Payload payload) {
-                return Mono.empty();
-            }
-        };
+    run();
 
-        run();
+    assertEquals(expected, output);
+  }
 
-        assertEquals(expected, output);
-    }
+  @Test
+  public void requestResponseFromMissingFile() throws Exception {
+    main.requestResponse = true;
+    main.input = "@src/test/resources/goodbye.text";
 
-    @Test
-    public void requestResponse() throws Exception {
-        main.requestResponse = true;
-        main.input = "Hello";
+    requestHandler = new AbstractReactiveSocket() {
+      @Override
+      public Mono<Payload> requestResponse(Payload payload) {
+        return Mono.just(reverse(ByteBufferUtil.toUtf8String(payload.getData())));
+      }
+    };
 
-        requestHandler = new AbstractReactiveSocket() {
-            @Override
-            public Mono<Payload> requestResponse(Payload payload) {
-                return Mono.just(reverse(ByteBufferUtil.toUtf8String(payload.getData())));
-            }
-        };
+    expected.info("file not found: src/test/resources/goodbye.text");
 
-        expected.showOutput("olleH");
+    run();
 
-        run();
+    assertEquals(expected, output);
+  }
 
-        assertEquals(expected, output);
-    }
+  @Test
+  public void requestResponseError() throws Exception {
+    main.requestResponse = true;
+    main.input = "Hello";
 
-    @Test
-    public void requestResponseFromFile() throws Exception {
-        main.requestResponse = true;
-        main.input = "@src/test/resources/hello.text";
+    requestHandler = new AbstractReactiveSocket() {
+      @Override
+      public Mono<Payload> requestResponse(Payload payload) {
+        return Mono.error(new ApplicationException(payload("server failure")));
+      }
+    };
 
-        requestHandler = new AbstractReactiveSocket() {
-            @Override
-            public Mono<Payload> requestResponse(Payload payload) {
-                return Mono.just(reverse(ByteBufferUtil.toUtf8String(payload.getData())));
-            }
-        };
+    expected.error("error from server", new ApplicationException(payload("server failure")));
 
-        expected.showOutput("!elif a morf olleH");
+    run();
 
-        run();
+    assertEquals(expected, output);
+  }
 
-        assertEquals(expected, output);
-    }
+  @Test
+  public void stream() throws Exception {
+    main.stream = true;
+    main.input = "Hello";
 
-    @Test
-    public void requestResponseFromMissingFile() throws Exception {
-        main.requestResponse = true;
-        main.input = "@src/test/resources/goodbye.text";
+    requestHandler = new AbstractReactiveSocket() {
+      @Override
+      public Flux<Payload> requestStream(Payload payload) {
+        String s = ByteBufferUtil.toUtf8String(payload.getData());
 
-        requestHandler = new AbstractReactiveSocket() {
-            @Override
-            public Mono<Payload> requestResponse(Payload payload) {
-                return Mono.just(reverse(ByteBufferUtil.toUtf8String(payload.getData())));
-            }
-        };
+        return Flux.range(1, 3).map(i -> reverse(s));
+      }
+    };
 
-        expected.info("file not found: src/test/resources/goodbye.text");
+    expected.showOutput("olleH");
+    expected.showOutput("olleH");
+    expected.showOutput("olleH");
 
-        run();
+    // TODO filter next_complete?
+    expected.showOutput("");
 
-        assertEquals(expected, output);
-    }
+    run();
 
-    @Test
-    public void requestResponseError() throws Exception {
-        main.requestResponse = true;
-        main.input = "Hello";
+    assertEquals(expected, output);
+  }
 
-        requestHandler = new AbstractReactiveSocket() {
-            @Override
-            public Mono<Payload> requestResponse(Payload payload) {
-                return Mono.error(new ApplicationException(payload("server failure")));
-            }
-        };
+  @Test
+  public void streamCompletedByFailure() throws Exception {
+    main.stream = true;
+    main.input = "Hello";
 
-        expected.error("error from server", new ApplicationException(payload("server failure")));
+    requestHandler = new AbstractReactiveSocket() {
+      @Override
+      public Flux<Payload> requestStream(Payload payload) {
+        return Flux.range(1, 3)
+            .map(i -> payload("i " + i))
+            .concatWith(Mono.error(new ApplicationException(new PayloadImpl("failed"))));
+      }
+    };
 
-        run();
+    expected.showOutput("i 1");
+    expected.showOutput("i 2");
+    expected.showOutput("i 3");
+    expected.error("error from server", new ApplicationException(payload("failed")));
 
-        assertEquals(expected, output);
-    }
+    run();
 
-    @Test
-    public void stream() throws Exception {
-        main.stream = true;
-        main.input = "Hello";
+    assertEquals(expected, output);
+  }
 
-        requestHandler = new AbstractReactiveSocket() {
-            @Override
-            public Flux<Payload> requestStream(Payload payload) {
-                String s = ByteBufferUtil.toUtf8String(payload.getData());
+  private void run() throws Exception {
+    connect();
+    main.run(client).blockLast(Duration.ofSeconds(3));
+  }
 
-                return Flux.range(1, 3).map(i -> reverse(s));
-            }
-        };
+  public static Payload reverse(String s) {
+    return payload(new StringBuilder(s).reverse().toString());
+  }
 
-        expected.showOutput("olleH");
-        expected.showOutput("olleH");
-        expected.showOutput("olleH");
-
-        // TODO filter next_complete?
-        expected.showOutput("");
-
-        run();
-
-        assertEquals(expected, output);
-    }
-
-    @Test
-    public void streamCompletedByFailure() throws Exception {
-        main.stream = true;
-        main.input = "Hello";
-
-        requestHandler = new AbstractReactiveSocket() {
-            @Override
-            public Flux<Payload> requestStream(Payload payload) {
-                return Flux.range(1, 3).map(i -> payload("i " + i)).concatWith(Mono.error(new ApplicationException(new PayloadImpl("failed"))));
-            }
-        };
-
-        expected.showOutput("i 1");
-        expected.showOutput("i 2");
-        expected.showOutput("i 3");
-        expected.error("error from server", new ApplicationException(payload("failed")));
-
-        run();
-
-        assertEquals(expected, output);
-    }
-
-    private void run() throws Exception {
-        connect();
-        main.run(client).block(Duration.ofSeconds(5));
-    }
-
-    public static Payload reverse(String s) {
-        return payload(new StringBuilder(s).reverse().toString());
-    }
-
-    public static Payload payload(String data) {
-        return new PayloadImpl(data);
-    }
+  public static Payload payload(String data) {
+    return new PayloadImpl(data);
+  }
 }
