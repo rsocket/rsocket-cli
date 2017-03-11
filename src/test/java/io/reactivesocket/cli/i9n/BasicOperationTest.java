@@ -66,13 +66,13 @@ public class BasicOperationTest {
 
     @After
     public void shutdown() {
-        if (client != null) {
-            client.close();
-        }
-        if (server != null) {
-            server.shutdown();
-            server.awaitShutdown(5, SECONDS);
-        }
+        //if (client != null) {
+        //    client.close();
+        //}
+        //if (server != null) {
+        //    server.shutdown();
+        //    server.awaitShutdown(5, SECONDS);
+        //}
     }
 
     @Test
