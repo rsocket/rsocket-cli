@@ -31,7 +31,7 @@ $ reactivesocket-cli --rr -i "I am a Client" tcp://localhost:8765      # window 
 Stream the dictionary (With frames debugged)
 
 ```
-$ reactivesocket-cli -i @/usr/share/dict/words --server tcp://localhost:8765  # window 1
+$ reactivesocket-cli --debug -i @/usr/share/dict/words --server tcp://localhost:8765  # window 1
 $ reactivesocket-cli --str -i "Word Up" tcp://localhost:8765                  # window 2
 ```
 
