@@ -12,11 +12,10 @@ Simple ReactiveSocket CLI currently for two main purposes
 <a href='https://travis-ci.org/ReactiveSocket/reactivesocket-cli/builds'><img src='https://travis-ci.org/ReactiveSocket/reactivesocket-cli.svg?branch=master'></a> 
 
 
-## Running
+## Build and Run (one step)
 
 ```
-$ gradle installDist
-$ ./build/install/reactivesocket-cli/bin/reactivesocket-cli tcp://localhost:8765
+$ ./reactivesocket-cli tcp://localhost:8765
 ```
 
 ## Installing via Homebrew
@@ -25,8 +24,14 @@ Use tab completion for help with specifying the operation type.
 
 ```
 $ brew install yschimke/tap/reactivesocket-cli
-$ reactivesocket-cli -i "I am a Server" --server tcp://localhost:8765 # window 1
-$ reactivesocket-cli --rr -i "I am a Client" tcp://localhost:8765 # window 2
+$ reactivesocket-cli -i "I am a Server" --server tcp://localhost:8765  # window 1
+$ reactivesocket-cli --rr -i "I am a Client" tcp://localhost:8765      # window 2
 ```
 
+Stream the dictionary (With frames debugged)
+
+```
+$ reactivesocket-cli -i @/usr/share/dict/words --server tcp://localhost:8765  # window 1
+$ reactivesocket-cli --str -i "Word Up" tcp://localhost:8765                  # window 2
+```
 
