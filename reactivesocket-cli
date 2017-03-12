@@ -1,6 +1,6 @@
 #!/bin/sh -e
 
-./gradlew -q distTar
+./gradlew -q installDist
 
 ./build/install/reactivesocket-cli/bin/reactivesocket-cli "$@"
 
