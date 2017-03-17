@@ -8,10 +8,10 @@ import io.reactivesocket.client.ReactiveSocketClient;
 import io.reactivesocket.exceptions.ApplicationException;
 import io.reactivesocket.frame.ByteBufferUtil;
 import io.reactivesocket.lease.DisabledLeaseAcceptingSocket;
-import io.reactivesocket.local.LocalClient;
-import io.reactivesocket.local.LocalServer;
 import io.reactivesocket.server.ReactiveSocketServer;
 import io.reactivesocket.transport.TransportServer;
+import io.reactivesocket.transport.local.LocalClient;
+import io.reactivesocket.transport.local.LocalServer;
 import io.reactivesocket.util.PayloadImpl;
 import io.reactivex.Flowable;
 import org.junit.After;
@@ -60,7 +60,8 @@ public class BasicOperationTest {
         server = ReactiveSocketServer.create(localServer)
                 .start((setup, sendingSocket) -> new DisabledLeaseAcceptingSocket(requestHandler));
 
-        client = Flowable.fromPublisher(ReactiveSocketClient.create(LocalClient.create(localServer),
+        client = Flowable.fromPublisher(ReactiveSocketClient.create(LocalClient.create("test-local-server-"
+                        + testName),
                 keepAlive(never()).disableLease()).connect()).blockingFirst();
     }
 
