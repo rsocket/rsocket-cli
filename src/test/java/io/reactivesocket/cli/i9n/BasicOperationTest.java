@@ -28,6 +28,7 @@ import java.time.Duration;
 
 import static io.reactivesocket.client.KeepAliveProvider.never;
 import static io.reactivesocket.client.SetupProvider.keepAlive;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
 
 public class BasicOperationTest {
@@ -69,10 +70,10 @@ public class BasicOperationTest {
         if (client != null) {
             client.close();
         }
-        //if (server != null) {
-        //    server.shutdown();
-        //    server.awaitShutdown(5, SECONDS);
-        //}
+        if (server != null) {
+            server.shutdown();
+            server.awaitShutdown(5, SECONDS);
+        }
     }
 
     @Ignore("broken in reactivesocket-java for local")
@@ -213,7 +214,6 @@ public class BasicOperationTest {
         assertEquals(expected, output);
     }
 
-    @Ignore("broken in reactivesocket-java for local")
     @Test
     public void streamCompletedByFailure() throws Exception {
         main.stream = true;
