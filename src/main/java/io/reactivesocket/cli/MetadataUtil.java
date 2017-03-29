@@ -15,9 +15,9 @@ package io.reactivesocket.cli;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import com.google.common.base.Throwables;
 import java.util.Map;
-import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 
 public class MetadataUtil {
 
