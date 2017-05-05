@@ -225,8 +225,7 @@ public class Main {
       return KeepAliveProvider.never();
     }
 
-    Duration duration = parseShortDuration(keepalive);
-    return KeepAliveProvider.from((int) duration.toMillis(), Flux.interval(duration));
+    return KeepAliveProvider.from(parseShortDuration(keepalive));
   }
 
   public ReactiveSocket createServerRequestHandler(ConnectionSetupPayload setupPayload) {
