@@ -14,6 +14,7 @@
 package io.reactivesocket.cli;
 
 import com.google.common.base.Charsets;
+import com.google.common.base.Throwables;
 import com.google.common.io.CharSource;
 import com.google.common.io.Files;
 import io.airlift.airline.Arguments;
@@ -30,14 +31,14 @@ import io.reactivesocket.cli.util.LoggingUtil;
 import io.reactivesocket.client.KeepAliveProvider;
 import io.reactivesocket.client.ReactiveSocketClient;
 import io.reactivesocket.client.SetupProvider;
-import io.reactivesocket.frame.ByteBufferUtil;
 import io.reactivesocket.lease.DisabledLeaseAcceptingSocket;
 import io.reactivesocket.server.ReactiveSocketServer;
 import io.reactivesocket.transport.TransportServer;
 import io.reactivesocket.util.PayloadImpl;
+
+import java.nio.ByteBuffer;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import org.agrona.LangUtil;
 import org.reactivestreams.Publisher;
 import org.slf4j.LoggerFactory;
 
@@ -201,7 +202,7 @@ public class Main {
       try {
         source = Files.asCharSource(setupFile(), Charsets.UTF_8).read();
       } catch (IOException e) {
-        LangUtil.rethrowUnchecked(e);
+        throw Throwables.propagate(e);
       }
     } else {
       source = setup;
@@ -257,7 +258,7 @@ public class Main {
 
       @Override
       public Mono<Void> metadataPush(Payload payload) {
-        outputHandler.showOutput(ByteBufferUtil.toUtf8String(payload.getMetadata()));
+        outputHandler.showOutput(toUtf8String(payload.getMetadata()));
         return Mono.empty();
       }
     };
@@ -269,7 +270,11 @@ public class Main {
   }
 
   private void showPayload(Payload payload) {
-    outputHandler.showOutput(ByteBufferUtil.toUtf8String(payload.getData()));
+    outputHandler.showOutput(toUtf8String(payload.getData()));
+  }
+
+  private String toUtf8String(ByteBuffer data) {
+    return StandardCharsets.UTF_8.decode(data).toString();
   }
 
   public Flux<Void> run(ReactiveSocket client) {
@@ -314,7 +319,7 @@ public class Main {
       }
 
       return source.map(Payload::getData)
-          .map(ByteBufferUtil::toUtf8String)
+          .map(this::toUtf8String)
           .doOnNext(outputHandler::showOutput)
           .doOnError(e -> outputHandler.error("error from server", e))
           .onErrorResumeWith(e -> Flux.empty()).thenMany(Flux.empty());
