@@ -1,4 +1,4 @@
-package io.reactivesocket.cli;
+package io.rsocket.cli;
 
 import io.airlift.airline.ParseException;
 

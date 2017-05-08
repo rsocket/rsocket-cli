@@ -11,7 +11,7 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.reactivesocket.cli;
+package io.rsocket.cli;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
@@ -23,18 +23,17 @@ import io.airlift.airline.Help;
 import io.airlift.airline.Option;
 import io.airlift.airline.ParseException;
 import io.airlift.airline.SingleCommand;
-import io.reactivesocket.AbstractReactiveSocket;
-import io.reactivesocket.ConnectionSetupPayload;
-import io.reactivesocket.Payload;
-import io.reactivesocket.ReactiveSocket;
-import io.reactivesocket.cli.util.LoggingUtil;
-import io.reactivesocket.client.KeepAliveProvider;
-import io.reactivesocket.client.ReactiveSocketClient;
-import io.reactivesocket.client.SetupProvider;
-import io.reactivesocket.lease.DisabledLeaseAcceptingSocket;
-import io.reactivesocket.server.ReactiveSocketServer;
-import io.reactivesocket.transport.TransportServer;
-import io.reactivesocket.util.PayloadImpl;
+import io.rsocket.AbstractRSocket;
+import io.rsocket.ConnectionSetupPayload;
+import io.rsocket.Payload;
+import io.rsocket.RSocket;
+import io.rsocket.client.KeepAliveProvider;
+import io.rsocket.client.RSocketClient;
+import io.rsocket.client.SetupProvider;
+import io.rsocket.lease.DisabledLeaseAcceptingSocket;
+import io.rsocket.server.RSocketServer;
+import io.rsocket.transport.TransportServer;
+import io.rsocket.util.PayloadImpl;
 
 import java.nio.ByteBuffer;
 import java.util.LinkedHashMap;
@@ -54,15 +53,15 @@ import java.util.function.Supplier;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import static io.reactivesocket.cli.TimeUtil.*;
+import static io.rsocket.cli.TimeUtil.*;
 
 /**
- * Simple command line tool to make a ReactiveSocket connection and send/receive elements.
+ * Simple command line tool to make a RSocket connection and send/receive elements.
  * <p>
  * Currently limited in features, only supports a text/line based approach.
  */
 @SuppressWarnings({"WeakerAccess", "CanBeFinal", "unused"})
-@Command(name = Main.NAME, description = "CLI for ReactiveSocket.")
+@Command(name = Main.NAME, description = "CLI for RSocket.")
 public class Main {
   static final String NAME = "reactivesocket-cli";
 
@@ -122,7 +121,7 @@ public class Main {
   @Arguments(title = "target", description = "Endpoint URL", required = true)
   public List<String> arguments = new ArrayList<>();
 
-  public ReactiveSocket client;
+  public RSocket client;
 
   public OutputHandler outputHandler;
   private TransportServer.StartedServer server;
@@ -138,7 +137,7 @@ public class Main {
       URI uri = new URI(arguments.get(0));
 
       if (serverMode) {
-        server = ReactiveSocketServer.create(ConnectionHelper.buildServerConnection(uri))
+        server = RSocketServer.create(ConnectionHelper.buildServerConnection(uri))
             .start((setupPayload, reactiveSocket) -> new DisabledLeaseAcceptingSocket(
                 createServerRequestHandler(setupPayload)));
 
@@ -147,7 +146,7 @@ public class Main {
         SetupProvider setupProvider = buildSetupProvider();
 
         client = Mono.from(
-            ReactiveSocketClient
+            RSocketClient
                 .create(ConnectionHelper.buildClientConnection(uri), setupProvider)
                 .connect()).block();
 
@@ -229,10 +228,10 @@ public class Main {
     return KeepAliveProvider.from(parseShortDuration(keepalive));
   }
 
-  public ReactiveSocket createServerRequestHandler(ConnectionSetupPayload setupPayload) {
+  public RSocket createServerRequestHandler(ConnectionSetupPayload setupPayload) {
     LoggerFactory.getLogger(Main.class).debug("setup payload " + setupPayload);
 
-    return new AbstractReactiveSocket() {
+    return new AbstractRSocket() {
       @Override
       public Mono<Void> fireAndForget(Payload payload) {
         showPayload(payload);
@@ -277,7 +276,7 @@ public class Main {
     return StandardCharsets.UTF_8.decode(data).toString();
   }
 
-  public Flux<Void> run(ReactiveSocket client) {
+  public Flux<Void> run(RSocket client) {
     try {
       return runAllOperations(client);
     } catch (Exception e) {
@@ -291,11 +290,11 @@ public class Main {
     outputHandler.error("error", e);
   }
 
-  private Flux<Void> runAllOperations(ReactiveSocket client) {
+  private Flux<Void> runAllOperations(RSocket client) {
     return Flux.range(0, operations).flatMap(i -> runSingleOperation(client));
   }
 
-  private Flux<Void> runSingleOperation(ReactiveSocket client) {
+  private Flux<Void> runSingleOperation(RSocket client) {
     try {
       Flux<Payload> source;
 

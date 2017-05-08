@@ -11,12 +11,12 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.reactivesocket.cli;
+package io.rsocket.cli;
 
-import io.reactivesocket.transport.TransportClient;
-import io.reactivesocket.transport.TransportServer;
-import io.reactivesocket.transport.netty.client.TcpTransportClient;
-import io.reactivesocket.transport.netty.server.TcpTransportServer;
+import io.rsocket.transport.TransportClient;
+import io.rsocket.transport.TransportServer;
+import io.rsocket.transport.netty.client.TcpTransportClient;
+import io.rsocket.transport.netty.server.TcpTransportServer;
 import reactor.ipc.netty.tcp.TcpClient;
 import reactor.ipc.netty.tcp.TcpServer;
 

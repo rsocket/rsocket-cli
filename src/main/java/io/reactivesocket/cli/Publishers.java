@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.reactivesocket.cli;
+package io.rsocket.cli;
 
 import com.google.common.io.CharSource;
 import com.google.common.io.LineProcessor;
-import io.reactivesocket.Payload;
-import io.reactivesocket.util.PayloadImpl;
+import io.rsocket.Payload;
+import io.rsocket.util.PayloadImpl;
 import io.reactivex.Flowable;
 import io.reactivex.schedulers.Schedulers;
 import java.nio.charset.StandardCharsets;

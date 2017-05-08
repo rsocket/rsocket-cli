@@ -1,4 +1,4 @@
-package io.reactivesocket.cli;
+package io.rsocket.cli;
 
 import com.google.common.io.CharSource;
 

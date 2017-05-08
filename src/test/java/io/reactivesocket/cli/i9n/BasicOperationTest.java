@@ -1,18 +1,18 @@
-package io.reactivesocket.cli.i9n;
+package io.rsocket.cli.i9n;
 
-import io.reactivesocket.AbstractReactiveSocket;
-import io.reactivesocket.Payload;
-import io.reactivesocket.ReactiveSocket;
-import io.reactivesocket.cli.Main;
-import io.reactivesocket.client.ReactiveSocketClient;
-import io.reactivesocket.exceptions.ApplicationException;
-import io.reactivesocket.frame.ByteBufferUtil;
-import io.reactivesocket.lease.DisabledLeaseAcceptingSocket;
-import io.reactivesocket.server.ReactiveSocketServer;
-import io.reactivesocket.transport.TransportServer;
-import io.reactivesocket.transport.local.LocalClient;
-import io.reactivesocket.transport.local.LocalServer;
-import io.reactivesocket.util.PayloadImpl;
+import io.rsocket.AbstractRSocket;
+import io.rsocket.Payload;
+import io.rsocket.RSocket;
+import io.rsocket.cli.Main;
+import io.rsocket.client.RSocketClient;
+import io.rsocket.exceptions.ApplicationException;
+import io.rsocket.frame.ByteBufferUtil;
+import io.rsocket.lease.DisabledLeaseAcceptingSocket;
+import io.rsocket.server.RSocketServer;
+import io.rsocket.transport.TransportServer;
+import io.rsocket.transport.local.LocalClient;
+import io.rsocket.transport.local.LocalServer;
+import io.rsocket.util.PayloadImpl;
 import io.reactivex.Flowable;
 import org.junit.After;
 import org.junit.Ignore;
@@ -26,8 +26,8 @@ import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 
-import static io.reactivesocket.client.KeepAliveProvider.never;
-import static io.reactivesocket.client.SetupProvider.keepAlive;
+import static io.rsocket.client.KeepAliveProvider.never;
+import static io.rsocket.client.SetupProvider.keepAlive;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
 
@@ -35,11 +35,11 @@ public class BasicOperationTest {
     private Main main = new Main();
     private TestOutputHandler output = new TestOutputHandler();
     private TransportServer.StartedServer server;
-    private ReactiveSocket client;
+    private RSocket client;
 
     private final TestOutputHandler expected = new TestOutputHandler();
 
-    private ReactiveSocket requestHandler = new AbstractReactiveSocket() {
+    private RSocket requestHandler = new AbstractRSocket() {
     };
 
     private String testName;
@@ -58,10 +58,10 @@ public class BasicOperationTest {
         LocalServer localServer = LocalServer.create("test-local-server-"
                 + testName);
 
-        server = ReactiveSocketServer.create(localServer)
+        server = RSocketServer.create(localServer)
                 .start((setup, sendingSocket) -> new DisabledLeaseAcceptingSocket(requestHandler));
 
-        client = Flowable.fromPublisher(ReactiveSocketClient.create(LocalClient.create("test-local-server-" + testName),
+        client = Flowable.fromPublisher(RSocketClient.create(LocalClient.create("test-local-server-" + testName),
                 keepAlive(never()).disableLease()).connect()).blockingFirst();
     }
 
@@ -82,7 +82,7 @@ public class BasicOperationTest {
         main.metadataPush = true;
         main.input = "Hello";
 
-        requestHandler = new AbstractReactiveSocket() {
+        requestHandler = new AbstractRSocket() {
             @Override
             public Mono<Void> metadataPush(Payload payload) {
                 return Mono.empty();
@@ -99,7 +99,7 @@ public class BasicOperationTest {
         main.fireAndForget = true;
         main.input = "Hello";
 
-        requestHandler = new AbstractReactiveSocket() {
+        requestHandler = new AbstractRSocket() {
             @Override
             public Mono<Void> fireAndForget(Payload payload) {
                 return Mono.empty();
@@ -116,7 +116,7 @@ public class BasicOperationTest {
         main.requestResponse = true;
         main.input = "Hello";
 
-        requestHandler = new AbstractReactiveSocket() {
+        requestHandler = new AbstractRSocket() {
             @Override
             public Mono<Payload> requestResponse(Payload payload) {
                 return Mono.just(reverse(ByteBufferUtil.toUtf8String(payload.getData())));
@@ -135,7 +135,7 @@ public class BasicOperationTest {
         main.requestResponse = true;
         main.input = "@src/test/resources/hello.text";
 
-        requestHandler = new AbstractReactiveSocket() {
+        requestHandler = new AbstractRSocket() {
             @Override
             public Mono<Payload> requestResponse(Payload payload) {
                 return Mono.just(reverse(ByteBufferUtil.toUtf8String(payload.getData())));
@@ -154,7 +154,7 @@ public class BasicOperationTest {
         main.requestResponse = true;
         main.input = "@src/test/resources/goodbye.text";
 
-        requestHandler = new AbstractReactiveSocket() {
+        requestHandler = new AbstractRSocket() {
             @Override
             public Mono<Payload> requestResponse(Payload payload) {
                 return Mono.just(reverse(ByteBufferUtil.toUtf8String(payload.getData())));
@@ -173,7 +173,7 @@ public class BasicOperationTest {
         main.requestResponse = true;
         main.input = "Hello";
 
-        requestHandler = new AbstractReactiveSocket() {
+        requestHandler = new AbstractRSocket() {
             @Override
             public Mono<Payload> requestResponse(Payload payload) {
                 return Mono.error(new ApplicationException(payload("server failure")));
@@ -193,7 +193,7 @@ public class BasicOperationTest {
         main.stream = true;
         main.input = "Hello";
 
-        requestHandler = new AbstractReactiveSocket() {
+        requestHandler = new AbstractRSocket() {
             @Override
             public Flux<Payload> requestStream(Payload payload) {
                 String s = ByteBufferUtil.toUtf8String(payload.getData());
@@ -219,7 +219,7 @@ public class BasicOperationTest {
         main.stream = true;
         main.input = "Hello";
 
-        requestHandler = new AbstractReactiveSocket() {
+        requestHandler = new AbstractRSocket() {
             @Override
             public Flux<Payload> requestStream(Payload payload) {
                 return Flux.range(1, 3)

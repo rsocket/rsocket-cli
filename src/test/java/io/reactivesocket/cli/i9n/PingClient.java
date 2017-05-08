@@ -1,6 +1,6 @@
-package io.reactivesocket.cli.i9n;
+package io.rsocket.cli.i9n;
 
-import io.reactivesocket.cli.Main;
+import io.rsocket.cli.Main;
 
 public class PingClient {
     public static void main(String[] args) throws Exception {

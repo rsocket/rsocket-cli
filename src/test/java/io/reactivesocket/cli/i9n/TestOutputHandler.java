@@ -1,8 +1,8 @@
-package io.reactivesocket.cli.i9n;
+package io.rsocket.cli.i9n;
 
 import com.google.common.collect.Lists;
-import io.reactivesocket.cli.OutputHandler;
-import io.reactivesocket.cli.UsageException;
+import io.rsocket.cli.OutputHandler;
+import io.rsocket.cli.UsageException;
 
 import java.util.List;
 
