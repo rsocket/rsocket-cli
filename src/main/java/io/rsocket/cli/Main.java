@@ -27,6 +27,7 @@ import io.rsocket.AbstractRSocket;
 import io.rsocket.ConnectionSetupPayload;
 import io.rsocket.Payload;
 import io.rsocket.RSocket;
+import io.rsocket.cli.util.LoggingUtil;
 import io.rsocket.client.KeepAliveProvider;
 import io.rsocket.client.RSocketClient;
 import io.rsocket.client.SetupProvider;
