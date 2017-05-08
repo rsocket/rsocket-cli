@@ -16,19 +16,13 @@
 package io.rsocket.cli;
 
 import com.google.common.io.CharSource;
-import com.google.common.io.LineProcessor;
 import io.rsocket.Payload;
 import io.rsocket.util.PayloadImpl;
-import io.reactivex.Flowable;
-import io.reactivex.schedulers.Schedulers;
-import java.nio.charset.StandardCharsets;
-import java.util.function.Function;
-import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscription;
+import reactor.core.publisher.Flux;
 
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicBoolean;
-import reactor.core.publisher.Flux;
+import java.nio.charset.StandardCharsets;
+import java.util.function.Function;
 
 public final class Publishers {
 
