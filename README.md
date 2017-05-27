@@ -9,7 +9,7 @@ Simple RSocket CLI currently for two main purposes
 
 # Build Status
 
-<a href='https://travis-ci.org/RSocket/reactivesocket-cli/builds'><img src='https://travis-ci.org/RSocket/reactivesocket-cli.svg?branch=master'></a> 
+<a href='https://travis-ci.org/ReactiveSocket/reactivesocket-cli/builds'><img src='https://travis-ci.org/ReactiveSocket/reactivesocket-cli.svg?branch=master'></a> 
 
 
 ## Build and Run (one step)
