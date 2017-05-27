@@ -1,11 +1,11 @@
-# ReactiveSocket CLI
+# RSocket CLI
 
 ## Description
 
-Simple ReactiveSocket CLI currently for two main purposes
+Simple RSocket CLI currently for two main purposes
 
 1. Early testing of new protocol server implementations e.g. websocket
-2. Sending some basic traffic to servers built using ReactiveSocket e.g. help debug a mobile <=> server integration issue. 
+2. Sending some basic traffic to servers built using RSocket e.g. help debug a mobile <=> server integration issue. 
 
 # Build Status
 

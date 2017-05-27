@@ -11,7 +11,7 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.reactivesocket.cli.util;
+package io.rsocket.cli.util;
 
 import com.google.common.collect.Lists;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -40,13 +40,13 @@ public class LoggingUtil {
       getLogger("").setLevel(Level.INFO);
       getLogger("io.netty").setLevel(Level.INFO);
       getLogger("io.reactivex").setLevel(Level.FINE);
-      getLogger("io.reactivesocket").setLevel(Level.FINEST);
+      getLogger("io.rsocket").setLevel(Level.FINEST);
       getLogger("reactor.ipc.netty").setLevel(Level.FINEST);
     } else {
       getLogger("").setLevel(Level.SEVERE);
       getLogger("io.netty").setLevel(Level.SEVERE);
       getLogger("io.reactivex").setLevel(Level.SEVERE);
-      getLogger("io.reactivesocket").setLevel(Level.SEVERE);
+      getLogger("io.rsocket").setLevel(Level.SEVERE);
     }
   }
 

@@ -11,7 +11,7 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.reactivesocket.cli;
+package io.rsocket.cli;
 
 public class UsageException extends RuntimeException {
     public UsageException(String message) {

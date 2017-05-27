@@ -1,11 +1,11 @@
-package io.reactivesocket.cli.i9n;
+package io.rsocket.cli.i9n;
 
 import io.airlift.airline.ParseException;
 import org.junit.Test;
 
 import java.time.Duration;
 
-import static io.reactivesocket.cli.TimeUtil.parseShortDuration;
+import static io.rsocket.cli.TimeUtil.parseShortDuration;
 import static org.junit.Assert.assertEquals;
 
 public class TimeUtilTest {

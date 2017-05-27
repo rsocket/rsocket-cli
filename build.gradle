@@ -3,24 +3,23 @@ buildscript {
   dependencies { classpath 'io.reactivesocket:gradle-nebula-plugin-reactivesocket:1.0.6' }
 }
 
-description = 'ReactiveSocket CLI.'
+description = 'RSocket CLI.'
 
 apply plugin: 'reactivesocket-project'
 apply plugin: 'java'
 apply plugin: 'application'
 
-mainClassName = "io.reactivesocket.cli.Main"
+mainClassName = "io.rsocket.cli.Main"
 
 repositories {
     mavenLocal()
     maven { url 'https://oss.jfrog.org/libs-snapshot' }
-    maven { url 'https://dl.bintray.com/reactivesocket/ReactiveSocket' }
+    maven { url 'https://dl.bintray.com/reactivesocket/RSocket' }
 }
 
 dependencies {
-    compile 'io.reactivesocket:reactivesocket-transport-netty:0.9-SNAPSHOT'
-    compile 'io.reactivesocket:reactivesocket-transport-local:0.9-SNAPSHOT'
-    compile 'io.reactivex.rxjava2:rxjava:2.0.2'
+    compile 'io.rsocket:rsocket-transport-netty:0.9-SNAPSHOT'
+    compile 'io.rsocket:rsocket-transport-local:0.9-SNAPSHOT'
 
     compile 'io.airlift:airline:0.7'
     compile 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.8.8'

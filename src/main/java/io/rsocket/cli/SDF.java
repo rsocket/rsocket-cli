@@ -1,4 +1,4 @@
-package io.reactivesocket.cli;
+package io.rsocket.cli;
 
 public class SDF {
     public static void main(String[] args) throws Exception {

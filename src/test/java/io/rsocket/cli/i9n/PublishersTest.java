@@ -1,7 +1,7 @@
-package io.reactivesocket.cli.i9n;
+package io.rsocket.cli.i9n;
 
 import com.google.common.io.CharSource;
-import io.reactivesocket.cli.Publishers;
+import io.rsocket.cli.Publishers;
 import io.reactivex.subscribers.TestSubscriber;
 import org.junit.Test;
 import org.reactivestreams.Subscriber;
