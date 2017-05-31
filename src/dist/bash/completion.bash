@@ -30,7 +30,7 @@ _reactivesocket_complete()
   fi
 
   # TODO remember recent hosts
-  _reactivesocket_hosts="tcp://localhost:9898"
+  _reactivesocket_hosts="tcp://localhost:9898 ws://localhost:9897"
   COMPREPLY=( $( compgen -W "$_reactivesocket_hosts" -- "$cur" ) )
 
   __ltrim_colon_completions "$cur"

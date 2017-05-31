@@ -16,7 +16,9 @@ package io.rsocket.cli;
 import io.rsocket.transport.ClientTransport;
 import io.rsocket.transport.ServerTransport;
 import io.rsocket.transport.netty.client.TcpClientTransport;
+import io.rsocket.transport.netty.client.WebsocketClientTransport;
 import io.rsocket.transport.netty.server.TcpServerTransport;
+import io.rsocket.transport.netty.server.WebsocketServerTransport;
 import reactor.ipc.netty.tcp.TcpClient;
 import reactor.ipc.netty.tcp.TcpServer;
 
@@ -26,6 +28,8 @@ public class ConnectionHelper {
     public static ClientTransport buildClientConnection(URI uri) {
         if ("tcp".equals(uri.getScheme())) {
             return TcpClientTransport.create(TcpClient.create(uri.getHost(), uri.getPort()));
+        } else if ("ws".equals(uri.getScheme())) {
+            return WebsocketClientTransport.create(uri.getHost(), uri.getPort());
         } else {
             throw new UnsupportedOperationException("uri unsupported: " + uri);
         }
@@ -34,6 +38,8 @@ public class ConnectionHelper {
     public static ServerTransport buildServerConnection(URI uri) {
         if ("tcp".equals(uri.getScheme())) {
             return TcpServerTransport.create(TcpServer.create(uri.getHost(), uri.getPort()));
+        } else if ("ws".equals(uri.getScheme())) {
+            return WebsocketServerTransport.create(uri.getHost(), uri.getPort());
         } else {
             throw new UnsupportedOperationException("uri unsupported: " + uri);
         }
