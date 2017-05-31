@@ -2,5 +2,5 @@
 
 ./gradlew -q installDist
 
-./build/install/reactivesocket-cli/bin/reactivesocket-cli "$@"
+./build/install/rsocket-cli/bin/rsocket-cli "$@"
 
