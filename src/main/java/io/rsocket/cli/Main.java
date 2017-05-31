@@ -17,44 +17,25 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.io.CharSource;
 import com.google.common.io.Files;
-import io.airlift.airline.Arguments;
-import io.airlift.airline.Command;
-import io.airlift.airline.Help;
-import io.airlift.airline.Option;
-import io.airlift.airline.ParseException;
-import io.airlift.airline.SingleCommand;
-import io.rsocket.AbstractRSocket;
-import io.rsocket.ConnectionSetupPayload;
-import io.rsocket.Payload;
-import io.rsocket.RSocket;
+import io.airlift.airline.*;
+import io.rsocket.*;
 import io.rsocket.cli.util.LoggingUtil;
-import io.rsocket.client.KeepAliveProvider;
-import io.rsocket.client.RSocketClient;
-import io.rsocket.client.SetupProvider;
-import io.rsocket.lease.DisabledLeaseAcceptingSocket;
-import io.rsocket.server.RSocketServer;
-import io.rsocket.transport.TransportServer;
 import io.rsocket.util.PayloadImpl;
-
-import java.nio.ByteBuffer;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import org.reactivestreams.Publisher;
 import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
 import java.util.function.Supplier;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
-import static io.rsocket.cli.TimeUtil.*;
+import static io.rsocket.cli.TimeUtil.parseShortDuration;
 
 /**
  * Simple command line tool to make a RSocket connection and send/receive elements.
@@ -97,11 +78,11 @@ public class Main {
   public String metadata;
 
   @Option(name = {"--metadataFormat"}, description = "Metadata Format", allowedValues = {"json",
-      "cbor", "mime-type"})
+          "cbor", "mime-type"})
   public String metadataFormat = "json";
 
   @Option(name = {"--dataFormat"}, description = "Data Format", allowedValues = {"json", "cbor",
-      "mime-type"})
+          "mime-type"})
   public String dataFormat = "binary";
 
   @Option(name = "--setup", description = "String input or @path/to/file for setup metadata")
@@ -125,7 +106,7 @@ public class Main {
   public RSocket client;
 
   public OutputHandler outputHandler;
-  private TransportServer.StartedServer server;
+  private Closeable server;
 
   public void run() {
     LoggingUtil.configureLogging(debug);
@@ -138,18 +119,25 @@ public class Main {
       URI uri = new URI(arguments.get(0));
 
       if (serverMode) {
-        server = RSocketServer.create(ConnectionHelper.buildServerConnection(uri))
-            .start((setupPayload, reactiveSocket) -> new DisabledLeaseAcceptingSocket(
-                createServerRequestHandler(setupPayload)));
+        server = RSocketFactory.receive().acceptor((setupPayload, reactiveSocket) -> createServerRequestHandler(setupPayload))
+                .transport(ConnectionHelper.buildServerConnection(uri)).start().block();
 
-        server.awaitShutdown();
+        server.onClose().block();
       } else {
-        SetupProvider setupProvider = buildSetupProvider();
+        RSocketFactory.ClientRSocketFactory clientRSocketFactory = RSocketFactory.connect();
 
-        client = Mono.from(
-            RSocketClient
-                .create(ConnectionHelper.buildClientConnection(uri), setupProvider)
-                .connect()).block();
+        if (keepalive != null) {
+          clientRSocketFactory.keepAliveTickPeriod(parseShortDuration(keepalive));
+        }
+        clientRSocketFactory.errorConsumer(t -> outputHandler.error("client error", t));
+        clientRSocketFactory.metadataMimeType(standardMimeType(metadataFormat));
+        clientRSocketFactory.dataMineType(standardMimeType(dataFormat));
+        if (setup != null) {
+          clientRSocketFactory.setupPayload(parseSetupPayload());
+        }
+
+        client = clientRSocketFactory
+                .transport(ConnectionHelper.buildClientConnection(uri)).start().block();
 
         Flux<Void> run = run(client);
 
@@ -162,18 +150,6 @@ public class Main {
     } catch (Exception e) {
       handleError(e);
     }
-  }
-
-  private SetupProvider buildSetupProvider() {
-    SetupProvider setupProvider = SetupProvider.keepAlive(keepAlive())
-        .disableLease()
-        .metadataMimeType(standardMimeType(metadataFormat))
-        .dataMimeType(standardMimeType(dataFormat));
-
-    if (setup != null) {
-      setupProvider = setupProvider.setupPayload(parseSetupPayload());
-    }
-    return setupProvider;
   }
 
   private String standardMimeType(String dataFormat) {
@@ -221,18 +197,10 @@ public class Main {
     return file;
   }
 
-  private KeepAliveProvider keepAlive() {
-    if (keepalive == null) {
-      return KeepAliveProvider.never();
-    }
-
-    return KeepAliveProvider.from(parseShortDuration(keepalive));
-  }
-
-  public RSocket createServerRequestHandler(ConnectionSetupPayload setupPayload) {
+  public Mono<RSocket> createServerRequestHandler(ConnectionSetupPayload setupPayload) {
     LoggerFactory.getLogger(Main.class).debug("setup payload " + setupPayload);
 
-    return new AbstractRSocket() {
+    return Mono.just(new AbstractRSocket() {
       @Override
       public Mono<Void> fireAndForget(Payload payload) {
         showPayload(payload);
@@ -252,7 +220,7 @@ public class Main {
       @Override
       public Flux<Payload> requestChannel(Publisher<Payload> payloads) {
         Flux.from(payloads)
-            .subscribe(p -> showPayload(p), e -> outputHandler.error("channel error", e));
+                .subscribe(p -> showPayload(p), e -> outputHandler.error("channel error", e));
         return inputPublisher();
       }
 
@@ -261,7 +229,7 @@ public class Main {
         outputHandler.showOutput(toUtf8String(payload.getMetadata()));
         return Mono.empty();
       }
-    };
+    });
   }
 
   private Flux<Payload> handleIncomingPayload(Payload payload) {
@@ -314,15 +282,15 @@ public class Main {
         source = client.requestChannel(inputPublisher());
       } else {
         outputHandler.info(
-            "Using passive client mode, choose an option to use a different mode.");
+                "Using passive client mode, choose an option to use a different mode.");
         source = Flux.never();
       }
 
       return source.map(Payload::getData)
-          .map(this::toUtf8String)
-          .doOnNext(outputHandler::showOutput)
-          .doOnError(e -> outputHandler.error("error from server", e))
-          .onErrorResumeWith(e -> Flux.empty()).thenMany(Flux.empty());
+              .map(this::toUtf8String)
+              .doOnNext(outputHandler::showOutput)
+              .doOnError(e -> outputHandler.error("error from server", e))
+              .onErrorResumeWith(e -> Flux.empty()).thenMany(Flux.empty());
     } catch (Exception ex) {
       return Flux.<Void>error(ex).doOnError(e -> outputHandler.error("error before query", e)).onErrorResumeWith(e -> Flux.empty());
     }
@@ -419,7 +387,8 @@ public class Main {
     }
   }
 
-  @SuppressWarnings("ConstantConditions") public static void main(String... args) throws Exception {
+  @SuppressWarnings("ConstantConditions")
+  public static void main(String... args) throws Exception {
     fromArgs(args).run();
   }
 }

@@ -13,27 +13,27 @@
  */
 package io.rsocket.cli;
 
-import io.rsocket.transport.TransportClient;
-import io.rsocket.transport.TransportServer;
-import io.rsocket.transport.netty.client.TcpTransportClient;
-import io.rsocket.transport.netty.server.TcpTransportServer;
+import io.rsocket.transport.ClientTransport;
+import io.rsocket.transport.ServerTransport;
+import io.rsocket.transport.netty.client.TcpClientTransport;
+import io.rsocket.transport.netty.server.TcpServerTransport;
 import reactor.ipc.netty.tcp.TcpClient;
 import reactor.ipc.netty.tcp.TcpServer;
 
 import java.net.URI;
 
 public class ConnectionHelper {
-    public static TransportClient buildClientConnection(URI uri) {
+    public static ClientTransport buildClientConnection(URI uri) {
         if ("tcp".equals(uri.getScheme())) {
-            return TcpTransportClient.create(TcpClient.create(uri.getHost(), uri.getPort()));
+            return TcpClientTransport.create(TcpClient.create(uri.getHost(), uri.getPort()));
         } else {
             throw new UnsupportedOperationException("uri unsupported: " + uri);
         }
     }
 
-    public static TransportServer buildServerConnection(URI uri) {
+    public static ServerTransport buildServerConnection(URI uri) {
         if ("tcp".equals(uri.getScheme())) {
-            return TcpTransportServer.create(TcpServer.create(uri.getHost(), uri.getPort()));
+            return TcpServerTransport.create(TcpServer.create(uri.getHost(), uri.getPort()));
         } else {
             throw new UnsupportedOperationException("uri unsupported: " + uri);
         }

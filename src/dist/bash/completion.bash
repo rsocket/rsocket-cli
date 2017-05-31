@@ -36,4 +36,4 @@ _reactivesocket_complete()
   __ltrim_colon_completions "$cur"
 }
 
-complete -F _reactivesocket_complete reactivesocket-cli
+complete -F _reactivesocket_complete rsocket-cli
