@@ -15,7 +15,7 @@ Simple RSocket CLI currently for two main purposes
 ## Build and Run (one step)
 
 ```
-$ ./reactivesocket-cli tcp://localhost:8765
+$ ./rsocket-cli tcp://localhost:8765
 ```
 
 ## Installing via Homebrew
@@ -24,14 +24,14 @@ Use tab completion for help with specifying the operation type.
 
 ```
 $ brew install yschimke/tap/reactivesocket-cli
-$ reactivesocket-cli -i "I am a Server" --server tcp://localhost:8765  # window 1
-$ reactivesocket-cli --rr -i "I am a Client" tcp://localhost:8765      # window 2
+$ rsocket-cli -i "I am a Server" --server tcp://localhost:8765  # window 1
+$ rsocket-cli --rr -i "I am a Client" tcp://localhost:8765      # window 2
 ```
 
 Stream the dictionary (With frames debugged)
 
 ```
-$ reactivesocket-cli --debug -i @/usr/share/dict/words --server tcp://localhost:8765  # window 1
-$ reactivesocket-cli --str -i "Word Up" tcp://localhost:8765                  # window 2
+$ rsocket-cli --debug -i @/usr/share/dict/words --server tcp://localhost:8765  # window 1
+$ rsocket-cli --str -i "Word Up" tcp://localhost:8765                          # window 2
 ```
 
