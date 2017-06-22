@@ -20,6 +20,7 @@ import com.google.common.io.Files;
 import io.airlift.airline.*;
 import io.rsocket.*;
 import io.rsocket.cli.util.LoggingUtil;
+import io.rsocket.uri.UriTransportRegistry;
 import io.rsocket.util.PayloadImpl;
 import org.reactivestreams.Publisher;
 import org.slf4j.LoggerFactory;
@@ -106,6 +107,7 @@ public class Main {
   public RSocket client;
 
   public OutputHandler outputHandler;
+
   private Closeable server;
 
   public void run() {
@@ -116,11 +118,11 @@ public class Main {
     }
 
     try {
-      URI uri = new URI(arguments.get(0));
+      String uri = arguments.get(0);
 
       if (serverMode) {
         server = RSocketFactory.receive().acceptor((setupPayload, reactiveSocket) -> createServerRequestHandler(setupPayload))
-                .transport(ConnectionHelper.buildServerConnection(uri)).start().block();
+                .transport(UriTransportRegistry.serverForUri(uri)).start().block();
 
         server.onClose().block();
       } else {
@@ -137,7 +139,7 @@ public class Main {
         }
 
         client = clientRSocketFactory
-                .transport(ConnectionHelper.buildClientConnection(uri)).start().block();
+                .transport(UriTransportRegistry.clientForUri(uri)).start().block();
 
         Flux<Void> run = run(client);
 
@@ -290,9 +292,9 @@ public class Main {
               .map(this::toUtf8String)
               .doOnNext(outputHandler::showOutput)
               .doOnError(e -> outputHandler.error("error from server", e))
-              .onErrorResumeWith(e -> Flux.empty()).thenMany(Flux.empty());
+              .onErrorResume(e -> Flux.empty()).thenMany(Flux.empty());
     } catch (Exception ex) {
-      return Flux.<Void>error(ex).doOnError(e -> outputHandler.error("error before query", e)).onErrorResumeWith(e -> Flux.empty());
+      return Flux.<Void>error(ex).doOnError(e -> outputHandler.error("error before query", e)).onErrorResume(e -> Flux.empty());
     }
   }
 
