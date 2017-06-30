@@ -133,7 +133,7 @@ public class Main {
         }
         clientRSocketFactory.errorConsumer(t -> outputHandler.error("client error", t));
         clientRSocketFactory.metadataMimeType(standardMimeType(metadataFormat));
-        clientRSocketFactory.dataMineType(standardMimeType(dataFormat));
+        clientRSocketFactory.dataMimeType(standardMimeType(dataFormat));
         if (setup != null) {
           clientRSocketFactory.setupPayload(parseSetupPayload());
         }
