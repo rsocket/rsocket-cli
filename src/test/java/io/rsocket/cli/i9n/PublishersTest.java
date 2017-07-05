@@ -2,23 +2,26 @@ package io.rsocket.cli.i9n;
 
 import com.google.common.io.CharSource;
 import io.rsocket.cli.Publishers;
-import io.reactivex.subscribers.TestSubscriber;
+import java.util.Arrays;
+import java.util.List;
 import org.junit.Test;
-import org.reactivestreams.Subscriber;
+
+import static org.junit.Assert.assertEquals;
 
 public class PublishersTest {
 
-    @Test(timeout = 2000)
-    public void testSplitInLinesWithEOF() throws Exception {
-        TestSubscriber<String> sub = TestSubscriber.create();
-        Publishers.splitInLines(CharSource.wrap("Hello")).subscribe(sub);
-        sub.await().assertNoErrors().assertValue("Hello");
-    }
+  @Test(timeout = 2000)
+  public void testSplitInLinesWithEOF() throws Exception {
+    List<String> list =
+        Publishers.splitInLines(CharSource.wrap("Hello")).collectList().block();
 
-    @Test(timeout = 2000)
-    public void testSplitInLinesWithNewLines() throws Exception {
-        TestSubscriber<String> sub = TestSubscriber.create();
-        Publishers.splitInLines(CharSource.wrap("Hello\nHello1")).subscribe(sub);
-        sub.await().assertNoErrors().assertValues("Hello", "Hello1");
-    }
+    assertEquals(Arrays.asList("Hello"), list);
+  }
+
+  @Test(timeout = 2000)
+  public void testSplitInLinesWithNewLines() throws Exception {
+    List<String> list =
+        Publishers.splitInLines(CharSource.wrap("Hello\nHello1")).collectList().block();
+    assertEquals(Arrays.asList("Hello", "Hello1"), list);
+  }
 }
