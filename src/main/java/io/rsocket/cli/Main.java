@@ -13,6 +13,8 @@
  */
 package io.rsocket.cli;
 
+import static io.rsocket.cli.TimeUtil.parseShortDuration;
+
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.io.CharSource;
@@ -22,36 +24,38 @@ import io.rsocket.*;
 import io.rsocket.cli.util.LoggingUtil;
 import io.rsocket.uri.UriTransportRegistry;
 import io.rsocket.util.PayloadImpl;
-import org.reactivestreams.Publisher;
-import org.slf4j.LoggerFactory;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
 import java.util.function.Supplier;
-
-import static io.rsocket.cli.TimeUtil.parseShortDuration;
+import org.reactivestreams.Publisher;
+import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * Simple command line tool to make a RSocket connection and send/receive elements.
- * <p>
- * Currently limited in features, only supports a text/line based approach.
+ *
+ * <p>Currently limited in features, only supports a text/line based approach.
  */
 @SuppressWarnings({"WeakerAccess", "CanBeFinal", "unused"})
 @Command(name = Main.NAME, description = "CLI for RSocket.")
 public class Main {
   static final String NAME = "reactivesocket-cli";
 
-  @Option(name = {"-h", "--help"}, description = "Display help information")
+  @Option(
+    name = {"-h", "--help"},
+    description = "Display help information"
+  )
   public boolean help;
 
-  @Option(name = {"-H", "--header"}, description = "Custom header to pass to server")
+  @Option(
+    name = {"-H", "--header"},
+    description = "Custom header to pass to server"
+  )
   public List<String> headers;
 
   @Option(name = "--str", description = "Request Stream")
@@ -72,18 +76,30 @@ public class Main {
   @Option(name = "--server", description = "Start server instead of client")
   public boolean serverMode;
 
-  @Option(name = {"-i", "--input"}, description = "String input or @path/to/file")
+  @Option(
+    name = {"-i", "--input"},
+    description = "String input or @path/to/file"
+  )
   public String input;
 
-  @Option(name = {"-m", "--metadata"}, description = "Metadata input string input or @path/to/file")
+  @Option(
+    name = {"-m", "--metadata"},
+    description = "Metadata input string input or @path/to/file"
+  )
   public String metadata;
 
-  @Option(name = {"--metadataFormat"}, description = "Metadata Format", allowedValues = {"json",
-          "cbor", "mime-type"})
+  @Option(
+    name = {"--metadataFormat"},
+    description = "Metadata Format",
+    allowedValues = {"json", "cbor", "mime-type"}
+  )
   public String metadataFormat = "json";
 
-  @Option(name = {"--dataFormat"}, description = "Data Format", allowedValues = {"json", "cbor",
-          "mime-type"})
+  @Option(
+    name = {"--dataFormat"},
+    description = "Data Format",
+    allowedValues = {"json", "cbor", "mime-type"}
+  )
   public String dataFormat = "binary";
 
   @Option(name = "--setup", description = "String input or @path/to/file for setup metadata")
@@ -121,8 +137,13 @@ public class Main {
       String uri = arguments.get(0);
 
       if (serverMode) {
-        server = RSocketFactory.receive().acceptor((setupPayload, reactiveSocket) -> createServerRequestHandler(setupPayload))
-                .transport(UriTransportRegistry.serverForUri(uri)).start().block();
+        server =
+            RSocketFactory.receive()
+                .acceptor(
+                    (setupPayload, reactiveSocket) -> createServerRequestHandler(setupPayload))
+                .transport(UriTransportRegistry.serverForUri(uri))
+                .start()
+                .block();
 
         server.onClose().block();
       } else {
@@ -138,8 +159,8 @@ public class Main {
           clientRSocketFactory.setupPayload(parseSetupPayload());
         }
 
-        client = clientRSocketFactory
-                .transport(UriTransportRegistry.clientForUri(uri)).start().block();
+        client =
+            clientRSocketFactory.transport(UriTransportRegistry.clientForUri(uri)).start().block();
 
         Flux<Void> run = run(client);
 
@@ -202,36 +223,37 @@ public class Main {
   public Mono<RSocket> createServerRequestHandler(ConnectionSetupPayload setupPayload) {
     LoggerFactory.getLogger(Main.class).debug("setup payload " + setupPayload);
 
-    return Mono.just(new AbstractRSocket() {
-      @Override
-      public Mono<Void> fireAndForget(Payload payload) {
-        showPayload(payload);
-        return Mono.empty();
-      }
+    return Mono.just(
+        new AbstractRSocket() {
+          @Override
+          public Mono<Void> fireAndForget(Payload payload) {
+            showPayload(payload);
+            return Mono.empty();
+          }
 
-      @Override
-      public Mono<Payload> requestResponse(Payload payload) {
-        return handleIncomingPayload(payload).single();
-      }
+          @Override
+          public Mono<Payload> requestResponse(Payload payload) {
+            return handleIncomingPayload(payload).single();
+          }
 
-      @Override
-      public Flux<Payload> requestStream(Payload payload) {
-        return handleIncomingPayload(payload);
-      }
+          @Override
+          public Flux<Payload> requestStream(Payload payload) {
+            return handleIncomingPayload(payload);
+          }
 
-      @Override
-      public Flux<Payload> requestChannel(Publisher<Payload> payloads) {
-        Flux.from(payloads)
+          @Override
+          public Flux<Payload> requestChannel(Publisher<Payload> payloads) {
+            Flux.from(payloads)
                 .subscribe(p -> showPayload(p), e -> outputHandler.error("channel error", e));
-        return inputPublisher();
-      }
+            return inputPublisher();
+          }
 
-      @Override
-      public Mono<Void> metadataPush(Payload payload) {
-        outputHandler.showOutput(toUtf8String(payload.getMetadata()));
-        return Mono.empty();
-      }
-    });
+          @Override
+          public Mono<Void> metadataPush(Payload payload) {
+            outputHandler.showOutput(toUtf8String(payload.getMetadata()));
+            return Mono.empty();
+          }
+        });
   }
 
   private Flux<Payload> handleIncomingPayload(Payload payload) {
@@ -283,18 +305,21 @@ public class Main {
         }
         source = client.requestChannel(inputPublisher());
       } else {
-        outputHandler.info(
-                "Using passive client mode, choose an option to use a different mode.");
+        outputHandler.info("Using passive client mode, choose an option to use a different mode.");
         source = Flux.never();
       }
 
-      return source.map(Payload::getData)
-              .map(this::toUtf8String)
-              .doOnNext(outputHandler::showOutput)
-              .doOnError(e -> outputHandler.error("error from server", e))
-              .onErrorResume(e -> Flux.empty()).thenMany(Flux.empty());
+      return source
+          .map(Payload::getData)
+          .map(this::toUtf8String)
+          .doOnNext(outputHandler::showOutput)
+          .doOnError(e -> outputHandler.error("error from server", e))
+          .onErrorResume(e -> Flux.empty())
+          .thenMany(Flux.empty());
     } catch (Exception ex) {
-      return Flux.<Void>error(ex).doOnError(e -> outputHandler.error("error before query", e)).onErrorResume(e -> Flux.empty());
+      return Flux.<Void>error(ex)
+          .doOnError(e -> outputHandler.error("error before query", e))
+          .onErrorResume(e -> Flux.empty());
     }
   }
 
@@ -343,10 +368,13 @@ public class Main {
   }
 
   private PayloadImpl singleInputPayload() {
-    String data = getInputFromSource(input, () -> {
-      Scanner in = new Scanner(System.in);
-      return in.nextLine();
-    });
+    String data =
+        getInputFromSource(
+            input,
+            () -> {
+              Scanner in = new Scanner(System.in);
+              return in.nextLine();
+            });
 
     byte[] metadata = buildMetadata();
 

@@ -18,33 +18,34 @@ package io.rsocket.cli;
 import com.google.common.io.CharSource;
 import io.rsocket.Payload;
 import io.rsocket.util.PayloadImpl;
-import reactor.core.publisher.Flux;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.function.Function;
+import reactor.core.publisher.Flux;
 
 public final class Publishers {
 
-    private Publishers() {
-        // No instances.
-    }
+  private Publishers() {
+    // No instances.
+  }
 
-    /**
-     * Return a publisher for consuming each line from the passed stream.
-     *
-     * @param inputStream to read.
-     */
-    public static Flux<Payload> lines(CharSource inputStream, Function<String, byte[]> metadataFn) {
-        return splitInLines(inputStream)
-                       .map(l -> (Payload) new PayloadImpl(l.getBytes(StandardCharsets.UTF_8), metadataFn.apply(l)));
-    }
+  /**
+   * Return a publisher for consuming each line from the passed stream.
+   *
+   * @param inputStream to read.
+   */
+  public static Flux<Payload> lines(CharSource inputStream, Function<String, byte[]> metadataFn) {
+    return splitInLines(inputStream)
+        .map(
+            l ->
+                (Payload) new PayloadImpl(l.getBytes(StandardCharsets.UTF_8), metadataFn.apply(l)));
+  }
 
-    public static Flux<String> splitInLines(CharSource inputStream) {
-        try {
-            return Flux.fromStream(inputStream.openBufferedStream().lines());
-        } catch (IOException e) {
-            return Flux.error(e);
-        }
+  public static Flux<String> splitInLines(CharSource inputStream) {
+    try {
+      return Flux.fromStream(inputStream.openBufferedStream().lines());
+    } catch (IOException e) {
+      return Flux.error(e);
     }
+  }
 }
