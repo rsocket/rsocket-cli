@@ -1,4 +1,4 @@
-package io.rsocket.cli;
+package io.rsocket.cli.util;
 
 import io.airlift.airline.ParseException;
 import java.time.Duration;

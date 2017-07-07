@@ -13,15 +13,25 @@
  */
 package io.rsocket.cli;
 
-import static io.rsocket.cli.TimeUtil.parseShortDuration;
-
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.io.CharSource;
 import com.google.common.io.Files;
-import io.airlift.airline.*;
-import io.rsocket.*;
+import io.airlift.airline.Arguments;
+import io.airlift.airline.Command;
+import io.airlift.airline.Help;
+import io.airlift.airline.Option;
+import io.airlift.airline.ParseException;
+import io.airlift.airline.SingleCommand;
+import io.rsocket.AbstractRSocket;
+import io.rsocket.Closeable;
+import io.rsocket.ConnectionSetupPayload;
+import io.rsocket.Payload;
+import io.rsocket.RSocket;
+import io.rsocket.RSocketFactory;
 import io.rsocket.cli.util.LoggingUtil;
+import io.rsocket.cli.util.MetadataUtil;
+import io.rsocket.transport.ClientTransport;
 import io.rsocket.uri.UriTransportRegistry;
 import io.rsocket.util.PayloadImpl;
 import java.io.File;
@@ -29,12 +39,19 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
 import java.util.function.Supplier;
 import org.reactivestreams.Publisher;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import static io.rsocket.cli.util.HeaderUtil.headerMap;
+import static io.rsocket.cli.util.HeaderUtil.inputFile;
+import static io.rsocket.cli.util.HeaderUtil.stringValue;
+import static io.rsocket.cli.util.TimeUtil.parseShortDuration;
 
 /**
  * Simple command line tool to make a RSocket connection and send/receive elements.
@@ -47,21 +64,27 @@ public class Main {
   static final String NAME = "reactivesocket-cli";
 
   @Option(
-    name = {"-h", "--help"},
-    description = "Display help information"
+      name = {"-h", "--help"},
+      description = "Display help information"
   )
   public boolean help;
 
   @Option(
-    name = {"-H", "--header"},
-    description = "Custom header to pass to server"
+      name = {"-H", "--header"},
+      description = "Custom header to pass to server"
   )
   public List<String> headers;
 
-  @Option(name = "--str", description = "Request Stream")
+  @Option(
+      name = {"-T", "--transport-header"},
+      description = "Custom header to pass to the transport"
+  )
+  public List<String> transportHeader;
+
+  @Option(name = "--stream", description = "Request Stream")
   public boolean stream;
 
-  @Option(name = "--rr", description = "Request Response")
+  @Option(name = "--request", description = "Request Response")
   public boolean requestResponse;
 
   @Option(name = "--fnf", description = "Fire and Forget")
@@ -77,28 +100,28 @@ public class Main {
   public boolean serverMode;
 
   @Option(
-    name = {"-i", "--input"},
-    description = "String input or @path/to/file"
+      name = {"-i", "--input"},
+      description = "String input or @path/to/file"
   )
   public String input;
 
   @Option(
-    name = {"-m", "--metadata"},
-    description = "Metadata input string input or @path/to/file"
+      name = {"-m", "--metadata"},
+      description = "Metadata input string input or @path/to/file"
   )
   public String metadata;
 
   @Option(
-    name = {"--metadataFormat"},
-    description = "Metadata Format",
-    allowedValues = {"json", "cbor", "mime-type"}
+      name = {"--metadataFormat"},
+      description = "Metadata Format",
+      allowedValues = {"json", "cbor", "mime-type"}
   )
   public String metadataFormat = "json";
 
   @Option(
-    name = {"--dataFormat"},
-    description = "Data Format",
-    allowedValues = {"json", "cbor", "mime-type"}
+      name = {"--dataFormat"},
+      description = "Data Format",
+      allowedValues = {"json", "cbor", "mime-type"}
   )
   public String dataFormat = "binary";
 
@@ -159,8 +182,13 @@ public class Main {
           clientRSocketFactory.setupPayload(parseSetupPayload());
         }
 
-        client =
-            clientRSocketFactory.transport(UriTransportRegistry.clientForUri(uri)).start().block();
+        ClientTransport clientTransport = UriTransportRegistry.clientForUri(uri);
+
+        if (transportHeader != null && clientTransport instanceof HeaderAware) {
+          ((HeaderAware) clientTransport).setHeaders(headerMap(transportHeader));
+        }
+
+        client = clientRSocketFactory.transport(clientTransport).start().block();
 
         Flux<Void> run = run(client);
 
@@ -344,27 +372,11 @@ public class Main {
 
     if (source == null) {
       s = nullHandler.get();
-    } else if (source.startsWith("@")) {
-      try {
-        s = Files.toString(inputFile(source), StandardCharsets.UTF_8);
-      } catch (IOException e) {
-        throw new UsageException(e.toString());
-      }
     } else {
-      s = source;
+      s = stringValue(source);
     }
 
     return s;
-  }
-
-  private static File inputFile(String path) {
-    File file = new File(path.substring(1));
-
-    if (!file.isFile()) {
-      throw new UsageException("file not found: " + file);
-    }
-
-    return file;
   }
 
   private PayloadImpl singleInputPayload() {
@@ -389,17 +401,7 @@ public class Main {
 
       return getInputFromSource(this.metadata, () -> "").getBytes(StandardCharsets.UTF_8);
     } else if (this.headers != null) {
-      Map<String, String> headerMap = new LinkedHashMap<>();
-
-      if (headers != null) {
-        for (String header : headers) {
-          String[] parts = header.split(":", 2);
-          // TODO: consider better strategy than simple trim
-          headerMap.put(parts[0].trim(), parts[1].trim());
-        }
-      }
-
-      return MetadataUtil.encodeMetadataMap(headerMap, standardMimeType(metadataFormat));
+      return MetadataUtil.encodeMetadataMap(headerMap(headers), standardMimeType(metadataFormat));
     } else {
       return new byte[0];
     }

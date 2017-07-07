@@ -11,12 +11,13 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.rsocket.cli;
+package io.rsocket.cli.util;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import com.google.common.base.Throwables;
+import io.rsocket.cli.UsageException;
 import java.util.Map;
 
 public class MetadataUtil {

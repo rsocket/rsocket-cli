@@ -1,6 +1,6 @@
 package io.rsocket.cli.i9n;
 
-import static io.rsocket.cli.TimeUtil.parseShortDuration;
+import static io.rsocket.cli.util.TimeUtil.parseShortDuration;
 import static org.junit.Assert.assertEquals;
 
 import io.airlift.airline.ParseException;
