@@ -170,7 +170,8 @@ public class Http2DuplexConnection implements DuplexConnection {
   }
 
   public static class MyRSocketLengthCodec extends RSocketLengthCodec {
-    @Override public Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+    @Override
+    public Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
       return super.decode(ctx, in);
     }
   }
