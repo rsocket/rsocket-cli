@@ -39,38 +39,46 @@ public class Http2ClientTransport implements ClientTransport, HeaderAware {
     this.headers = headers;
   }
 
-  @Override public void setHeaders(Map<String, String> headers) {
+  @Override
+  public void setHeaders(Map<String, String> headers) {
     this.headers = headers;
   }
 
-  @Override public Mono<DuplexConnection> connect() {
+  @Override
+  public Mono<DuplexConnection> connect() {
     return createSession().flatMap(s -> Http2DuplexConnection.create(s, uri, headers));
   }
 
   private Mono<Session> createSession() {
-    return Mono.create(c -> {
-      HTTP2Client client = new HTTP2Client();
-      client.setExecutor(daemonClientExecutor());
-      client.setScheduler(daemonClientScheduler());
-      SslContextFactory sslContextFactory = new SslContextFactory();
-      client.addBean(sslContextFactory);
-      try {
-        client.start();
+    return Mono.create(
+        c -> {
+          HTTP2Client client = new HTTP2Client();
+          client.setExecutor(daemonClientExecutor());
+          client.setScheduler(daemonClientScheduler());
+          SslContextFactory sslContextFactory = new SslContextFactory();
+          client.addBean(sslContextFactory);
+          try {
+            client.start();
 
-        client.connect(sslContextFactory, new InetSocketAddress(uri.getHost(), getPort()),
-            new ServerSessionListener.Adapter(), new Promise<Session>() {
-              @Override public void succeeded(Session result) {
-                c.success(result);
-              }
+            client.connect(
+                sslContextFactory,
+                new InetSocketAddress(uri.getHost(), getPort()),
+                new ServerSessionListener.Adapter(),
+                new Promise<Session>() {
+                  @Override
+                  public void succeeded(Session result) {
+                    c.success(result);
+                  }
 
-              @Override public void failed(Throwable x) {
-                c.error(x);
-              }
-            });
-      } catch (Exception e) {
-        c.error(e);
-      }
-    });
+                  @Override
+                  public void failed(Throwable x) {
+                    c.error(x);
+                  }
+                });
+          } catch (Exception e) {
+            c.error(e);
+          }
+        });
   }
 
   private ScheduledExecutorScheduler daemonClientScheduler() {

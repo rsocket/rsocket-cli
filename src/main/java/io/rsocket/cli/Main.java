@@ -13,6 +13,11 @@
  */
 package io.rsocket.cli;
 
+import static io.rsocket.cli.util.HeaderUtil.headerMap;
+import static io.rsocket.cli.util.HeaderUtil.inputFile;
+import static io.rsocket.cli.util.HeaderUtil.stringValue;
+import static io.rsocket.cli.util.TimeUtil.parseShortDuration;
+
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.io.CharSource;
@@ -48,11 +53,6 @@ import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import static io.rsocket.cli.util.HeaderUtil.headerMap;
-import static io.rsocket.cli.util.HeaderUtil.inputFile;
-import static io.rsocket.cli.util.HeaderUtil.stringValue;
-import static io.rsocket.cli.util.TimeUtil.parseShortDuration;
-
 /**
  * Simple command line tool to make a RSocket connection and send/receive elements.
  *
@@ -64,20 +64,20 @@ public class Main {
   static final String NAME = "reactivesocket-cli";
 
   @Option(
-      name = {"-h", "--help"},
-      description = "Display help information"
+    name = {"-h", "--help"},
+    description = "Display help information"
   )
   public boolean help;
 
   @Option(
-      name = {"-H", "--header"},
-      description = "Custom header to pass to server"
+    name = {"-H", "--header"},
+    description = "Custom header to pass to server"
   )
   public List<String> headers;
 
   @Option(
-      name = {"-T", "--transport-header"},
-      description = "Custom header to pass to the transport"
+    name = {"-T", "--transport-header"},
+    description = "Custom header to pass to the transport"
   )
   public List<String> transportHeader;
 
@@ -100,28 +100,28 @@ public class Main {
   public boolean serverMode;
 
   @Option(
-      name = {"-i", "--input"},
-      description = "String input or @path/to/file"
+    name = {"-i", "--input"},
+    description = "String input or @path/to/file"
   )
   public String input;
 
   @Option(
-      name = {"-m", "--metadata"},
-      description = "Metadata input string input or @path/to/file"
+    name = {"-m", "--metadata"},
+    description = "Metadata input string input or @path/to/file"
   )
   public String metadata;
 
   @Option(
-      name = {"--metadataFormat"},
-      description = "Metadata Format",
-      allowedValues = {"json", "cbor", "mime-type"}
+    name = {"--metadataFormat"},
+    description = "Metadata Format",
+    allowedValues = {"json", "cbor", "mime-type"}
   )
   public String metadataFormat = "json";
 
   @Option(
-      name = {"--dataFormat"},
-      description = "Data Format",
-      allowedValues = {"json", "cbor", "mime-type"}
+    name = {"--dataFormat"},
+    description = "Data Format",
+    allowedValues = {"json", "cbor", "mime-type"}
   )
   public String dataFormat = "binary";
 

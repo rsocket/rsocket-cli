@@ -33,7 +33,7 @@ public class HeaderUtil {
     return headerMap;
   }
 
-  private static Map<? extends String,? extends String> headerFileMap(String input) {
+  private static Map<? extends String, ? extends String> headerFileMap(String input) {
     CharSource is = Files.asCharSource(inputFile(input), Charsets.UTF_8);
     return headerMap(Publishers.splitInLines(is).collectList().block());
   }

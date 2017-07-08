@@ -31,91 +31,114 @@ public class Http2DuplexConnection implements DuplexConnection {
   private final MonoProcessor<Void> onClose = MonoProcessor.create();
   private final DirectProcessor<Frame> receive = DirectProcessor.create();
 
-  private Stream.Listener responseListener = new Stream.Listener.Adapter() {
-    @Override public void onData(Stream stream, DataFrame frame, Callback callback) {
-      // TODO check subscription
-      // TODO parse frames
-      if (frame.remaining() > 0) {
-        receive.onNext(frame(frame));
-      }
-      callback.succeeded();
-    }
+  private Stream.Listener responseListener =
+      new Stream.Listener.Adapter() {
+        @Override
+        public void onData(Stream stream, DataFrame frame, Callback callback) {
+          // TODO check subscription
+          // TODO parse frames
+          if (frame.remaining() > 0) {
+            receive.onNext(frame(frame));
+          }
+          callback.succeeded();
+        }
 
-    @Override public void onHeaders(Stream stream, HeadersFrame frame) {
-      log.fine(frame.getMetaData().toString());
-      for (HttpField e : frame.getMetaData().getFields()) {
-        log.fine(e.getName() + ": " + e.getValue());
-      }
+        @Override
+        public void onHeaders(Stream stream, HeadersFrame frame) {
+          log.fine(frame.getMetaData().toString());
+          for (HttpField e : frame.getMetaData().getFields()) {
+            log.fine(e.getName() + ": " + e.getValue());
+          }
 
-      MetaData.Response response = (MetaData.Response) frame.getMetaData();
-      if (response.getStatus() == 200) {
-        log.info("connected");
-      } else {
-        receive.onNext(Frame.Error.from(0,
-            new ConnectionCloseException("non 200 response: " + response.getStatus())));
-        close().subscribe();
-      }
-    }
-  };
+          MetaData.Response response = (MetaData.Response) frame.getMetaData();
+          if (response.getStatus() == 200) {
+            log.info("connected");
+          } else {
+            receive.onNext(
+                Frame.Error.from(
+                    0, new ConnectionCloseException("non 200 response: " + response.getStatus())));
+            close().subscribe();
+          }
+        }
+      };
 
   private Stream stream;
 
-  @Override public Mono<Void> send(Publisher<Frame> frame) {
-    return Flux.from(frame).doOnNext(f -> {
-      stream.data(dataFrame(f), new Callback() {
-        @Override public void failed(Throwable x) {
-          receive.onError(x);
-          close().subscribe();
-        }
-      });
-    }).then();
+  @Override
+  public Mono<Void> send(Publisher<Frame> frame) {
+    return Flux.from(frame)
+        .doOnNext(
+            f -> {
+              stream.data(
+                  dataFrame(f),
+                  new Callback() {
+                    @Override
+                    public void failed(Throwable x) {
+                      receive.onError(x);
+                      close().subscribe();
+                    }
+                  });
+            })
+        .then();
   }
 
-  @Override public Flux<Frame> receive() {
+  @Override
+  public Flux<Frame> receive() {
     return receive;
   }
 
-  @Override public double availability() {
+  @Override
+  public double availability() {
     return stream.isClosed() ? 0.0 : 1.0;
   }
 
-  @Override public Mono<Void> close() {
-    return Mono.defer(() -> {
-      // TODO listen to callback
-      if (!stream.isClosed()) {
-        stream.reset(new ResetFrame(stream.getId(), ErrorCode.STREAM_CLOSED_ERROR.code),
-            new Callback() {
-              @Override public void failed(Throwable x) {
-              }
-            });
-      }
-      onClose.onComplete();
-      return onClose;
-    });
+  @Override
+  public Mono<Void> close() {
+    return Mono.defer(
+        () -> {
+          // TODO listen to callback
+          if (!stream.isClosed()) {
+            stream.reset(
+                new ResetFrame(stream.getId(), ErrorCode.STREAM_CLOSED_ERROR.code),
+                new Callback() {
+                  @Override
+                  public void failed(Throwable x) {}
+                });
+          }
+          onClose.onComplete();
+          return onClose;
+        });
   }
 
-  @Override public Mono<Void> onClose() {
+  @Override
+  public Mono<Void> onClose() {
     return onClose;
   }
 
-  public static Mono<Http2DuplexConnection> create(Session session, URI uri,
-      Map<String, String> headers) {
-    return Mono.create(s -> {
-      Http2DuplexConnection c = new Http2DuplexConnection();
+  public static Mono<Http2DuplexConnection> create(
+      Session session, URI uri, Map<String, String> headers) {
+    return Mono.create(
+        s -> {
+          Http2DuplexConnection c = new Http2DuplexConnection();
 
-      headers.forEach((k, v) -> log.fine(k + ": " + v));
+          headers.forEach((k, v) -> log.fine(k + ": " + v));
 
-      session.newStream(headerFrame(uri, headers), new Promise<Stream>() {
-        @Override public void succeeded(Stream result) {
-          c.stream = result;
-          s.success(c);
-        }
+          session.newStream(
+              headerFrame(uri, headers),
+              new Promise<Stream>() {
+                @Override
+                public void succeeded(Stream result) {
+                  c.stream = result;
+                  s.success(c);
+                }
 
-        @Override public void failed(Throwable x) {
-          s.error(x);
-        }
-      }, c.responseListener);
-    });
+                @Override
+                public void failed(Throwable x) {
+                  s.error(x);
+                }
+              },
+              c.responseListener);
+        });
   }
 
   private static Frame frame(DataFrame frame) {
@@ -135,8 +158,8 @@ public class Http2DuplexConnection implements DuplexConnection {
     }
 
     MetaData.Request request =
-        new MetaData.Request("POST", new HttpURI(uri.toString()),
-            HttpVersion.HTTP_2, requestFields);
+        new MetaData.Request(
+            "POST", new HttpURI(uri.toString()), HttpVersion.HTTP_2, requestFields);
     return new HeadersFrame(request, null, false);
   }
 }

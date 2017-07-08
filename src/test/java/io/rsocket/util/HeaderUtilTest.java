@@ -1,11 +1,11 @@
 package io.rsocket.util;
 
+import static org.junit.Assert.assertEquals;
+
 import io.rsocket.cli.util.HeaderUtil;
 import java.util.Arrays;
 import java.util.Map;
 import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
 
 public class HeaderUtilTest {
   @Test
