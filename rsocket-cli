@@ -2,5 +2,5 @@
 
 ./gradlew -q installDist
 
+JAVA_OPTS=-Xbootclasspath/p:$HOME/.m2/repository/org/mortbay/jetty/alpn/alpn-boot/8.1.9.v20160720/alpn-boot-8.1.9.v20160720.jar \
 ./build/install/rsocket-cli/bin/rsocket-cli "$@"
-

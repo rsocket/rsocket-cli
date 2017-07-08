@@ -24,13 +24,13 @@ _reactivesocket_complete()
   if [[ $cur == -* ]]; then
       # TODO parse help automatically
       #_reactivesocket_options=${_reactivesocket_options:=$(_parse_help reactivesocket-cli --help)}
-      _reactivesocket_options="--sub --str --rr --fnf --channel --metadataPush --ops -i --input --debug --server --keepalive -h --help -m --metadata --setup --timeout --metadataFormat --dataFormat"
+      _reactivesocket_options="--sub --stream --request --fnf --channel --metadataPush --ops -i --input --debug --server --keepalive -h --help -m --metadata --setup --timeout --metadataFormat --dataFormat -H --header -T --transport-header"
       COMPREPLY=( $( compgen -W "$_reactivesocket_options" -- "$cur" ) )
       return;
   fi
 
   # TODO remember recent hosts
-  _reactivesocket_hosts="tcp://localhost:9898 ws://localhost:9897"
+  _reactivesocket_hosts="tcp://localhost:9898 ws://localhost:9897 https://example.com"
   COMPREPLY=( $( compgen -W "$_reactivesocket_hosts" -- "$cur" ) )
 
   __ltrim_colon_completions "$cur"
