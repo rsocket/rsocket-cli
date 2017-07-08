@@ -1,9 +1,12 @@
 package io.rsocket.cli.http2;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandlerContext;
 import io.rsocket.DuplexConnection;
 import io.rsocket.Frame;
 import io.rsocket.exceptions.ConnectionCloseException;
+import io.rsocket.transport.netty.RSocketLengthCodec;
 import java.net.URI;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -30,17 +33,26 @@ public class Http2DuplexConnection implements DuplexConnection {
   private static final Logger log = Logger.getLogger(Http2DuplexConnection.class.getName());
   private final MonoProcessor<Void> onClose = MonoProcessor.create();
   private final DirectProcessor<Frame> receive = DirectProcessor.create();
+  private final MyRSocketLengthCodec codec = new MyRSocketLengthCodec();
 
   private Stream.Listener responseListener =
       new Stream.Listener.Adapter() {
         @Override
         public void onData(Stream stream, DataFrame frame, Callback callback) {
-          // TODO check subscription
-          // TODO parse frames
-          if (frame.remaining() > 0) {
-            receive.onNext(frame(frame));
+
+          try {
+            ByteBuf data = Unpooled.wrappedBuffer(frame.getData());
+            while (data.readableBytes() > 0) {
+              ByteBuf sliceData = (ByteBuf) codec.decode(null, data);
+
+              if (sliceData != null) {
+                receive.onNext(Frame.from(sliceData));
+              }
+            }
+            callback.succeeded();
+          } catch (Exception e) {
+            callback.failed(e);
           }
-          callback.succeeded();
         }
 
         @Override
@@ -141,12 +153,6 @@ public class Http2DuplexConnection implements DuplexConnection {
         });
   }
 
-  private static Frame frame(DataFrame frame) {
-    byte[] bytes = new byte[frame.getData().remaining()];
-    frame.getData().get(bytes);
-    return Frame.from(Unpooled.wrappedBuffer(bytes));
-  }
-
   private DataFrame dataFrame(Frame f) {
     return new DataFrame(stream.getId(), f.content().nioBuffer(), false);
   }
@@ -161,5 +167,11 @@ public class Http2DuplexConnection implements DuplexConnection {
         new MetaData.Request(
             "POST", new HttpURI(uri.toString()), HttpVersion.HTTP_2, requestFields);
     return new HeadersFrame(request, null, false);
+  }
+
+  public static class MyRSocketLengthCodec extends RSocketLengthCodec {
+    @Override public Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+      return super.decode(ctx, in);
+    }
   }
 }
