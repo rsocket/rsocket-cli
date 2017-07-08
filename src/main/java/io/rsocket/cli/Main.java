@@ -219,7 +219,7 @@ public class Main {
       case "text":
         return "text/plain";
       default:
-        return "application/json";
+        return dataFormat;
     }
   }
 
