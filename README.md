@@ -26,14 +26,14 @@ Use tab completion for help with specifying the operation type.
 
 ```
 $ brew install yschimke/tap/rsocket-cli
-$ rsocket-cli -i "I am a Server" --server --debug tcp://localhost:8765  # window 1
-$ rsocket-cli --rr -i "I am a Client" --debug tcp://localhost:8765      # window 2
+$ rsocket-cli -i "I am a Server" --server --debug tcp://localhost:8765       # window 1
+$ rsocket-cli --request -i "I am a Client" --debug tcp://localhost:8765      # window 2
 ```
 
 Stream the dictionary (With frames debugged)
 
 ```
-$ rsocket-cli --debug -i @/usr/share/dict/words --server tcp://localhost:8765  # window 1
-$ rsocket-cli --str -i "Word Up" tcp://localhost:8765                          # window 2
+$ rsocket-cli --debug -i @/usr/share/dict/words --server tcp://localhost:8765     # window 1
+$ rsocket-cli --stream -i "Word Up" tcp://localhost:8765                          # window 2
 ```
 
