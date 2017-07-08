@@ -12,6 +12,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static io.rsocket.cli.util.FileUtil.expectedFile;
+
 // TODO handle duplicate header keys
 public class HeaderUtil {
   public static Map<String, String> headerMap(List<String> headers) {
@@ -51,12 +53,6 @@ public class HeaderUtil {
   }
 
   public static File inputFile(String path) {
-    File file = new File(path.substring(1));
-
-    if (!file.isFile()) {
-      throw new UsageException("file not found: " + file);
-    }
-
-    return file;
+    return expectedFile(path.substring(1));
   }
 }

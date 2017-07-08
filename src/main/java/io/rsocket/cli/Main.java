@@ -13,6 +13,7 @@
  */
 package io.rsocket.cli;
 
+import static io.rsocket.cli.util.FileUtil.expectedFile;
 import static io.rsocket.cli.util.HeaderUtil.headerMap;
 import static io.rsocket.cli.util.HeaderUtil.inputFile;
 import static io.rsocket.cli.util.HeaderUtil.stringValue;
@@ -239,13 +240,7 @@ public class Main {
   }
 
   private File setupFile() {
-    File file = new File(input.substring(1));
-
-    if (!file.isFile()) {
-      throw new UsageException("setup file not found: " + file);
-    }
-
-    return file;
+    return expectedFile(input.substring(1));
   }
 
   public Mono<RSocket> createServerRequestHandler(ConnectionSetupPayload setupPayload) {
