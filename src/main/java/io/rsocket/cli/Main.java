@@ -386,7 +386,7 @@ public class Main {
             () -> {
               Scanner in = new Scanner(System.in);
               return in.nextLine();
-            });
+            }).trim();
 
     byte[] metadata = buildMetadata();
 
