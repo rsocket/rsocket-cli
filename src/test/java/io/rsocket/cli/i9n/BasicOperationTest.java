@@ -72,7 +72,6 @@ public class BasicOperationTest {
     }
   }
 
-  @Ignore("broken in reactivesocket-java for local")
   @Test
   public void metadataPush() throws Exception {
     main.metadataPush = true;
@@ -193,7 +192,6 @@ public class BasicOperationTest {
     assertEquals(expected, output);
   }
 
-  @Ignore("broken in reactivesocket-java for local")
   @Test
   public void stream() throws Exception {
     main.stream = true;
@@ -211,9 +209,6 @@ public class BasicOperationTest {
     expected.showOutput("olleH");
     expected.showOutput("olleH");
     expected.showOutput("olleH");
-
-    // TODO filter next_complete?
-    expected.showOutput("");
 
     run();
 
