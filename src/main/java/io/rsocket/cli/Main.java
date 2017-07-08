@@ -382,11 +382,12 @@ public class Main {
   private PayloadImpl singleInputPayload() {
     String data =
         getInputFromSource(
-            input,
-            () -> {
-              Scanner in = new Scanner(System.in);
-              return in.nextLine();
-            }).trim();
+                input,
+                () -> {
+                  Scanner in = new Scanner(System.in);
+                  return in.nextLine();
+                })
+            .trim();
 
     byte[] metadata = buildMetadata();
 
