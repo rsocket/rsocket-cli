@@ -8,7 +8,7 @@ public class FileUtil {
     File file = new File(normalize(name));
 
     if (!file.isFile()) {
-      throw new UsageException("setup file not found: " + file);
+      throw new UsageException("file not found: " + file);
     }
     return file;
   }
