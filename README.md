@@ -11,7 +11,7 @@ Supports tcp and ws URIs
 
 # Build Status
 
-<a href='https://travis-ci.org/ReactiveSocket/reactivesocket-cli/builds'><img src='https://travis-ci.org/ReactiveSocket/reactivesocket-cli.svg?branch=master'></a> 
+<a href='https://travis-ci.org/rsocket/rsocket-cli/builds'><img src='https://travis-ci.org/rsocket/rsocket-cli.svg?branch=master'></a> 
 
 
 ## Build and Run (one step)
