@@ -12,7 +12,7 @@ _reactivesocket_complete()
   case $prev in
         # options with an argument we don't currently help with, everything else is assumed to be handled
         # below in case statement or has no arguments so drops through to the url handling near the end
-        -i | --input | --keepalive | -m | --metadata | --timeout | --setup)
+        -i | --input | --keepalive | -m | --metadata | --timeout | --setup | --requestn | -r)
             return
             ;;
         --metadataFormat | --dataFormat)
@@ -24,7 +24,7 @@ _reactivesocket_complete()
   if [[ $cur == -* ]]; then
       # TODO parse help automatically
       #_reactivesocket_options=${_reactivesocket_options:=$(_parse_help reactivesocket-cli --help)}
-      _reactivesocket_options="--sub --stream --request --fnf --channel --metadataPush --ops -i --input --debug --server --keepalive -h --help -m --metadata --setup --timeout --metadataFormat --dataFormat -H --header -T --transport-header"
+      _reactivesocket_options="--requestn -r --sub --stream --request --fnf --channel --metadataPush --ops -i --input --debug --server --keepalive -h --help -m --metadata --setup --timeout --metadataFormat --dataFormat -H --header -T --transport-header"
       COMPREPLY=( $( compgen -W "$_reactivesocket_options" -- "$cur" ) )
       return;
   fi
