@@ -1,6 +1,8 @@
 package io.rsocket.cli.http2;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.rsocket.DuplexConnection;
@@ -8,6 +10,8 @@ import io.rsocket.Frame;
 import io.rsocket.exceptions.ConnectionCloseException;
 import io.rsocket.transport.netty.RSocketLengthCodec;
 import java.net.URI;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.logging.Logger;
 import org.eclipse.jetty.http.HttpField;
@@ -35,18 +39,23 @@ public class Http2DuplexConnection implements DuplexConnection {
   private final DirectProcessor<Frame> receive = DirectProcessor.create();
   private final MyRSocketLengthCodec codec = new MyRSocketLengthCodec();
 
+  private CompositeByteBuf existingData = Unpooled.compositeBuffer();
+
   private Stream.Listener responseListener =
       new Stream.Listener.Adapter() {
         @Override
         public void onData(Stream stream, DataFrame frame, Callback callback) {
+          ByteBuffer fd = frame.getData();
 
           try {
-            ByteBuf data = Unpooled.wrappedBuffer(frame.getData());
-            while (data.readableBytes() > 0) {
-              ByteBuf sliceData = (ByteBuf) codec.decode(null, data);
+            existingData.addComponent(true, Unpooled.copiedBuffer(fd));
+            while (true) {
+              ByteBuf sliceData = (ByteBuf) codec.decode(null, existingData);
 
               if (sliceData != null) {
                 receive.onNext(Frame.from(sliceData));
+              } else {
+                break;
               }
             }
             callback.succeeded();
