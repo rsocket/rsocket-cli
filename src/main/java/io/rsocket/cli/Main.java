@@ -141,6 +141,9 @@ public class Main {
   @Option(name = "--keepalive", description = "Keepalive period")
   public String keepalive;
 
+  @Option(name = {"--requestn", "-r"}, description = "Request N credits")
+  public int requestN = Integer.MAX_VALUE;
+
   @Arguments(title = "target", description = "Endpoint URL", required = true)
   public List<String> arguments = new ArrayList<>();
 
@@ -338,6 +341,7 @@ public class Main {
           .doOnNext(outputHandler::showOutput)
           .doOnError(e -> outputHandler.error("error from server", e))
           .onErrorResume(e -> Flux.empty())
+          .take(requestN)
           .thenMany(Flux.empty());
     } catch (Exception ex) {
       return Flux.<Void>error(ex)
