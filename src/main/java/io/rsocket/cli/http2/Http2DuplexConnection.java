@@ -1,7 +1,6 @@
 package io.rsocket.cli.http2;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -11,7 +10,6 @@ import io.rsocket.exceptions.ConnectionCloseException;
 import io.rsocket.transport.netty.RSocketLengthCodec;
 import java.net.URI;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.logging.Logger;
 import org.eclipse.jetty.http.HttpField;

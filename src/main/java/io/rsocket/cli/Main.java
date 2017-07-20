@@ -141,7 +141,10 @@ public class Main {
   @Option(name = "--keepalive", description = "Keepalive period")
   public String keepalive;
 
-  @Option(name = {"--requestn", "-r"}, description = "Request N credits")
+  @Option(
+    name = {"--requestn", "-r"},
+    description = "Request N credits"
+  )
   public int requestN = Integer.MAX_VALUE;
 
   @Arguments(title = "target", description = "Endpoint URL", required = true)
