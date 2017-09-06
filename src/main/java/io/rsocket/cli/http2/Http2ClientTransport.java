@@ -8,6 +8,8 @@ import java.net.URI;
 import java.util.Collections;
 import java.util.Map;
 import java.util.logging.Logger;
+
+import org.eclipse.jetty.http.HttpScheme;
 import org.eclipse.jetty.http2.api.Session;
 import org.eclipse.jetty.http2.api.server.ServerSessionListener;
 import org.eclipse.jetty.http2.client.HTTP2Client;
@@ -56,7 +58,7 @@ public class Http2ClientTransport implements ClientTransport, HeaderAware {
           client.setExecutor(daemonClientExecutor());
           client.setScheduler(daemonClientScheduler());
           SslContextFactory sslContextFactory = null;
-          if (uri.getScheme().equals("https")) {
+          if (HttpScheme.HTTPS.is(uri.getScheme())) {
             sslContextFactory = new SslContextFactory();
             client.addBean(sslContextFactory);
           }
@@ -103,6 +105,6 @@ public class Http2ClientTransport implements ClientTransport, HeaderAware {
       return uri.getPort();
     }
 
-    return "https".equals(uri.getScheme()) ? 443 : 80;
+    return HttpScheme.HTTPS.is(uri.getScheme()) ? 443 : 80;
   }
 }
