@@ -55,14 +55,20 @@ public class Http2ClientTransport implements ClientTransport, HeaderAware {
           HTTP2Client client = new HTTP2Client();
           client.setExecutor(daemonClientExecutor());
           client.setScheduler(daemonClientScheduler());
-          SslContextFactory sslContextFactory = new SslContextFactory();
-          client.addBean(sslContextFactory);
+          SslContextFactory sslContextFactory = null;
+          if (uri.getScheme().equals("https")) {
+            sslContextFactory = new SslContextFactory();
+            client.addBean(sslContextFactory);
+          }
+
           try {
             client.start();
 
-            client.connect(
+              int port = getPort();
+              System.out.println(port);
+              client.connect(
                 sslContextFactory,
-                new InetSocketAddress(uri.getHost(), getPort()),
+                new InetSocketAddress(uri.getHost(), port),
                 new ServerSessionListener.Adapter(),
                 new Promise<Session>() {
                   @Override
@@ -93,6 +99,10 @@ public class Http2ClientTransport implements ClientTransport, HeaderAware {
   }
 
   private int getPort() {
-    return uri.getPort() != -1 ? uri.getPort() : 443;
+    if (uri.getPort() != -1) {
+      return uri.getPort();
+    }
+
+    return "https".equals(uri.getScheme()) ? 443 : 80;
   }
 }

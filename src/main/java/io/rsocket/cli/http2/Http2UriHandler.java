@@ -10,7 +10,7 @@ import java.util.Optional;
 public class Http2UriHandler implements UriHandler {
   @Override
   public Optional<ClientTransport> buildClient(URI uri) {
-    if ("https".equals(uri.getScheme())) {
+    if ("https".equals(uri.getScheme()) || "http".equals(uri.getScheme())) {
       return of(new Http2ClientTransport(uri));
     }
 
