@@ -66,11 +66,9 @@ public class Http2ClientTransport implements ClientTransport, HeaderAware {
           try {
             client.start();
 
-              int port = getPort();
-              System.out.println(port);
               client.connect(
                 sslContextFactory,
-                new InetSocketAddress(uri.getHost(), port),
+                new InetSocketAddress(uri.getHost(), getPort()),
                 new ServerSessionListener.Adapter(),
                 new Promise<Session>() {
                   @Override
