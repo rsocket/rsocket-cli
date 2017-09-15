@@ -167,13 +167,11 @@ public class Main {
       String uri = arguments.get(0);
 
       if (serverMode) {
-        server =
-            RSocketFactory.receive()
+        RSocketFactory.Start<Closeable> transport = RSocketFactory.receive()
                 .acceptor(
-                    (setupPayload, reactiveSocket) -> createServerRequestHandler(setupPayload))
-                .transport(UriTransportRegistry.serverForUri(uri))
-                .start()
-                .block();
+                        (setupPayload, reactiveSocket) -> createServerRequestHandler(setupPayload))
+                .transport(UriTransportRegistry.serverForUri(uri));
+        server = transport.start().block();
 
         server.onClose().block();
       } else {
