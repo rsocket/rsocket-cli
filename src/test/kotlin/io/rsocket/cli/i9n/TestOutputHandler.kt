@@ -8,12 +8,12 @@ class TestOutputHandler : OutputHandler {
   val stdout: MutableList<String> = Lists.newArrayList()
   val stderr: MutableList<String> = Lists.newArrayList()
 
-  override fun showOutput(s: String) {
-    stdout.add(s)
+  override fun showOutput(output: String) {
+    stdout.add(output)
   }
 
-  override fun info(s: String) {
-    stderr.add(s)
+  override fun info(msg: String) {
+    stderr.add(msg)
   }
 
   override fun error(msg: String, e: Throwable) {
@@ -28,14 +28,12 @@ class TestOutputHandler : OutputHandler {
     return stdout.hashCode() + stderr.hashCode()
   }
 
-  override fun equals(obj: Any?): Boolean {
-    if (obj !is TestOutputHandler) {
-      return false
+  override fun equals(other: Any?): Boolean {
+    if (other is TestOutputHandler) {
+      return stderr == other.stderr && stdout == other.stdout
     }
 
-    val other = obj as TestOutputHandler?
-
-    return stderr == other!!.stderr && stdout == other.stdout
+    return false
   }
 
   override fun toString(): String {

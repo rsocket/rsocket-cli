@@ -129,7 +129,7 @@ class Main {
 
       if (serverMode) {
         val transport = RSocketFactory.receive()
-            .acceptor { setupPayload, reactiveSocket -> createServerRequestHandler(setupPayload) }
+            .acceptor { setupPayload, _ -> createServerRequestHandler(setupPayload) }
             .transport(UriTransportRegistry.serverForUri(uri))
         server = transport.start().block()
 
@@ -184,7 +184,7 @@ class Main {
   }
 
   fun parseSetupPayload(): Payload {
-    var source: String? = null
+    var source: String?
 
     if (setup!!.startsWith("@")) {
       try {
@@ -205,7 +205,7 @@ class Main {
   }
 
   fun createServerRequestHandler(setupPayload: ConnectionSetupPayload): Mono<RSocket> {
-    LoggerFactory.getLogger(Main::class.java!!).debug("setup payload " + setupPayload)
+    LoggerFactory.getLogger(Main::class.java).debug("setup payload " + setupPayload)
 
     return Mono.just(
         object : AbstractRSocket() {
@@ -263,7 +263,7 @@ class Main {
   }
 
   private fun runAllOperations(client: RSocket?): Flux<Void> {
-    return Flux.range(0, operations).flatMap { i -> runSingleOperation(client) }
+    return Flux.range(0, operations).flatMap { _ -> runSingleOperation(client) }
   }
 
   private fun runSingleOperation(client: RSocket?): Flux<Void> {
@@ -289,17 +289,17 @@ class Main {
       }
 
       return source
-          .map({ it.getData() })
+          .map({ it.data })
           .map({ this.toUtf8String(it) })
           .doOnNext({ outputHandler!!.showOutput(it) })
           .doOnError { e -> outputHandler!!.error("error from server", e) }
-          .onErrorResume { e -> Flux.empty() }
+          .onErrorResume { _ -> Flux.empty() }
           .take(requestN.toLong())
           .thenMany(Flux.empty())
     } catch (ex: Exception) {
       return Flux.error<Void>(ex)
           .doOnError { e -> outputHandler!!.error("error before query", e) }
-          .onErrorResume { e -> Flux.empty() }
+          .onErrorResume { _ -> Flux.empty() }
     }
 
   }
@@ -317,13 +317,13 @@ class Main {
 
     val metadata = buildMetadata()
 
-    return lines(stream, java.util.function.Function<String, ByteArray> { l -> metadata })
+    return lines(stream, java.util.function.Function { _ -> metadata })
   }
 
   private fun singleInputPayload(): PayloadImpl {
     val data = getInputFromSource(
         input,
-        Supplier<String> {
+        Supplier {
           Scanner(System.`in`).nextLine()
         })
         .trim { it <= ' ' }
@@ -339,7 +339,7 @@ class Main {
         throw UsageException("Can't specify headers and metadata")
       }
 
-      return getInputFromSource(this.metadata, Supplier<String> { ""; }).toByteArray(StandardCharsets.UTF_8)
+      return getInputFromSource(this.metadata, Supplier { ""; }).toByteArray(StandardCharsets.UTF_8)
     } else return if (this.headers != null) {
       MetadataUtil.encodeMetadataMap(headerMap(headers), standardMimeType(metadataFormat))
     } else {
@@ -363,7 +363,7 @@ class Main {
     }
 
     private fun fromArgs(vararg args: String): Main? {
-      val cmd = SingleCommand.singleCommand<Main>(Main::class.java!!)
+      val cmd = SingleCommand.singleCommand<Main>(Main::class.java)
       try {
         return cmd.parse(*args)
       } catch (e: ParseException) {

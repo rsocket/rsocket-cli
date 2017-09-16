@@ -1,11 +1,10 @@
 package io.rsocket.cli.i9n
 
+import io.airlift.airline.ParseException
 import io.rsocket.cli.util.TimeUtil.parseShortDuration
 import org.junit.Assert.assertEquals
-
-import io.airlift.airline.ParseException
-import java.time.Duration
 import org.junit.Test
+import java.time.Duration
 
 class TimeUtilTest {
   @Test

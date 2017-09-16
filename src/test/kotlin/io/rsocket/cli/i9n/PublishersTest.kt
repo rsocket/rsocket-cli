@@ -1,11 +1,10 @@
 package io.rsocket.cli.i9n
 
-import org.junit.Assert.assertEquals
-
 import com.google.common.io.CharSource
 import io.rsocket.cli.Publishers
-import java.util.Arrays
+import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.util.*
 
 class PublishersTest {
 

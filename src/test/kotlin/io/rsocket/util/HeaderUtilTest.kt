@@ -1,13 +1,11 @@
 package io.rsocket.util
 
-import org.junit.Assert.assertEquals
-
 import io.rsocket.cli.util.HeaderUtil
-import java.net.URISyntaxException
-import java.net.URL
-import java.nio.file.Paths
-import java.util.Arrays
+import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.net.URISyntaxException
+import java.nio.file.Paths
+import java.util.*
 
 class HeaderUtilTest {
   @Test
@@ -44,7 +42,7 @@ class HeaderUtilTest {
 
   @Throws(URISyntaxException::class)
   private fun path(resourceName: String): String {
-    val resource = javaClass.getClassLoader().getResource(resourceName)
-    return Paths.get(resource!!.toURI()).toFile().getPath()
+    val resource = javaClass.classLoader.getResource(resourceName)
+    return Paths.get(resource!!.toURI()).toFile().path
   }
 }

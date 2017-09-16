@@ -1,17 +1,12 @@
 package io.rsocket.cli.http2
 
 import io.netty.buffer.ByteBuf
-import io.netty.buffer.CompositeByteBuf
 import io.netty.buffer.Unpooled
 import io.netty.channel.ChannelHandlerContext
 import io.rsocket.DuplexConnection
 import io.rsocket.Frame
 import io.rsocket.exceptions.ConnectionCloseException
 import io.rsocket.transport.netty.RSocketLengthCodec
-import java.net.URI
-import java.nio.ByteBuffer
-import java.util.logging.Logger
-import org.eclipse.jetty.http.HttpField
 import org.eclipse.jetty.http.HttpFields
 import org.eclipse.jetty.http.HttpURI
 import org.eclipse.jetty.http.HttpVersion
@@ -29,6 +24,8 @@ import reactor.core.publisher.DirectProcessor
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.core.publisher.MonoProcessor
+import java.net.URI
+import java.util.logging.Logger
 
 class Http2DuplexConnection : DuplexConnection {
   private val onClose = MonoProcessor.create<Void>()
@@ -44,7 +41,7 @@ class Http2DuplexConnection : DuplexConnection {
       try {
         existingData.addComponent(true, Unpooled.copiedBuffer(fd))
         while (true) {
-          val sliceData = codec.decode(null, existingData) as ByteBuf
+          val sliceData = codec.decode(null, existingData)
 
           if (sliceData != null) {
             receive.onNext(Frame.from(sliceData))
@@ -127,13 +124,13 @@ class Http2DuplexConnection : DuplexConnection {
 
   class MyRSocketLengthCodec : RSocketLengthCodec() {
     @Throws(Exception::class)
-    public override fun decode(ctx: ChannelHandlerContext?, `in`: ByteBuf): Any {
-      return super.decode(ctx, `in`)
+    public override fun decode(ctx: ChannelHandlerContext?, `in`: ByteBuf): ByteBuf? {
+      return super.decode(ctx, `in`) as ByteBuf?
     }
   }
 
   companion object {
-    private val log = Logger.getLogger(Http2DuplexConnection::class.java!!.getName())
+    private val log = Logger.getLogger(Http2DuplexConnection::class.java.name)
 
     fun create(
         session: Session, uri: URI, headers: Map<String, String>): Mono<Http2DuplexConnection> {

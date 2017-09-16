@@ -1,16 +1,14 @@
 package io.rsocket.cli.util
 
-import io.rsocket.cli.util.FileUtil.expectedFile
-
 import com.google.common.base.Charsets
-import com.google.common.io.CharSource
 import com.google.common.io.Files
 import io.rsocket.cli.Publishers
 import io.rsocket.cli.UsageException
+import io.rsocket.cli.util.FileUtil.expectedFile
 import java.io.File
 import java.io.IOException
 import java.nio.charset.StandardCharsets
-import java.util.LinkedHashMap
+import java.util.*
 
 // TODO handle duplicate header keys
 object HeaderUtil {

@@ -25,26 +25,25 @@ import java.net.ConnectException
  */
 class ConsoleOutputHandler : OutputHandler {
 
-  override fun showOutput(s: String) {
-    println(s)
+  override fun showOutput(output: String) {
+    println(output)
   }
 
-  override fun info(s: String) {
-    System.err.println(s)
+  override fun info(msg: String) {
+    System.err.println(msg)
   }
 
   override fun error(msg: String, e: Throwable) {
-    var e = e
-    e = unwrap(e)
-    if (e is ConnectException) {
-      logger.debug(msg, e)
-      System.err.println(e.message)
-    } else if (e is UsageException) {
-      logger.debug(msg, e)
-      System.err.println(e.message)
+    val ex = unwrap(e)
+    if (ex is ConnectException) {
+      logger.debug(msg, ex)
+      System.err.println(ex.message)
+    } else if (ex is UsageException) {
+      logger.debug(msg, ex)
+      System.err.println(ex.message)
     } else {
       System.err.println(msg)
-      e.printStackTrace()
+      ex.printStackTrace()
     }
   }
 
@@ -60,6 +59,6 @@ class ConsoleOutputHandler : OutputHandler {
   }
 
   companion object {
-    private val logger = LoggerFactory.getLogger(ConsoleOutputHandler::class.java!!)
+    private val logger = LoggerFactory.getLogger(ConsoleOutputHandler::class.java)
   }
 }

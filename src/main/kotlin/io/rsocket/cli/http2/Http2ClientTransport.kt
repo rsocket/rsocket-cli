@@ -16,10 +16,9 @@ import org.eclipse.jetty.util.thread.ScheduledExecutorScheduler
 import reactor.core.publisher.Mono
 import java.net.InetSocketAddress
 import java.net.URI
-import java.util.logging.Logger
 
 class Http2ClientTransport @JvmOverloads constructor(private val uri: URI, // assume simplified header model
-                                                     private var headers: Map<String, String> = emptyMap<String, String>()) : ClientTransport, HeaderAware {
+                                                     private var headers: Map<String, String> = emptyMap()) : ClientTransport, HeaderAware {
 
   override fun setHeaders(headers: Map<String, String>) {
     this.headers = headers
@@ -82,8 +81,6 @@ class Http2ClientTransport @JvmOverloads constructor(private val uri: URI, // as
     }
 
   companion object {
-    private val log = Logger.getLogger(Http2DuplexConnection::class.java!!.getName())
-
     init {
       Log.setLog(JavaUtilLog())
     }

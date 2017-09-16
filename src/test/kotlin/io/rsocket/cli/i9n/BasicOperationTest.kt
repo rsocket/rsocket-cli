@@ -42,7 +42,7 @@ class BasicOperationTest {
     main.outputHandler = output
 
     server = RSocketFactory.receive()
-        .acceptor { p, cr -> Mono.just(requestHandler) }
+        .acceptor { _, _ -> Mono.just(requestHandler) }
         .transport(LocalServerTransport.create("test-local-server-" + testName!!))
         .start()
         .block()
@@ -182,7 +182,7 @@ class BasicOperationTest {
     requestHandler = object : AbstractRSocket() {
       override fun requestStream(payload: Payload?): Flux<Payload> {
         val s = bufferToString(payload)
-        return Flux.range(1, 3).map { i -> reverse(s) }
+        return Flux.range(1, 3).map { _ -> reverse(s) }
       }
     }
 

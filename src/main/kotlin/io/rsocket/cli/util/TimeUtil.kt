@@ -2,7 +2,6 @@ package io.rsocket.cli.util
 
 import io.airlift.airline.ParseException
 import java.time.Duration
-import java.util.regex.Matcher
 import java.util.regex.Pattern
 
 object TimeUtil {
