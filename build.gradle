@@ -43,6 +43,10 @@ tasks.withType(JavaCompile) {
   options.encoding = 'UTF-8'
 }
 
+distTar {
+  compression = Compression.GZIP
+}
+
 repositories {
   mavenLocal()
   maven { url 'http://repo.spring.io/milestone' }
