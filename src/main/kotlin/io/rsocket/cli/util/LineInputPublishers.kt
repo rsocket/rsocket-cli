@@ -6,6 +6,7 @@ import io.rsocket.cli.OutputHandler
 import io.rsocket.cli.UsageException
 import io.rsocket.util.PayloadImpl
 import reactor.core.publisher.Flux
+import reactor.core.scheduler.Schedulers
 import java.io.File
 import java.nio.charset.StandardCharsets
 import java.util.*
@@ -28,7 +29,7 @@ class LineInputPublishers(val outputHandler: OutputHandler) : InputPublisher {
           } else {
             s.complete()
           }
-        }.doFinally({ r.close() })
+        }.doFinally({ r.close() }).subscribeOn(Schedulers.elastic())
       }
     })
   }
@@ -39,13 +40,13 @@ class LineInputPublishers(val outputHandler: OutputHandler) : InputPublisher {
 
   override fun inputPublisher(input: List<String>, metadata: ByteArray?): Flux<Payload> {
     val metadataPublisher = if (metadata != null) Flux.just(metadata) else Flux.empty()
-    return Flux.fromIterable(input).flatMap {
+    return Flux.fromIterable(input).concatMap {
       when {
         it == "-" -> systemInLines()
         it.startsWith("@") -> filePublisher(it.substring(1))
         else -> Flux.just(it)
       }
-    }.zipWith(metadataPublisher.concatWith(Flux.just(NULL_BYTE_ARRAY).repeat())).map { tuple ->
+    }.zipWith(metadataPublisher.concatWith(Flux.just(NULL_BYTE_ARRAY).repeat()), 1).map { tuple ->
       PayloadImpl(
           tuple.t1.toByteArray(StandardCharsets.UTF_8),
           if (tuple.t2 === NULL_BYTE_ARRAY) null else tuple.t2
@@ -58,13 +59,13 @@ class LineInputPublishers(val outputHandler: OutputHandler) : InputPublisher {
 
     val keyboard = Scanner(System.`in`)
 
-    return Flux.generate { s ->
+    return Flux.generate<String> { s ->
       if (keyboard.hasNext()) {
         s.next(keyboard.nextLine())
       } else {
         s.complete()
       }
-    }
+    }.subscribeOn(Schedulers.elastic())
   }
 
   private val NULL_BYTE_ARRAY = ByteArray(0)

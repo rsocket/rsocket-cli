@@ -276,12 +276,13 @@ class Main {
         outputHandler!!.info("Using passive client mode, choose an option to use a different mode.")
         Flux.never()
       }
-    }.map({ it.data })
+    }
+        .take(requestN.toLong())
+        .map({ it.data })
         .map({ this.toUtf8String(it) })
         .doOnNext({ outputHandler!!.showOutput(it) })
         .doOnError { e -> outputHandler!!.error("error from server", e) }
         .onErrorResume { Flux.empty() }
-        .take(requestN.toLong())
         .thenMany(Flux.empty())
   } catch (ex: Exception) {
     Flux.error<Void>(ex)
