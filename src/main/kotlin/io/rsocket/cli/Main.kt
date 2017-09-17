@@ -13,7 +13,6 @@
  */
 package io.rsocket.cli
 
-import com.google.common.base.Charsets
 import com.google.common.io.CharSource
 import com.google.common.io.Files
 import io.airlift.airline.*
@@ -178,7 +177,7 @@ class Main {
 
   private fun parseSetupPayload(): Payload = when {
     setup == null -> PayloadImpl.EMPTY
-    setup!!.startsWith("@") -> PayloadImpl(Files.asCharSource(expectedFile(setup!!.substring(1)), Charsets.UTF_8).read())
+    setup!!.startsWith("@") -> PayloadImpl(Files.asCharSource(expectedFile(setup!!.substring(1)), StandardCharsets.UTF_8).read())
     else -> PayloadImpl(setup)
   }
 
@@ -278,15 +277,11 @@ class Main {
     return lines(stream, java.util.function.Function { metadata })
   }
 
-  private fun singleInputPayload(): PayloadImpl {
-    val data = getInputFromSource(
-        input,
-        Supplier {
-          Scanner(System.`in`).nextLine()
-        })
-
-    return PayloadImpl(data.toByteArray(StandardCharsets.UTF_8), buildMetadata())
-  }
+  private fun singleInputPayload(): PayloadImpl = PayloadImpl(getInputFromSource(
+      input,
+      Supplier {
+        Scanner(System.`in`).nextLine()
+      }).toByteArray(StandardCharsets.UTF_8), buildMetadata())
 
   private fun buildMetadata(): ByteArray = when {
     this.metadata != null -> {
