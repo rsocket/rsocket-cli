@@ -26,46 +26,42 @@ class Http2ClientTransport @JvmOverloads constructor(
     this.transportHeaders = { transportHeaders() }
   }
 
-  override fun connect(): Mono<DuplexConnection> {
-    return createSession().flatMap { s -> Http2DuplexConnection.create(s, uri, transportHeaders() ) }
-  }
+  override fun connect(): Mono<DuplexConnection> =
+      createSession().flatMap { s -> Http2DuplexConnection.create(s, uri, transportHeaders() ) }
 
-  private fun createSession(): Mono<Session> {
-    return Mono.create { c ->
-      val client = HTTP2Client()
-      client.executor = daemonClientExecutor()
-      client.scheduler = daemonClientScheduler()
-      var sslContextFactory: SslContextFactory? = null
-      if (HttpScheme.HTTPS.`is`(uri.scheme)) {
-        sslContextFactory = SslContextFactory()
-        client.addBean(sslContextFactory)
-      }
+  private fun createSession(): Mono<Session> = Mono.create { c ->
+    val client = HTTP2Client()
+    client.executor = daemonClientExecutor()
+    client.scheduler = daemonClientScheduler()
+    var sslContextFactory: SslContextFactory? = null
+    if (HttpScheme.HTTPS.`is`(uri.scheme)) {
+      sslContextFactory = SslContextFactory()
+      client.addBean(sslContextFactory)
+    }
 
-      try {
-        client.start()
+    try {
+      client.start()
 
-        client.connect(
-            sslContextFactory,
-            InetSocketAddress(uri.host, port),
-            ServerSessionListener.Adapter(),
-            object : Promise<Session> {
-              override fun succeeded(result: Session?) {
-                c.success(result)
-              }
+      client.connect(
+          sslContextFactory,
+          InetSocketAddress(uri.host, port),
+          ServerSessionListener.Adapter(),
+          object : Promise<Session> {
+            override fun succeeded(result: Session?) {
+              c.success(result)
+            }
 
-              override fun failed(x: Throwable?) {
-                c.error(x!!)
-              }
-            })
-      } catch (e: Exception) {
-        c.error(e)
-      }
+            override fun failed(x: Throwable?) {
+              c.error(x!!)
+            }
+          })
+    } catch (e: Exception) {
+      c.error(e)
     }
   }
 
-  private fun daemonClientScheduler(): ScheduledExecutorScheduler {
-    return ScheduledExecutorScheduler("jetty-scheduler", true)
-  }
+  private fun daemonClientScheduler(): ScheduledExecutorScheduler =
+      ScheduledExecutorScheduler("jetty-scheduler", true)
 
   private fun daemonClientExecutor(): QueuedThreadPool {
     val executor = QueuedThreadPool()

@@ -31,25 +31,17 @@ object HeaderUtil {
     return headerMap
   }
 
-  private fun headerFileMap(input: String): Map<out String, String> {
-    val `is` = Files.asCharSource(inputFile(input), Charsets.UTF_8)
-    return headerMap(Publishers.splitInLines(`is`).collectList().block())
-  }
+  private fun headerFileMap(input: String): Map<out String, String> =
+      headerMap(Publishers.splitInLines(Files.asCharSource(inputFile(input), Charsets.UTF_8)).collectList().block())
 
-  fun stringValue(source: String): String {
-    return if (source.startsWith("@")) {
-      try {
-        Files.toString(inputFile(source), StandardCharsets.UTF_8)
-      } catch (e: IOException) {
-        throw UsageException(e.toString())
-      }
-
-    } else {
-      source
+  fun stringValue(source: String): String = when {
+    source.startsWith("@") -> try {
+      Files.toString(inputFile(source), StandardCharsets.UTF_8)
+    } catch (e: IOException) {
+      throw UsageException(e.toString())
     }
+    else -> source
   }
 
-  fun inputFile(path: String): File {
-    return expectedFile(path.substring(1))
-  }
+  fun inputFile(path: String): File = expectedFile(path.substring(1))
 }

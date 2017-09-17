@@ -31,23 +31,15 @@ object MetadataUtil {
     }
   }
 
-  private fun jsonEncodeStringMap(headerMap: Map<String, String>): ByteArray {
-    val m = ObjectMapper()
-
-    return try {
-      m.writeValueAsBytes(headerMap)
-    } catch (e: JsonProcessingException) {
-      throw RuntimeException(e)
-    }
+  private fun jsonEncodeStringMap(headerMap: Map<String, String>): ByteArray = try {
+    ObjectMapper().writeValueAsBytes(headerMap)
+  } catch (e: JsonProcessingException) {
+    throw RuntimeException(e)
   }
 
-  private fun cborEncodeStringMap(headerMap: Map<String, String>): ByteArray {
-    val m = ObjectMapper(CBORFactory())
-
-    return try {
-      m.writeValueAsBytes(headerMap)
-    } catch (e: JsonProcessingException) {
-      throw RuntimeException(e)
-    }
+  private fun cborEncodeStringMap(headerMap: Map<String, String>): ByteArray = try {
+    ObjectMapper(CBORFactory()).writeValueAsBytes(headerMap)
+  } catch (e: JsonProcessingException) {
+    throw RuntimeException(e)
   }
 }

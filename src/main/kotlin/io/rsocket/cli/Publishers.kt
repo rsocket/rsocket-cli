@@ -30,17 +30,13 @@ object Publishers {
    *
    * @param inputStream to read.
    */
-  fun lines(inputStream: CharSource, metadataFn: Function<String, ByteArray>): Flux<Payload> {
-    return splitInLines(inputStream)
-        .map { l -> PayloadImpl(l.toByteArray(StandardCharsets.UTF_8), metadataFn.apply(l)) as Payload }
-  }
+  fun lines(inputStream: CharSource, metadataFn: Function<String, ByteArray>): Flux<Payload> =
+      splitInLines(inputStream)
+          .map { l -> PayloadImpl(l.toByteArray(StandardCharsets.UTF_8), metadataFn.apply(l)) as Payload }
 
-  fun splitInLines(inputStream: CharSource): Flux<String> {
-    return try {
-      Flux.fromStream(inputStream.openBufferedStream().lines())
-    } catch (e: IOException) {
-      Flux.error(e)
-    }
-
+  fun splitInLines(inputStream: CharSource): Flux<String> = try {
+    Flux.fromStream(inputStream.openBufferedStream().lines())
+  } catch (e: IOException) {
+    Flux.error(e)
   }
 }// No instances.

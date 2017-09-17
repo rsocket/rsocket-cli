@@ -8,9 +8,9 @@ import java.util.*
 import java.util.Optional.of
 
 class Http2UriHandler : UriHandler {
-  override fun buildClient(uri: URI?): Optional<ClientTransport> {
-    return if (HttpScheme.HTTPS.`is`(uri!!.scheme) || HttpScheme.HTTP.`is`(uri.scheme)) {
-      of(Http2ClientTransport(uri))
-    } else super.buildClient(uri)
-  }
+  override fun buildClient(uri: URI?): Optional<ClientTransport> =
+      when {
+        HttpScheme.HTTPS.`is`(uri!!.scheme) || HttpScheme.HTTP.`is`(uri.scheme) -> of(Http2ClientTransport(uri))
+        else -> super.buildClient(uri)
+      }
 }

@@ -169,24 +169,17 @@ class Main {
 
   }
 
-  private fun standardMimeType(dataFormat: String?): String {
-    if (dataFormat == null) {
-      return "application/json"
-    }
-
-    return when (dataFormat) {
-      "json" -> "application/json"
-      "cbor" -> "application/cbor"
-      "binary" -> "application/binary"
-      "text" -> "text/plain"
-      else -> dataFormat
-    }
+  private fun standardMimeType(dataFormat: String?): String = when (dataFormat) {
+    null -> "application/json"
+    "json" -> "application/json"
+    "cbor" -> "application/cbor"
+    "binary" -> "application/binary"
+    "text" -> "text/plain"
+    else -> dataFormat
   }
 
   private fun parseSetupPayload(): Payload {
-    val source: String?
-
-    source = if (setup!!.startsWith("@")) {
+    val source = if (setup!!.startsWith("@")) {
       try {
         Files.asCharSource(setupFile(), Charsets.UTF_8).read()
       } catch (e: IOException) {
@@ -197,12 +190,10 @@ class Main {
       setup
     }
 
-    return PayloadImpl(source!!)
+    return PayloadImpl(source)
   }
 
-  private fun setupFile(): File {
-    return expectedFile(input!!.substring(1))
-  }
+  private fun setupFile(): File = expectedFile(input!!.substring(1))
 
   private fun createServerRequestHandler(setupPayload: ConnectionSetupPayload): Mono<RSocket> {
     LoggerFactory.getLogger(Main::class.java).debug("setup payload " + setupPayload)
@@ -244,63 +235,50 @@ class Main {
     outputHandler!!.showOutput(toUtf8String(payload!!.data))
   }
 
-  private fun toUtf8String(data: ByteBuffer): String {
-    return StandardCharsets.UTF_8.decode(data).toString()
-  }
+  private fun toUtf8String(data: ByteBuffer): String =
+      StandardCharsets.UTF_8.decode(data).toString()
 
-  fun run(client: RSocket?): Flux<Void> {
-    try {
-      return runAllOperations(client)
-    } catch (e: Exception) {
-      handleError(e)
-    }
-
-    return Flux.empty()
+  fun run(client: RSocket?): Flux<Void> = try {
+    runAllOperations(client)
+  } catch (e: Exception) {
+    handleError(e)
+    Flux.empty()
   }
 
   private fun handleError(e: Throwable) {
     outputHandler!!.error("error", e)
   }
 
-  private fun runAllOperations(client: RSocket?): Flux<Void> {
-    return Flux.range(0, operations).flatMap { _ -> runSingleOperation(client) }
-  }
+  private fun runAllOperations(client: RSocket?): Flux<Void> =
+      Flux.range(0, operations).flatMap { _ -> runSingleOperation(client) }
 
-  private fun runSingleOperation(client: RSocket?): Flux<Void> {
-    try {
-      val source: Flux<Payload>
-
-      when {
-        fireAndForget -> source = client!!.fireAndForget(singleInputPayload()).thenMany(Flux.empty())
-        metadataPush -> source = client!!.metadataPush(singleInputPayload()).thenMany(Flux.empty())
-        requestResponse -> source = client!!.requestResponse(singleInputPayload()).flux()
-        stream -> source = client!!.requestStream(singleInputPayload())
-        channel -> {
-          if (input == null) {
-            outputHandler!!.info("Type commands to send to the server.")
-          }
-          source = client!!.requestChannel(inputPublisher())
+  private fun runSingleOperation(client: RSocket?): Flux<Void> = try {
+    when {
+      fireAndForget -> client!!.fireAndForget(singleInputPayload()).thenMany(Flux.empty())
+      metadataPush -> client!!.metadataPush(singleInputPayload()).thenMany(Flux.empty())
+      requestResponse -> client!!.requestResponse(singleInputPayload()).flux()
+      stream -> client!!.requestStream(singleInputPayload())
+      channel -> {
+        if (input == null) {
+          outputHandler!!.info("Type commands to send to the server.")
         }
-        else -> {
-          outputHandler!!.info("Using passive client mode, choose an option to use a different mode.")
-          source = Flux.never()
-        }
+        client!!.requestChannel(inputPublisher())
       }
-
-      return source
-          .map({ it.data })
-          .map({ this.toUtf8String(it) })
-          .doOnNext({ outputHandler!!.showOutput(it) })
-          .doOnError { e -> outputHandler!!.error("error from server", e) }
-          .onErrorResume { _ -> Flux.empty() }
-          .take(requestN.toLong())
-          .thenMany(Flux.empty())
-    } catch (ex: Exception) {
-      return Flux.error<Void>(ex)
-          .doOnError { e -> outputHandler!!.error("error before query", e) }
-          .onErrorResume { _ -> Flux.empty() }
-    }
-
+      else -> {
+        outputHandler!!.info("Using passive client mode, choose an option to use a different mode.")
+        Flux.never()
+      }
+    }.map({ it.data })
+        .map({ this.toUtf8String(it) })
+        .doOnNext({ outputHandler!!.showOutput(it) })
+        .doOnError { e -> outputHandler!!.error("error from server", e) }
+        .onErrorResume { _ -> Flux.empty() }
+        .take(requestN.toLong())
+        .thenMany(Flux.empty())
+  } catch (ex: Exception) {
+    Flux.error<Void>(ex)
+        .doOnError { e -> outputHandler!!.error("error before query", e) }
+        .onErrorResume { _ -> Flux.empty() }
   }
 
   private fun inputPublisher(): Flux<Payload> {
@@ -345,15 +323,12 @@ class Main {
   companion object {
     const val NAME = "reactivesocket-cli"
 
-    private fun getInputFromSource(source: String?, nullHandler: Supplier<String>): String {
-      val s: String = if (source == null) {
-        nullHandler.get()
-      } else {
-        stringValue(source)
-      }
-
-      return s
-    }
+    private fun getInputFromSource(source: String?, nullHandler: Supplier<String>): String =
+        if (source == null) {
+          nullHandler.get()
+        } else {
+          stringValue(source)
+        }
 
     private fun fromArgs(vararg args: String): Main? {
       val cmd = SingleCommand.singleCommand<Main>(Main::class.java)

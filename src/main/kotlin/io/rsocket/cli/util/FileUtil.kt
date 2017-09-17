@@ -10,14 +10,12 @@ object FileUtil {
     if (!file.isFile) {
       throw UsageException("file not found: " + file)
     }
+
     return file
   }
 
-  private fun normalize(path: String): String {
-    return if (path.startsWith("~/")) {
-      System.getenv("HOME") + "/" + path.substring(2)
-    } else {
-      path
-    }
+  private fun normalize(path: String): String = when {
+    path.startsWith("~/") -> System.getenv("HOME") + "/" + path.substring(2)
+    else -> path
   }
 }

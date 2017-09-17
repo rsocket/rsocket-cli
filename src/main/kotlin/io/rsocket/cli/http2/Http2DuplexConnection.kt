@@ -91,36 +91,27 @@ class Http2DuplexConnection : DuplexConnection {
         .then()
   }
 
-  override fun receive(): Flux<Frame> {
-    return receive
-  }
+  override fun receive(): Flux<Frame> = receive
 
-  override fun availability(): Double {
-    return if (stream!!.isClosed) 0.0 else 1.0
-  }
+  override fun availability(): Double = if (stream!!.isClosed) 0.0 else 1.0
 
-  override fun close(): Mono<Void> {
-    return Mono.defer {
-      // TODO listen to callback
-      if (!stream!!.isClosed) {
-        stream!!.reset(
-            ResetFrame(stream!!.id, ErrorCode.STREAM_CLOSED_ERROR.code),
-            object : Callback {
-              override fun failed(x: Throwable?) {}
-            })
-      }
-      onClose.onComplete()
-      onClose
+  override fun close(): Mono<Void> = Mono.defer {
+    // TODO listen to callback
+    if (!stream!!.isClosed) {
+      stream!!.reset(
+          ResetFrame(stream!!.id, ErrorCode.STREAM_CLOSED_ERROR.code),
+          object : Callback {
+            override fun failed(x: Throwable?) {}
+          })
     }
+    onClose.onComplete()
+    onClose
   }
 
-  override fun onClose(): Mono<Void> {
-    return onClose
-  }
+  override fun onClose(): Mono<Void> = onClose
 
-  private fun dataFrame(f: Frame): DataFrame {
-    return DataFrame(stream!!.id, f.content().nioBuffer(), false)
-  }
+  private fun dataFrame(f: Frame): DataFrame =
+      DataFrame(stream!!.id, f.content().nioBuffer(), false)
 
   class MyRSocketLengthCodec : RSocketLengthCodec() {
     @Throws(Exception::class)
