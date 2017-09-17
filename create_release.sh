@@ -30,10 +30,10 @@ RELEASE_BODY=$(cat <<EOF
 EOF
 )
 
-RELEASE_ID=$(rsocket-cli -d "$RELEASE_BODY" https://api.github.com/repos/yschimke/rsocket-cli/releases | jq .id)
+RELEASE_ID=$(oksocial -d "$RELEASE_BODY" https://api.github.com/repos/rsocket/rsocket-cli/releases | jq .id)
 
-echo Created "https://api.github.com/repos/yschimke/rsocket-cli/releases/${RELEASE_ID}"
+echo Created "https://api.github.com/repos/rsocket/rsocket-cli/releases/${RELEASE_ID}"
 
 ./gradlew -q clean distTar
 
-./rsocket-cli -H "Content-Type: application/x-gzip" -d "@build/distributions/rsocket-cli-${TAG_VERSION}.tgz" "https://uploads.github.com/repos/yschimke/rsocket-cli/releases/${RELEASE_ID}/assets?name=rsocket-cli-${TAG_VERSION}.tgz" | jq ".browser_download_url"
+oksocial -H "Content-Type: application/x-gzip" -d "@build/distributions/rsocket-cli-${TAG_VERSION}.tgz" "https://uploads.github.com/repos/rsocket/rsocket-cli/releases/${RELEASE_ID}/assets?name=rsocket-cli-${TAG_VERSION}.tgz" | jq ".browser_download_url"
