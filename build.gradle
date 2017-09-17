@@ -9,6 +9,7 @@ buildscript {
 }
 
 plugins {
+  id "com.gradle.build-scan" version "1.9"
   id 'com.github.ben-manes.versions' version '0.15.0'
   id 'net.nemerosa.versioning' version '2.6.1'
   id "org.jetbrains.kotlin.jvm" version "1.1.4-3"
@@ -103,3 +104,5 @@ dependencies {
 test {
   testLogging.showStandardStreams = false
 }
+
+buildScan { licenseAgreementUrl = 'https://gradle.com/terms-of-service'; licenseAgree = 'yes' }
