@@ -1,51 +1,105 @@
 buildscript {
-  repositories { jcenter() }
+  repositories {
+    jcenter()
+    mavenCentral()
+  }
+  dependencies {
+    classpath 'org.junit.platform:junit-platform-gradle-plugin:1.0.0'
+  }
 }
 
 plugins {
-    id 'com.github.sherter.google-java-format' version '0.6'
+  id 'com.github.ben-manes.versions' version '0.15.0'
+  id 'net.nemerosa.versioning' version '2.6.1'
+  id "org.jetbrains.kotlin.jvm" version "1.1.4-3"
 }
 
 description = 'RSocket CLI.'
 
+ext.junit4Version = '4.12'
+ext.junitVintageVersion = '4.12.0'
+ext.junitPlatformVersion = '1.0.0'
+ext.junitJupiterVersion = '5.0.0'
+ext.kotlin_version = '1.1.4-3'
+
 apply plugin: 'java'
 apply plugin: 'application'
+apply plugin: 'maven'
+apply plugin: 'org.junit.platform.gradle.plugin'
 
+group = 'com.baulsupp'
 mainClassName = "io.rsocket.cli.Main"
 
+versioning {
+  releaseMode = project.hasProperty('releaseMode') ? project.property('releaseMode') : 'snapshot'
+}
+
+version = versioning.info.display
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+tasks.withType(JavaCompile) {
+  options.encoding = 'UTF-8'
+}
+
+distTar {
+  compression = Compression.GZIP
+}
+
 repositories {
-    mavenLocal()
-    maven { url 'http://repo.spring.io/milestone' }
-    maven { url 'https://oss.jfrog.org/libs-snapshot' }
-    maven { url 'https://dl.bintray.com/reactivesocket/RSocket' }
+  mavenLocal()
+  maven { url 'http://repo.spring.io/milestone' }
+  maven { url 'https://oss.jfrog.org/libs-snapshot' }
+  maven { url 'https://dl.bintray.com/reactivesocket/RSocket' }
+  maven { url "https://jitpack.io" }
+  mavenCentral()
 }
 
 dependencies {
-    compile 'io.rsocket:rsocket-transport-netty:0.9-SNAPSHOT'
-    compile 'io.rsocket:rsocket-transport-local:0.9-SNAPSHOT'
+  compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:1.1.4-3"
+  compile "org.jetbrains.kotlin:kotlin-reflect:1.1.4-3"
 
-    compile 'io.airlift:airline:0.7'
-    compile 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.8.8'
-    compile 'com.fasterxml.jackson.core:jackson-core:2.8.8'
-    compile 'com.fasterxml.jackson.core:jackson-databind:2.8.8'
-    compile 'com.fasterxml.jackson.module:jackson-module-afterburner:2.8.8'
-    compile 'com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.8.8'
-    compile 'org.slf4j:slf4j-jdk14:1.7.24'
+  compile 'io.rsocket:rsocket-transport-netty:0.9-SNAPSHOT'
+  compile 'io.rsocket:rsocket-transport-local:0.9-SNAPSHOT'
 
-    compile 'org.eclipse.jetty.http2:http2-http-client-transport:9.4.6.v20170531'
-    compile 'org.mortbay.jetty.alpn:alpn-boot:8.1.11.v20170118'
+  compile 'io.airlift:airline:0.8'
+  compile 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.9.1'
+  compile 'com.fasterxml.jackson.core:jackson-core:2.9.1'
+  compile 'com.fasterxml.jackson.core:jackson-databind:2.9.1'
+  compile 'com.fasterxml.jackson.module:jackson-module-afterburner:2.9.1'
+  compile 'com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.9.1'
+  compile 'org.slf4j:slf4j-jdk14:1.7.25'
 
-    runtime 'org.slf4j:slf4j-jdk14:1.7.25'
+  compile 'org.eclipse.jetty.http2:http2-http-client-transport:9.4.6.v20170531'
+  compile 'org.mortbay.jetty.alpn:alpn-boot:8.1.11.v20170118'
+  compile 'com.github.vjames19.kotlin-futures:kotlin-futures-jdk8:0.4.0'
+  compile 'com.spotify:completable-futures:0.3.1'
 
-    testCompile 'junit:junit:4.12'
-    testCompile 'org.mockito:mockito-core:1.10.19'
+  runtime 'org.slf4j:slf4j-jdk14:1.7.25'
+
+  // JUnit Jupiter API and TestEngine implementation
+  testCompile("org.junit.jupiter:junit-jupiter-api:${junitJupiterVersion}")
+  testRuntime("org.junit.jupiter:junit-jupiter-engine:${junitJupiterVersion}")
+
+  // If you also want to support JUnit 3 and JUnit 4 tests
+  testCompile("junit:junit:${junit4Version}")
+  testRuntime("org.junit.vintage:junit-vintage-engine:${junitVintageVersion}")
+
+  // Only needed to run tests in an (IntelliJ) IDE(A) that bundles an older version
+  testRuntime("org.junit.platform:junit-platform-launcher:${junitPlatformVersion}")
+
+  testCompile "org.jetbrains.kotlin:kotlin-test:1.1.4-3"
+  testCompile "org.jetbrains.kotlin:kotlin-test-junit:1.1.4-3"
+
+  testRuntime group: 'org.slf4j', name: 'slf4j-jdk14', version: '1.7.25'
+
+  testCompile group: 'com.squareup.okhttp3', name: 'okhttp-testing-support', version: '3.9.0'
+  testCompile group: 'com.squareup.okhttp3', name: 'mockwebserver', version: '3.9.0'
+
+  compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
 }
 
 test {
-    testLogging.showStandardStreams = false
-}
-
-compileJava {
-    sourceCompatibility = 1.8
-    targetCompatibility = 1.8
+  testLogging.showStandardStreams = false
 }
