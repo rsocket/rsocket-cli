@@ -34,13 +34,12 @@ import org.reactivestreams.Publisher
 import org.slf4j.LoggerFactory
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import java.io.File
-import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.time.Duration
 import java.util.*
 import java.util.function.Supplier
+import kotlin.system.exitProcess
 
 /**
  * Simple command line tool to make a RSocket connection and send/receive elements.
@@ -166,7 +165,6 @@ class Main {
     } catch (e: Exception) {
       handleError(e)
     }
-
   }
 
   private fun standardMimeType(dataFormat: String?): String = when (dataFormat) {
@@ -178,38 +176,27 @@ class Main {
     else -> dataFormat
   }
 
-  private fun parseSetupPayload(): Payload {
-    val source = if (setup!!.startsWith("@")) {
-      try {
-        Files.asCharSource(setupFile(), Charsets.UTF_8).read()
-      } catch (e: IOException) {
-        throw RuntimeException(e)
-      }
-
-    } else {
-      setup
-    }
-
-    return PayloadImpl(source)
+  private fun parseSetupPayload(): Payload = when {
+    setup == null -> PayloadImpl.EMPTY
+    setup!!.startsWith("@") -> PayloadImpl(Files.asCharSource(expectedFile(setup!!.substring(1)), Charsets.UTF_8).read())
+    else -> PayloadImpl(setup)
   }
-
-  private fun setupFile(): File = expectedFile(input!!.substring(1))
 
   private fun createServerRequestHandler(setupPayload: ConnectionSetupPayload): Mono<RSocket> {
     LoggerFactory.getLogger(Main::class.java).debug("setup payload " + setupPayload)
 
     return Mono.just(
         object : AbstractRSocket() {
-          override fun fireAndForget(payload: Payload?): Mono<Void> {
+          override fun fireAndForget(payload: Payload): Mono<Void> {
             showPayload(payload)
             return Mono.empty()
           }
 
-          override fun requestResponse(payload: Payload?): Mono<Payload> {
+          override fun requestResponse(payload: Payload): Mono<Payload> {
             return handleIncomingPayload(payload).single()
           }
 
-          override fun requestStream(payload: Payload?): Flux<Payload> {
+          override fun requestStream(payload: Payload): Flux<Payload> {
             return handleIncomingPayload(payload)
           }
 
@@ -226,13 +213,13 @@ class Main {
         })
   }
 
-  private fun handleIncomingPayload(payload: Payload?): Flux<Payload> {
+  private fun handleIncomingPayload(payload: Payload): Flux<Payload> {
     showPayload(payload)
     return inputPublisher()
   }
 
-  private fun showPayload(payload: Payload?) {
-    outputHandler!!.showOutput(toUtf8String(payload!!.data))
+  private fun showPayload(payload: Payload) {
+    outputHandler!!.showOutput(toUtf8String(payload.data))
   }
 
   private fun toUtf8String(data: ByteBuffer): String =
@@ -250,7 +237,7 @@ class Main {
   }
 
   private fun runAllOperations(client: RSocket?): Flux<Void> =
-      Flux.range(0, operations).flatMap { _ -> runSingleOperation(client) }
+      Flux.range(0, operations).flatMap { runSingleOperation(client) }
 
   private fun runSingleOperation(client: RSocket?): Flux<Void> = try {
     when {
@@ -258,12 +245,7 @@ class Main {
       metadataPush -> client!!.metadataPush(singleInputPayload()).thenMany(Flux.empty())
       requestResponse -> client!!.requestResponse(singleInputPayload()).flux()
       stream -> client!!.requestStream(singleInputPayload())
-      channel -> {
-        if (input == null) {
-          outputHandler!!.info("Type commands to send to the server.")
-        }
-        client!!.requestChannel(inputPublisher())
-      }
+      channel -> client!!.requestChannel(inputPublisher())
       else -> {
         outputHandler!!.info("Using passive client mode, choose an option to use a different mode.")
         Flux.never()
@@ -272,25 +254,28 @@ class Main {
         .map({ this.toUtf8String(it) })
         .doOnNext({ outputHandler!!.showOutput(it) })
         .doOnError { e -> outputHandler!!.error("error from server", e) }
-        .onErrorResume { _ -> Flux.empty() }
+        .onErrorResume { Flux.empty() }
         .take(requestN.toLong())
         .thenMany(Flux.empty())
   } catch (ex: Exception) {
     Flux.error<Void>(ex)
         .doOnError { e -> outputHandler!!.error("error before query", e) }
-        .onErrorResume { _ -> Flux.empty() }
+        .onErrorResume { Flux.empty() }
   }
 
   private fun inputPublisher(): Flux<Payload> {
     val stream: CharSource = when {
-      input == null -> SystemInCharSource.INSTANCE
+      input == null -> {
+        outputHandler!!.info("Type commands to send to the server.")
+        SystemInCharSource.INSTANCE
+      }
       input!!.startsWith("@") -> Files.asCharSource(inputFile(input!!), Charsets.UTF_8)
       else -> CharSource.wrap(input!!)
     }
 
     val metadata = buildMetadata()
 
-    return lines(stream, java.util.function.Function { _ -> metadata })
+    return lines(stream, java.util.function.Function { metadata })
   }
 
   private fun singleInputPayload(): PayloadImpl {
@@ -299,54 +284,46 @@ class Main {
         Supplier {
           Scanner(System.`in`).nextLine()
         })
-        .trim { it <= ' ' }
 
-    val metadata = buildMetadata()
-
-    return PayloadImpl(data.toByteArray(StandardCharsets.UTF_8), metadata)
+    return PayloadImpl(data.toByteArray(StandardCharsets.UTF_8), buildMetadata())
   }
 
-  private fun buildMetadata(): ByteArray {
-    return when {
-      this.metadata != null -> {
-        if (this.headers != null) {
-          throw UsageException("Can't specify headers and metadata")
-        }
-
-        getInputFromSource(this.metadata, Supplier { ""; }).toByteArray(StandardCharsets.UTF_8)
+  private fun buildMetadata(): ByteArray = when {
+    this.metadata != null -> {
+      if (this.headers != null) {
+        throw UsageException("Can't specify headers and metadata")
       }
-      this.headers != null -> MetadataUtil.encodeMetadataMap(headerMap(headers), standardMimeType(metadataFormat))
-      else -> ByteArray(0)
+
+      getInputFromSource(this.metadata, Supplier { ""; }).toByteArray(StandardCharsets.UTF_8)
     }
+    this.headers != null -> MetadataUtil.encodeMetadataMap(headerMap(headers), standardMimeType(metadataFormat))
+    else -> ByteArray(0)
   }
 
   companion object {
     const val NAME = "reactivesocket-cli"
 
     private fun getInputFromSource(source: String?, nullHandler: Supplier<String>): String =
-        if (source == null) {
-          nullHandler.get()
-        } else {
-          stringValue(source)
+        when (source) {
+          null -> nullHandler.get()
+          else -> stringValue(source)
         }
 
-    private fun fromArgs(vararg args: String): Main? {
+    private fun fromArgs(vararg args: String): Main {
       val cmd = SingleCommand.singleCommand<Main>(Main::class.java)
       return try {
         cmd.parse(*args)
       } catch (e: ParseException) {
         System.err.println(e.message)
         Help.help(cmd.commandMetadata)
-        System.exit(-1)
-        null
+        exitProcess(-1)
       }
-
     }
 
     @Throws(Exception::class)
     @JvmStatic
     fun main(vararg args: String) {
-      fromArgs(*args)!!.run()
+      fromArgs(*args).run()
     }
   }
 }
