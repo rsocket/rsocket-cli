@@ -13,18 +13,13 @@
  */
 package io.rsocket.cli
 
-import com.google.common.io.CharSource
 import com.google.common.io.Files
 import io.airlift.airline.*
 import io.rsocket.*
 import io.rsocket.cli.Main.Companion.NAME
-import io.rsocket.cli.Publishers.lines
+import io.rsocket.cli.util.*
 import io.rsocket.cli.util.FileUtil.expectedFile
 import io.rsocket.cli.util.HeaderUtil.headerMap
-import io.rsocket.cli.util.HeaderUtil.inputFile
-import io.rsocket.cli.util.HeaderUtil.stringValue
-import io.rsocket.cli.util.LoggingUtil
-import io.rsocket.cli.util.MetadataUtil
 import io.rsocket.cli.util.TimeUtil.parseShortDuration
 import io.rsocket.transport.TransportHeaderAware
 import io.rsocket.uri.UriTransportRegistry
@@ -76,8 +71,8 @@ class Main {
   @Option(name = arrayOf("--server"), description = "Start server instead of client")
   var serverMode: Boolean = false
 
-  @Option(name = arrayOf("-i", "--input"), description = "String input or @path/to/file")
-  var input: String? = null
+  @Option(name = arrayOf("-i", "--input"), description = "String input, '-' (STDIN) or @path/to/file")
+  var input: List<String>? = null
 
   @Option(name = arrayOf("-m", "--metadata"), description = "Metadata input string input or @path/to/file")
   var metadata: String? = null
@@ -113,6 +108,8 @@ class Main {
 
   var outputHandler: OutputHandler? = null
 
+  var inputPublisher: InputPublisher? = null
+
   private var server: Closeable? = null
 
   fun run() {
@@ -120,6 +117,10 @@ class Main {
 
     if (outputHandler == null) {
       outputHandler = ConsoleOutputHandler()
+    }
+
+    if (inputPublisher == null) {
+      inputPublisher = LineInputPublishers(outputHandler!!)
     }
 
     try {
@@ -199,9 +200,9 @@ class Main {
             return handleIncomingPayload(payload)
           }
 
-          override fun requestChannel(payloads: Publisher<Payload>?): Flux<Payload> {
-            Flux.from(payloads!!)
-                .subscribe({ p -> showPayload(p) }) { e -> outputHandler!!.error("channel error", e) }
+          override fun requestChannel(payloads: Publisher<Payload>): Flux<Payload> {
+            Flux.from(payloads).take(requestN.toLong())
+                .subscribe({ p -> showPayload(p) }, { e -> outputHandler!!.error("channel error", e) })
             return inputPublisher()
           }
 
@@ -215,6 +216,32 @@ class Main {
   private fun handleIncomingPayload(payload: Payload): Flux<Payload> {
     showPayload(payload)
     return inputPublisher()
+  }
+
+  fun getInputFromSource(source: String?, nullHandler: Supplier<String>): String =
+      when (source) {
+        null -> nullHandler.get()
+        else -> HeaderUtil.stringValue(source)
+      }
+
+  fun buildMetadata(): ByteArray? = when {
+    this.metadata != null -> {
+      if (this.headers != null) {
+        throw UsageException("Can't specify headers and metadata")
+      }
+
+      getInputFromSource(this.metadata, Supplier { ""; }).toByteArray(StandardCharsets.UTF_8)
+    }
+    this.headers != null -> MetadataUtil.encodeMetadataMap(HeaderUtil.headerMap(headers), standardMimeType(metadataFormat))
+    else -> ByteArray(0)
+  }
+
+  private fun inputPublisher(): Flux<Payload> {
+    return inputPublisher!!.inputPublisher(input ?: listOf("-"), buildMetadata())
+  }
+
+  private fun singleInputPayload(): Payload {
+    return inputPublisher!!.singleInputPayload(input ?: listOf("-"), buildMetadata())
   }
 
   private fun showPayload(payload: Payload) {
@@ -261,45 +288,6 @@ class Main {
         .doOnError { e -> outputHandler!!.error("error before query", e) }
         .onErrorResume { Flux.empty() }
   }
-
-  private fun inputPublisher(): Flux<Payload> {
-    val stream: CharSource = when {
-      input == null -> {
-        outputHandler!!.info("Type commands to send to the server.")
-        SystemInCharSource.INSTANCE
-      }
-      input!!.startsWith("@") -> Files.asCharSource(inputFile(input!!), Charsets.UTF_8)
-      else -> CharSource.wrap(input!!)
-    }
-
-    val metadata = buildMetadata()
-
-    return lines(stream, java.util.function.Function { metadata })
-  }
-
-  private fun singleInputPayload(): PayloadImpl = PayloadImpl(getInputFromSource(
-      input,
-      Supplier {
-        Scanner(System.`in`).nextLine()
-      }).toByteArray(StandardCharsets.UTF_8), buildMetadata())
-
-  private fun buildMetadata(): ByteArray = when {
-    this.metadata != null -> {
-      if (this.headers != null) {
-        throw UsageException("Can't specify headers and metadata")
-      }
-
-      getInputFromSource(this.metadata, Supplier { ""; }).toByteArray(StandardCharsets.UTF_8)
-    }
-    this.headers != null -> MetadataUtil.encodeMetadataMap(headerMap(headers), standardMimeType(metadataFormat))
-    else -> ByteArray(0)
-  }
-
-  private fun getInputFromSource(source: String?, nullHandler: Supplier<String>): String =
-      when (source) {
-        null -> nullHandler.get()
-        else -> stringValue(source)
-      }
 
   companion object {
     const val NAME = "reactivesocket-cli"

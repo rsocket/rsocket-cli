@@ -2,6 +2,7 @@ package io.rsocket.cli.i9n
 
 import io.rsocket.*
 import io.rsocket.cli.Main
+import io.rsocket.cli.util.LineInputPublishers
 import io.rsocket.exceptions.ApplicationException
 import io.rsocket.transport.local.LocalClientTransport
 import io.rsocket.transport.local.LocalServerTransport
@@ -40,6 +41,7 @@ class BasicOperationTest {
 
   private fun connect() {
     main.outputHandler = output
+    main.inputPublisher = LineInputPublishers(output)
 
     server = RSocketFactory.receive()
         .acceptor { _, _ -> Mono.just(requestHandler) }
@@ -67,7 +69,7 @@ class BasicOperationTest {
   @Throws(Exception::class)
   fun metadataPush() {
     main.metadataPush = true
-    main.input = "Hello"
+    main.input = listOf("Hello")
 
     requestHandler = object : AbstractRSocket() {
       override fun metadataPush(payload: Payload?): Mono<Void> {
@@ -84,7 +86,7 @@ class BasicOperationTest {
   @Throws(Exception::class)
   fun fireAndForget() {
     main.fireAndForget = true
-    main.input = "Hello"
+    main.input = listOf("Hello")
 
     requestHandler = object : AbstractRSocket() {
       override fun fireAndForget(payload: Payload?): Mono<Void> {
@@ -101,7 +103,7 @@ class BasicOperationTest {
   @Throws(Exception::class)
   fun requestResponse() {
     main.requestResponse = true
-    main.input = "Hello"
+    main.input = listOf("Hello")
 
     requestHandler = object : AbstractRSocket() {
       override fun requestResponse(payload: Payload?): Mono<Payload> {
@@ -120,7 +122,7 @@ class BasicOperationTest {
   @Throws(Exception::class)
   fun requestResponseFromFile() {
     main.requestResponse = true
-    main.input = "@src/test/resources/hello.text"
+    main.input = listOf("@src/test/resources/hello.text")
 
     requestHandler = object : AbstractRSocket() {
       override fun requestResponse(payload: Payload?): Mono<Payload> {
@@ -139,7 +141,7 @@ class BasicOperationTest {
   @Throws(Exception::class)
   fun requestResponseFromMissingFile() {
     main.requestResponse = true
-    main.input = "@src/test/resources/goodbye.text"
+    main.input = listOf("@src/test/resources/goodbye.text")
 
     requestHandler = object : AbstractRSocket() {
       override fun requestResponse(payload: Payload?): Mono<Payload> {
@@ -158,7 +160,7 @@ class BasicOperationTest {
   @Throws(Exception::class)
   fun requestResponseError() {
     main.requestResponse = true
-    main.input = "Hello"
+    main.input = listOf("Hello")
 
     requestHandler = object : AbstractRSocket() {
       override fun requestResponse(payload: Payload?): Mono<Payload> {
@@ -177,7 +179,7 @@ class BasicOperationTest {
   @Throws(Exception::class)
   fun stream() {
     main.stream = true
-    main.input = "Hello"
+    main.input = listOf("Hello")
 
     requestHandler = object : AbstractRSocket() {
       override fun requestStream(payload: Payload?): Flux<Payload> {
@@ -199,7 +201,7 @@ class BasicOperationTest {
   @Throws(Exception::class)
   fun streamCompletedByFailure() {
     main.stream = true
-    main.input = "Hello"
+    main.input = listOf("Hello")
 
     requestHandler = object : AbstractRSocket() {
       override fun requestStream(payload: Payload?): Flux<Payload> {
