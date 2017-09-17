@@ -295,14 +295,14 @@ class Main {
     else -> ByteArray(0)
   }
 
+  private fun getInputFromSource(source: String?, nullHandler: Supplier<String>): String =
+      when (source) {
+        null -> nullHandler.get()
+        else -> stringValue(source)
+      }
+
   companion object {
     const val NAME = "reactivesocket-cli"
-
-    private fun getInputFromSource(source: String?, nullHandler: Supplier<String>): String =
-        when (source) {
-          null -> nullHandler.get()
-          else -> stringValue(source)
-        }
 
     private fun fromArgs(vararg args: String): Main {
       val cmd = SingleCommand.singleCommand<Main>(Main::class.java)

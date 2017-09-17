@@ -27,7 +27,7 @@ class Http2ClientTransport @JvmOverloads constructor(
   }
 
   override fun connect(): Mono<DuplexConnection> =
-      createSession().flatMap { s -> Http2DuplexConnection.create(s, uri, transportHeaders() ) }
+      createSession().flatMap { s -> Http2DuplexConnection.create(s, uri, transportHeaders()) }
 
   private fun createSession(): Mono<Session> = Mono.create { c ->
     val client = HTTP2Client()
