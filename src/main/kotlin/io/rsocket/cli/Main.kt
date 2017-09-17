@@ -14,7 +14,6 @@
 package io.rsocket.cli
 
 import com.google.common.base.Charsets
-import com.google.common.base.Throwables
 import com.google.common.io.CharSource
 import com.google.common.io.Files
 import io.airlift.airline.*
@@ -191,7 +190,7 @@ class Main {
       try {
         source = Files.asCharSource(setupFile(), Charsets.UTF_8).read()
       } catch (e: IOException) {
-        throw Throwables.propagate(e)
+        throw RuntimeException(e)
       }
 
     } else {
