@@ -38,7 +38,7 @@ class BasicOperationTest {
     }
   }
 
-  fun connect() {
+  private fun connect() {
     main.outputHandler = output
 
     server = RSocketFactory.receive()

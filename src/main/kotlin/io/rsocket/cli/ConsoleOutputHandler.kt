@@ -35,15 +35,19 @@ class ConsoleOutputHandler : OutputHandler {
 
   override fun error(msg: String, e: Throwable) {
     val ex = unwrap(e)
-    if (ex is ConnectException) {
-      logger.debug(msg, ex)
-      System.err.println(ex.message)
-    } else if (ex is UsageException) {
-      logger.debug(msg, ex)
-      System.err.println(ex.message)
-    } else {
-      System.err.println(msg)
-      ex.printStackTrace()
+    when (ex) {
+      is ConnectException -> {
+        logger.debug(msg, ex)
+        System.err.println(ex.message)
+      }
+      is UsageException -> {
+        logger.debug(msg, ex)
+        System.err.println(ex.message)
+      }
+      else -> {
+        System.err.println(msg)
+        ex.printStackTrace()
+      }
     }
   }
 

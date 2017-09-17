@@ -5,8 +5,8 @@ import io.rsocket.cli.OutputHandler
 import io.rsocket.cli.UsageException
 
 class TestOutputHandler : OutputHandler {
-  val stdout: MutableList<String> = Lists.newArrayList()
-  val stderr: MutableList<String> = Lists.newArrayList()
+  private val stdout: MutableList<String> = Lists.newArrayList()
+  private val stderr: MutableList<String> = Lists.newArrayList()
 
   override fun showOutput(output: String) {
     stdout.add(output)

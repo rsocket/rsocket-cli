@@ -19,40 +19,35 @@ package io.rsocket.cli.util
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory
-import com.google.common.base.Throwables
 import io.rsocket.cli.UsageException
 
 object MetadataUtil {
 
   fun encodeMetadataMap(headerMap: Map<String, String>, mimeType: String): ByteArray {
-    return if (mimeType == "application/json") {
-      MetadataUtil.jsonEncodeStringMap(headerMap)
-    } else if (mimeType == "application/cbor") {
-      MetadataUtil.cborEncodeStringMap(headerMap)
-    } else {
-      throw UsageException("headers not supported with mimetype '$mimeType'")
+    return when (mimeType) {
+      "application/json" -> MetadataUtil.jsonEncodeStringMap(headerMap)
+      "application/cbor" -> MetadataUtil.cborEncodeStringMap(headerMap)
+      else -> throw UsageException("headers not supported with mimetype '$mimeType'")
     }
   }
 
-  fun jsonEncodeStringMap(headerMap: Map<String, String>): ByteArray {
+  private fun jsonEncodeStringMap(headerMap: Map<String, String>): ByteArray {
     val m = ObjectMapper()
 
-    try {
-      return m.writeValueAsBytes(headerMap)
+    return try {
+      m.writeValueAsBytes(headerMap)
     } catch (e: JsonProcessingException) {
-      throw Throwables.propagate(e)
+      throw RuntimeException(e)
     }
-
   }
 
-  fun cborEncodeStringMap(headerMap: Map<String, String>): ByteArray {
+  private fun cborEncodeStringMap(headerMap: Map<String, String>): ByteArray {
     val m = ObjectMapper(CBORFactory())
 
-    try {
-      return m.writeValueAsBytes(headerMap)
+    return try {
+      m.writeValueAsBytes(headerMap)
     } catch (e: JsonProcessingException) {
-      throw Throwables.propagate(e)
+      throw RuntimeException(e)
     }
-
   }
 }

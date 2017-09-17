@@ -52,7 +52,7 @@ object LoggingUtil {
     }
   }
 
-  fun getLogger(name: String): java.util.logging.Logger {
+  private fun getLogger(name: String): java.util.logging.Logger {
     val logger = java.util.logging.Logger.getLogger(name)
     activeLoggers.add(logger)
     return logger

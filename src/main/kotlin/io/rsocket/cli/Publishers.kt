@@ -36,10 +36,10 @@ object Publishers {
   }
 
   fun splitInLines(inputStream: CharSource): Flux<String> {
-    try {
-      return Flux.fromStream(inputStream.openBufferedStream().lines())
+    return try {
+      Flux.fromStream(inputStream.openBufferedStream().lines())
     } catch (e: IOException) {
-      return Flux.error(e)
+      Flux.error(e)
     }
 
   }

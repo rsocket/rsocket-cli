@@ -17,10 +17,10 @@ object TimeUtil {
     val amount = java.lang.Long.valueOf(match.group(1))!!
     val unit = match.group(2)
 
-    when (unit) {
-      "ms" -> return Duration.ofMillis(amount)
-      "s" -> return Duration.ofSeconds(amount)
-      else -> return Duration.ofMinutes(amount)
+    return when (unit) {
+      "ms" -> Duration.ofMillis(amount)
+      "s" -> Duration.ofSeconds(amount)
+      else -> Duration.ofMinutes(amount)
     }
   }
 }

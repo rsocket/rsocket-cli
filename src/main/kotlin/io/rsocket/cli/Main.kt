@@ -174,27 +174,27 @@ class Main {
       return "application/json"
     }
 
-    when (dataFormat) {
-      "json" -> return "application/json"
-      "cbor" -> return "application/cbor"
-      "binary" -> return "application/binary"
-      "text" -> return "text/plain"
-      else -> return dataFormat
+    return when (dataFormat) {
+      "json" -> "application/json"
+      "cbor" -> "application/cbor"
+      "binary" -> "application/binary"
+      "text" -> "text/plain"
+      else -> dataFormat
     }
   }
 
-  fun parseSetupPayload(): Payload {
-    var source: String?
+  private fun parseSetupPayload(): Payload {
+    val source: String?
 
-    if (setup!!.startsWith("@")) {
+    source = if (setup!!.startsWith("@")) {
       try {
-        source = Files.asCharSource(setupFile(), Charsets.UTF_8).read()
+        Files.asCharSource(setupFile(), Charsets.UTF_8).read()
       } catch (e: IOException) {
         throw RuntimeException(e)
       }
 
     } else {
-      source = setup
+      setup
     }
 
     return PayloadImpl(source!!)
@@ -204,7 +204,7 @@ class Main {
     return expectedFile(input!!.substring(1))
   }
 
-  fun createServerRequestHandler(setupPayload: ConnectionSetupPayload): Mono<RSocket> {
+  private fun createServerRequestHandler(setupPayload: ConnectionSetupPayload): Mono<RSocket> {
     LoggerFactory.getLogger(Main::class.java).debug("setup payload " + setupPayload)
 
     return Mono.just(
@@ -270,22 +270,21 @@ class Main {
     try {
       val source: Flux<Payload>
 
-      if (fireAndForget) {
-        source = client!!.fireAndForget(singleInputPayload()).thenMany(Flux.empty())
-      } else if (metadataPush) {
-        source = client!!.metadataPush(singleInputPayload()).thenMany(Flux.empty())
-      } else if (requestResponse) {
-        source = client!!.requestResponse(singleInputPayload()).flux()
-      } else if (stream) {
-        source = client!!.requestStream(singleInputPayload())
-      } else if (channel) {
-        if (input == null) {
-          outputHandler!!.info("Type commands to send to the server.")
+      when {
+        fireAndForget -> source = client!!.fireAndForget(singleInputPayload()).thenMany(Flux.empty())
+        metadataPush -> source = client!!.metadataPush(singleInputPayload()).thenMany(Flux.empty())
+        requestResponse -> source = client!!.requestResponse(singleInputPayload()).flux()
+        stream -> source = client!!.requestStream(singleInputPayload())
+        channel -> {
+          if (input == null) {
+            outputHandler!!.info("Type commands to send to the server.")
+          }
+          source = client!!.requestChannel(inputPublisher())
         }
-        source = client!!.requestChannel(inputPublisher())
-      } else {
-        outputHandler!!.info("Using passive client mode, choose an option to use a different mode.")
-        source = Flux.never()
+        else -> {
+          outputHandler!!.info("Using passive client mode, choose an option to use a different mode.")
+          source = Flux.never()
+        }
       }
 
       return source
@@ -305,14 +304,10 @@ class Main {
   }
 
   private fun inputPublisher(): Flux<Payload> {
-    val stream: CharSource
-
-    if (input == null) {
-      stream = SystemInCharSource.INSTANCE
-    } else if (input!!.startsWith("@")) {
-      stream = Files.asCharSource(inputFile(input!!), Charsets.UTF_8)
-    } else {
-      stream = CharSource.wrap(input!!)
+    val stream: CharSource = when {
+      input == null -> SystemInCharSource.INSTANCE
+      input!!.startsWith("@") -> Files.asCharSource(inputFile(input!!), Charsets.UTF_8)
+      else -> CharSource.wrap(input!!)
     }
 
     val metadata = buildMetadata()
@@ -334,16 +329,16 @@ class Main {
   }
 
   private fun buildMetadata(): ByteArray {
-    if (this.metadata != null) {
-      if (this.headers != null) {
-        throw UsageException("Can't specify headers and metadata")
-      }
+    return when {
+      this.metadata != null -> {
+        if (this.headers != null) {
+          throw UsageException("Can't specify headers and metadata")
+        }
 
-      return getInputFromSource(this.metadata, Supplier { ""; }).toByteArray(StandardCharsets.UTF_8)
-    } else return if (this.headers != null) {
-      MetadataUtil.encodeMetadataMap(headerMap(headers), standardMimeType(metadataFormat))
-    } else {
-      ByteArray(0)
+        getInputFromSource(this.metadata, Supplier { ""; }).toByteArray(StandardCharsets.UTF_8)
+      }
+      this.headers != null -> MetadataUtil.encodeMetadataMap(headerMap(headers), standardMimeType(metadataFormat))
+      else -> ByteArray(0)
     }
   }
 
@@ -351,12 +346,10 @@ class Main {
     const val NAME = "reactivesocket-cli"
 
     private fun getInputFromSource(source: String?, nullHandler: Supplier<String>): String {
-      val s: String
-
-      if (source == null) {
-        s = nullHandler.get()
+      val s: String = if (source == null) {
+        nullHandler.get()
       } else {
-        s = stringValue(source)
+        stringValue(source)
       }
 
       return s
@@ -364,13 +357,13 @@ class Main {
 
     private fun fromArgs(vararg args: String): Main? {
       val cmd = SingleCommand.singleCommand<Main>(Main::class.java)
-      try {
-        return cmd.parse(*args)
+      return try {
+        cmd.parse(*args)
       } catch (e: ParseException) {
         System.err.println(e.message)
         Help.help(cmd.commandMetadata)
         System.exit(-1)
-        return null
+        null
       }
 
     }
