@@ -28,6 +28,7 @@ import io.rsocket.cli.util.HeaderUtil.stringValue
 import io.rsocket.cli.util.LoggingUtil
 import io.rsocket.cli.util.MetadataUtil
 import io.rsocket.cli.util.TimeUtil.parseShortDuration
+import io.rsocket.transport.TransportHeaderAware
 import io.rsocket.uri.UriTransportRegistry
 import io.rsocket.util.PayloadImpl
 import org.reactivestreams.Publisher
@@ -149,8 +150,8 @@ class Main {
 
         val clientTransport = UriTransportRegistry.clientForUri(uri)
 
-        if (transportHeader != null && clientTransport is HeaderAware) {
-          (clientTransport as HeaderAware).setHeaders(headerMap(transportHeader))
+        if (transportHeader != null && clientTransport is TransportHeaderAware) {
+          clientTransport.setTransportHeaders({ headerMap(transportHeader) })
         }
 
         client = clientRSocketFactory.transport(clientTransport).start().block()

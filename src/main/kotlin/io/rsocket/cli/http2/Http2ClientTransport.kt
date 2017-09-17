@@ -1,8 +1,8 @@
 package io.rsocket.cli.http2
 
 import io.rsocket.DuplexConnection
-import io.rsocket.cli.HeaderAware
 import io.rsocket.transport.ClientTransport
+import io.rsocket.transport.TransportHeaderAware
 import org.eclipse.jetty.http.HttpScheme
 import org.eclipse.jetty.http2.api.Session
 import org.eclipse.jetty.http2.api.server.ServerSessionListener
@@ -16,16 +16,18 @@ import org.eclipse.jetty.util.thread.ScheduledExecutorScheduler
 import reactor.core.publisher.Mono
 import java.net.InetSocketAddress
 import java.net.URI
+import java.util.function.Supplier
 
-class Http2ClientTransport @JvmOverloads constructor(private val uri: URI, // assume simplified header model
-                                                     private var headers: Map<String, String> = emptyMap()) : ClientTransport, HeaderAware {
+class Http2ClientTransport @JvmOverloads constructor(
+    private val uri: URI,
+    private var transportHeaders: () -> MutableMap<String, String> = { mutableMapOf() }) : ClientTransport, TransportHeaderAware {
 
-  override fun setHeaders(headers: Map<String, String>) {
-    this.headers = headers
+  override fun setTransportHeaders(transportHeaders: Supplier<MutableMap<String, String>>?) {
+    this.transportHeaders = { transportHeaders() }
   }
 
   override fun connect(): Mono<DuplexConnection> {
-    return createSession().flatMap { s -> Http2DuplexConnection.create(s, uri, headers) }
+    return createSession().flatMap { s -> Http2DuplexConnection.create(s, uri, transportHeaders() ) }
   }
 
   private fun createSession(): Mono<Session> {
