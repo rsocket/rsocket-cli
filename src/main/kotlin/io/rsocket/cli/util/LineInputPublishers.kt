@@ -56,8 +56,6 @@ class LineInputPublishers(val outputHandler: OutputHandler) : InputPublisher {
   }
 
   private fun systemInLines(): Flux<String> {
-    outputHandler.info("Type commands to send to the server.")
-
     val keyboard = Scanner(System.`in`)
 
     return Flux.generate<String> { s ->
@@ -66,7 +64,9 @@ class LineInputPublishers(val outputHandler: OutputHandler) : InputPublisher {
       } else {
         s.complete()
       }
-    }.subscribeOn(Schedulers.elastic())
+    }.doOnSubscribe({
+      outputHandler.info("Type commands to send to the server.")
+    }).subscribeOn(Schedulers.elastic())
   }
 
   private val NULL_BYTE_ARRAY = ByteArray(0)
