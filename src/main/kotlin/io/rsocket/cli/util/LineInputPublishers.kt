@@ -4,6 +4,7 @@ import com.google.common.io.Files
 import io.rsocket.Payload
 import io.rsocket.cli.OutputHandler
 import io.rsocket.cli.UsageException
+import io.rsocket.cli.util.FileUtil.expectedFile
 import io.rsocket.util.PayloadImpl
 import reactor.core.publisher.Flux
 import reactor.core.scheduler.Schedulers
@@ -14,7 +15,7 @@ import java.util.*
 class LineInputPublishers(val outputHandler: OutputHandler) : InputPublisher {
   private fun filePublisher(filename: String): Flux<String> {
     return Flux.defer({
-      val file = File(filename)
+      val file = expectedFile(filename)
 
       if (!file.exists()) {
         Flux.error(UsageException("file not found: $filename"))
@@ -69,5 +70,5 @@ class LineInputPublishers(val outputHandler: OutputHandler) : InputPublisher {
     }).subscribeOn(Schedulers.elastic())
   }
 
-  private val NULL_BYTE_ARRAY = ByteArray(0)
+//  private val NULL_BYTE_ARRAY = ByteArray(0)
 }
