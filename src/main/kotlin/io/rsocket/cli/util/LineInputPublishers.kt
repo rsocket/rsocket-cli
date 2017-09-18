@@ -39,17 +39,18 @@ class LineInputPublishers(val outputHandler: OutputHandler) : InputPublisher {
   }
 
   override fun inputPublisher(input: List<String>, metadata: ByteArray?): Flux<Payload> {
-    val metadataPublisher = if (metadata != null) Flux.just(metadata) else Flux.empty()
+//    val metadataPublisher = if (metadata != null) Flux.just(metadata) else Flux.empty()
     return Flux.fromIterable(input).concatMap {
       when {
         it == "-" -> systemInLines()
         it.startsWith("@") -> filePublisher(it.substring(1))
         else -> Flux.just(it)
       }
-    }.zipWith(metadataPublisher.concatWith(Flux.just(NULL_BYTE_ARRAY).repeat()), 1).map { tuple ->
+//    }.zipWith(metadataPublisher.concatWith(Flux.just(NULL_BYTE_ARRAY).repeat()), 1).map { tuple ->
+    } .map {
       PayloadImpl(
-          tuple.t1.toByteArray(StandardCharsets.UTF_8),
-          if (tuple.t2 === NULL_BYTE_ARRAY) null else tuple.t2
+          it.toByteArray(StandardCharsets.UTF_8),
+          metadata
       )
     }
   }
