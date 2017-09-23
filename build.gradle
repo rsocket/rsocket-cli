@@ -12,7 +12,7 @@ plugins {
   id "com.gradle.build-scan" version "1.9"
   id 'com.github.ben-manes.versions' version '0.15.0'
   id 'net.nemerosa.versioning' version '2.6.1'
-  id "org.jetbrains.kotlin.jvm" version "1.1.4-3"
+  id "org.jetbrains.kotlin.jvm" version "1.1.50"
 }
 
 description = 'RSocket CLI.'
@@ -21,7 +21,7 @@ ext.junit4Version = '4.12'
 ext.junitVintageVersion = '4.12.0'
 ext.junitPlatformVersion = '1.0.0'
 ext.junitJupiterVersion = '5.0.0'
-ext.kotlin_version = '1.1.4-3'
+ext.kotlinVersion = '1.1.50'
 
 apply plugin: 'java'
 apply plugin: 'application'
@@ -56,10 +56,10 @@ repositories {
   maven { url "https://jitpack.io" }
   mavenCentral()
 }
-
+  
 dependencies {
-  compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:1.1.4-3"
-  compile "org.jetbrains.kotlin:kotlin-reflect:1.1.4-3"
+  compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:${kotlinVersion}"
+  compile "org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}"
 
   compile 'io.rsocket:rsocket-transport-netty:0.9-SNAPSHOT'
   compile 'io.rsocket:rsocket-transport-local:0.9-SNAPSHOT'
@@ -90,15 +90,15 @@ dependencies {
   // Only needed to run tests in an (IntelliJ) IDE(A) that bundles an older version
   testRuntime("org.junit.platform:junit-platform-launcher:${junitPlatformVersion}")
 
-  testCompile "org.jetbrains.kotlin:kotlin-test:1.1.4-3"
-  testCompile "org.jetbrains.kotlin:kotlin-test-junit:1.1.4-3"
+  testCompile "org.jetbrains.kotlin:kotlin-test:${kotlinVersion}"
+  testCompile "org.jetbrains.kotlin:kotlin-test-junit:${kotlinVersion}"
 
   testRuntime group: 'org.slf4j', name: 'slf4j-jdk14', version: '1.7.25'
 
   testCompile group: 'com.squareup.okhttp3', name: 'okhttp-testing-support', version: '3.9.0'
   testCompile group: 'com.squareup.okhttp3', name: 'mockwebserver', version: '3.9.0'
 
-  compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+  compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:${kotlinVersion}"
 }
 
 test {

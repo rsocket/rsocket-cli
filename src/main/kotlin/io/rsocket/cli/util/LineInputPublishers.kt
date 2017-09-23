@@ -8,7 +8,6 @@ import io.rsocket.cli.util.FileUtil.expectedFile
 import io.rsocket.util.PayloadImpl
 import reactor.core.publisher.Flux
 import reactor.core.scheduler.Schedulers
-import java.io.File
 import java.nio.charset.StandardCharsets
 import java.util.*
 
