@@ -21,6 +21,7 @@ import io.rsocket.cli.util.*
 import io.rsocket.cli.util.FileUtil.expectedFile
 import io.rsocket.cli.util.HeaderUtil.headerMap
 import io.rsocket.cli.util.TimeUtil.parseShortDuration
+import io.rsocket.plugins.DuplexConnectionInterceptor
 import io.rsocket.transport.TransportHeaderAware
 import io.rsocket.uri.UriTransportRegistry
 import io.rsocket.util.PayloadImpl
@@ -99,7 +100,7 @@ class Main {
   var keepalive: String? = null
 
   @Option(name = arrayOf("--requestn", "-r"), description = "Request N credits")
-  var requestN = Integer.MAX_VALUE
+  var requestN = Int.MAX_VALUE
 
   @Arguments(title = "target", description = "Endpoint URL", required = true)
   var arguments: List<String> = ArrayList()
@@ -144,6 +145,25 @@ class Main {
         clientRSocketFactory.dataMimeType(standardMimeType(dataFormat))
         if (setup != null) {
           clientRSocketFactory.setupPayload(parseSetupPayload())
+        }
+        if (debug) {
+          clientRSocketFactory.addConnectionPlugin({ type, s ->
+            if (type == DuplexConnectionInterceptor.Type.SOURCE) {
+              object : DuplexConnection {
+                override fun receive(): Flux<Frame> = s.receive().log()
+
+                override fun availability(): Double = s.availability()
+
+                override fun send(frame: Publisher<Frame>?): Mono<Void> = s.send(Flux.from(frame).log())
+
+                override fun close(): Mono<Void> = s.close()
+
+                override fun onClose(): Mono<Void> = s.onClose()
+              }
+            } else {
+              s
+            }
+          })
         }
 
         val clientTransport = UriTransportRegistry.clientForUri(uri)
@@ -218,13 +238,13 @@ class Main {
     return inputPublisher()
   }
 
-  fun getInputFromSource(source: String?, nullHandler: Supplier<String>): String =
+  private fun getInputFromSource(source: String?, nullHandler: Supplier<String>): String =
       when (source) {
         null -> nullHandler.get()
         else -> HeaderUtil.stringValue(source)
       }
 
-  fun buildMetadata(): ByteArray? = when {
+  private fun buildMetadata(): ByteArray? = when {
     this.metadata != null -> {
       if (this.headers != null) {
         throw UsageException("Can't specify headers and metadata")

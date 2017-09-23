@@ -56,7 +56,7 @@ repositories {
   maven { url "https://jitpack.io" }
   mavenCentral()
 }
-  
+
 dependencies {
   compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:${kotlinVersion}"
   compile "org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}"

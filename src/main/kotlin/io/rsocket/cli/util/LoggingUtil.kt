@@ -39,11 +39,11 @@ object LoggingUtil {
     activeLogger.addHandler(handler)
 
     if (debug) {
-      getLogger("").level = Level.INFO
-      getLogger("io.netty").level = Level.INFO
-      getLogger("io.reactivex").level = Level.FINE
-      getLogger("io.rsocket").level = Level.FINEST
-      getLogger("reactor.ipc.netty").level = Level.FINEST
+//      getLogger("").level = Level.INFO
+//      getLogger("io.netty").level = Level.INFO
+//      getLogger("io.reactivex").level = Level.FINE
+//      getLogger("io.rsocket").level = Level.FINEST
+//      getLogger("reactor.ipc.netty").level = Level.FINEST
     } else {
       getLogger("").level = Level.SEVERE
       getLogger("io.netty").level = Level.SEVERE
