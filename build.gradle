@@ -61,8 +61,8 @@ dependencies {
   compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:${kotlinVersion}"
   compile "org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}"
 
-  compile 'io.rsocket:rsocket-transport-netty:0.9-SNAPSHOT'
-  compile 'io.rsocket:rsocket-transport-local:0.9-SNAPSHOT'
+  compile 'io.rsocket:rsocket-transport-netty:0.9.6'
+  compile 'io.rsocket:rsocket-transport-local:0.9.6'
 
   compile 'io.airlift:airline:0.8'
   compile 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.9.1'
