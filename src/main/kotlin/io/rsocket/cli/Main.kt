@@ -38,14 +38,10 @@ import kotlin.system.exitProcess
 /**
  * Simple command line tool to make a RSocket connection and send/receive elements.
  *
- *
  * Currently limited in features, only supports a text/line based approach.
  */
 @Command(name = NAME, description = "CLI for RSocket.")
-class Main {
-
-  @Option(name = arrayOf("-h", "--help"), description = "Display help information")
-  var help: Boolean = false
+class Main: HelpOption() {
 
   @Option(name = arrayOf("-H", "--header"), description = "Custom header to pass to server")
   var headers: List<String>? = null
@@ -128,7 +124,7 @@ class Main {
 
       if (serverMode) {
         val transport = RSocketFactory.receive()
-            .acceptor { setupPayload, _ -> createServerRequestHandler(setupPayload) }
+            .acceptor(this::createServerRequestHandler)
             .transport(UriTransportRegistry.serverForUri(uri))
         server = transport.start().block()
 
@@ -152,6 +148,8 @@ class Main {
           clientTransport.setTransportHeaders({ headerMap(transportHeader) })
         }
 
+        clientRSocketFactory.acceptor(this::createClientRequestHandler)
+
         client = clientRSocketFactory.transport(clientTransport).start().block()
 
         val run = run(client)
@@ -166,6 +164,8 @@ class Main {
       handleError(e)
     }
   }
+
+  private fun createClientRequestHandler(socket: RSocket): RSocket = createResponder()
 
   private fun standardMimeType(dataFormat: String?): String = when (dataFormat) {
     null -> "application/json"
@@ -182,35 +182,40 @@ class Main {
     else -> PayloadImpl(setup)
   }
 
-  private fun createServerRequestHandler(setupPayload: ConnectionSetupPayload): Mono<RSocket> {
+  private fun createServerRequestHandler(setupPayload: ConnectionSetupPayload, socket: RSocket): Mono<RSocket> {
     LoggerFactory.getLogger(Main::class.java).debug("setup payload " + setupPayload)
 
-    return Mono.just(
-        object : AbstractRSocket() {
-          override fun fireAndForget(payload: Payload): Mono<Void> {
-            showPayload(payload)
-            return Mono.empty()
-          }
+    runAllOperations(socket).subscribe()
 
-          override fun requestResponse(payload: Payload): Mono<Payload> {
-            return handleIncomingPayload(payload).single()
-          }
+    return Mono.just(createResponder())
+  }
 
-          override fun requestStream(payload: Payload): Flux<Payload> {
-            return handleIncomingPayload(payload)
-          }
+  private fun createResponder(): AbstractRSocket {
+    return object : AbstractRSocket() {
+      override fun fireAndForget(payload: Payload): Mono<Void> {
+        showPayload(payload)
+        return Mono.empty()
+      }
 
-          override fun requestChannel(payloads: Publisher<Payload>): Flux<Payload> {
-            Flux.from(payloads).takeN(requestN)
+      override fun requestResponse(payload: Payload): Mono<Payload> {
+        return handleIncomingPayload(payload).single()
+      }
+
+      override fun requestStream(payload: Payload): Flux<Payload> {
+        return handleIncomingPayload(payload)
+      }
+
+      override fun requestChannel(payloads: Publisher<Payload>): Flux<Payload> {
+        Flux.from(payloads).takeN(requestN)
                 .subscribe({ p -> showPayload(p) }, { e -> outputHandler!!.error("channel error", e) })
-            return inputPublisher()
-          }
+        return inputPublisher()
+      }
 
-          override fun metadataPush(payload: Payload?): Mono<Void> {
-            outputHandler!!.showOutput(toUtf8String(payload!!.metadata))
-            return Mono.empty()
-          }
-        })
+      override fun metadataPush(payload: Payload?): Mono<Void> {
+        outputHandler!!.showOutput(toUtf8String(payload!!.metadata))
+        return Mono.empty()
+      }
+    }
   }
 
   private fun handleIncomingPayload(payload: Payload): Flux<Payload> {
@@ -272,10 +277,7 @@ class Main {
       requestResponse -> client!!.requestResponse(singleInputPayload()).flux()
       stream -> client!!.requestStream(singleInputPayload())
       channel -> client!!.requestChannel(inputPublisher())
-      else -> {
-        outputHandler!!.info("Using passive client mode, choose an option to use a different mode.")
-        Flux.never()
-      }
+      else -> Flux.never()
     }
         .takeN(requestN)
         .map({ it.data })
