@@ -12,7 +12,7 @@ plugins {
   id "com.gradle.build-scan" version "1.9"
   id 'com.github.ben-manes.versions' version '0.15.0'
   id 'net.nemerosa.versioning' version '2.6.1'
-  id "org.jetbrains.kotlin.jvm" version "1.1.50"
+  id "org.jetbrains.kotlin.jvm" version "1.1.51"
   id "org.jlleitschuh.gradle.ktlint" version "2.2.1"
 }
 
@@ -24,7 +24,7 @@ ext.junit4Version = '4.12'
 ext.junitVintageVersion = '4.12.0'
 ext.junitPlatformVersion = '1.0.0'
 ext.junitJupiterVersion = '5.0.0'
-ext.kotlinVersion = '1.1.50'
+ext.kotlinVersion = '1.1.51'
 
 apply plugin: 'java'
 apply plugin: 'application'
