@@ -19,68 +19,68 @@ import java.net.URI
 import java.util.function.Supplier
 
 class Http2ClientTransport @JvmOverloads constructor(
-    private val uri: URI,
-    private var transportHeadersFn: () -> MutableMap<String, String> = { mutableMapOf() }) : ClientTransport, TransportHeaderAware {
+        private val uri: URI,
+        private var transportHeadersFn: () -> MutableMap<String, String> = { mutableMapOf() }) : ClientTransport, TransportHeaderAware {
 
-  override fun setTransportHeaders(transportHeaders: Supplier<MutableMap<String, String>>?) {
-    this.transportHeadersFn = { transportHeaders?.get() ?: mutableMapOf() }
-  }
-
-  override fun connect(): Mono<DuplexConnection> =
-      createSession().flatMap { s -> Http2DuplexConnection.create(s, uri, transportHeadersFn()) }
-
-  private fun createSession(): Mono<Session> = Mono.create { c ->
-    val client = HTTP2Client()
-    client.executor = daemonClientExecutor()
-    client.scheduler = daemonClientScheduler()
-    var sslContextFactory: SslContextFactory? = null
-    if (HttpScheme.HTTPS.`is`(uri.scheme)) {
-      sslContextFactory = SslContextFactory()
-      client.addBean(sslContextFactory)
+    override fun setTransportHeaders(transportHeaders: Supplier<MutableMap<String, String>>?) {
+        this.transportHeadersFn = { transportHeaders?.get() ?: mutableMapOf() }
     }
 
-    try {
-      client.start()
+    override fun connect(): Mono<DuplexConnection> =
+            createSession().flatMap { s -> Http2DuplexConnection.create(s, uri, transportHeadersFn()) }
 
-      client.connect(
-          sslContextFactory,
-          InetSocketAddress(uri.host, port),
-          ServerSessionListener.Adapter(),
-          object : Promise<Session> {
-            override fun succeeded(result: Session?) {
-              c.success(result)
+    private fun createSession(): Mono<Session> = Mono.create { c ->
+        val client = HTTP2Client()
+        client.executor = daemonClientExecutor()
+        client.scheduler = daemonClientScheduler()
+        var sslContextFactory: SslContextFactory? = null
+        if (HttpScheme.HTTPS.`is`(uri.scheme)) {
+            sslContextFactory = SslContextFactory()
+            client.addBean(sslContextFactory)
+        }
+
+        try {
+            client.start()
+
+            client.connect(
+                    sslContextFactory,
+                    InetSocketAddress(uri.host, port),
+                    ServerSessionListener.Adapter(),
+                    object : Promise<Session> {
+                        override fun succeeded(result: Session?) {
+                            c.success(result)
+                        }
+
+                        override fun failed(x: Throwable?) {
+                            c.error(x!!)
+                        }
+                    })
+        } catch (e: Exception) {
+            c.error(e)
+        }
+    }
+
+    private fun daemonClientScheduler(): ScheduledExecutorScheduler =
+            ScheduledExecutorScheduler("jetty-scheduler", true)
+
+    private fun daemonClientExecutor(): QueuedThreadPool {
+        val executor = QueuedThreadPool()
+        executor.isDaemon = true
+        return executor
+    }
+
+    private val port: Int
+        get() {
+            if (uri.port != -1) {
+                return uri.port
             }
 
-            override fun failed(x: Throwable?) {
-              c.error(x!!)
-            }
-          })
-    } catch (e: Exception) {
-      c.error(e)
+            return if (HttpScheme.HTTPS.`is`(uri.scheme)) 443 else 80
+        }
+
+    companion object {
+        init {
+            Log.setLog(JavaUtilLog())
+        }
     }
-  }
-
-  private fun daemonClientScheduler(): ScheduledExecutorScheduler =
-      ScheduledExecutorScheduler("jetty-scheduler", true)
-
-  private fun daemonClientExecutor(): QueuedThreadPool {
-    val executor = QueuedThreadPool()
-    executor.isDaemon = true
-    return executor
-  }
-
-  private val port: Int
-    get() {
-      if (uri.port != -1) {
-        return uri.port
-      }
-
-      return if (HttpScheme.HTTPS.`is`(uri.scheme)) 443 else 80
-    }
-
-  companion object {
-    init {
-      Log.setLog(JavaUtilLog())
-    }
-  }
 }

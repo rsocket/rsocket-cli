@@ -1,6 +1,10 @@
 package io.rsocket.cli.i9n
 
-import io.rsocket.*
+import io.rsocket.AbstractRSocket
+import io.rsocket.Closeable
+import io.rsocket.Payload
+import io.rsocket.RSocket
+import io.rsocket.RSocketFactory
 import io.rsocket.cli.Main
 import io.rsocket.cli.util.LineInputPublishers
 import io.rsocket.exceptions.ApplicationException
@@ -20,225 +24,225 @@ import java.nio.charset.StandardCharsets
 import java.time.Duration
 
 class BasicOperationTest {
-  private val main = Main()
-  private val output = TestOutputHandler()
-  private var client: RSocket? = null
-  private var server: Closeable? = null
+    private val main = Main()
+    private val output = TestOutputHandler()
+    private var client: RSocket? = null
+    private var server: Closeable? = null
 
-  private val expected = TestOutputHandler()
+    private val expected = TestOutputHandler()
 
-  private var requestHandler: RSocket = object : AbstractRSocket() {
-  }
-
-  private var testName: String? = null
-
-  @get:Rule
-  var watcher: TestRule = object : TestWatcher() {
-    override fun starting(description: Description?) {
-      testName = description!!.methodName
-    }
-  }
-
-  private fun connect() {
-    main.outputHandler = output
-    main.inputPublisher = LineInputPublishers(output)
-
-    server = RSocketFactory.receive()
-        .acceptor { _, _ -> Mono.just(requestHandler) }
-        .transport(LocalServerTransport.create("test-local-server-" + testName!!))
-        .start()
-        .block()
-
-    client = RSocketFactory.connect()
-        .transport(LocalClientTransport.create("test-local-server-" + testName!!))
-        .start()
-        .block()
-  }
-
-  @After
-  fun shutdown() {
-    if (client != null) {
-      client!!.close()
-    }
-    if (server != null) {
-      server!!.close().block()
-    }
-  }
-
-  @Test
-  @Throws(Exception::class)
-  fun metadataPush() {
-    main.metadataPush = true
-    main.input = listOf("Hello")
-
-    requestHandler = object : AbstractRSocket() {
-      override fun metadataPush(payload: Payload?): Mono<Void> {
-        return Mono.empty()
-      }
+    private var requestHandler: RSocket = object : AbstractRSocket() {
     }
 
-    run()
+    private var testName: String? = null
 
-    assertEquals(expected, output)
-  }
-
-  @Test
-  @Throws(Exception::class)
-  fun fireAndForget() {
-    main.fireAndForget = true
-    main.input = listOf("Hello")
-
-    requestHandler = object : AbstractRSocket() {
-      override fun fireAndForget(payload: Payload?): Mono<Void> {
-        return Mono.empty()
-      }
+    @get:Rule
+    var watcher: TestRule = object : TestWatcher() {
+        override fun starting(description: Description?) {
+            testName = description!!.methodName
+        }
     }
 
-    run()
+    private fun connect() {
+        main.outputHandler = output
+        main.inputPublisher = LineInputPublishers(output)
 
-    assertEquals(expected, output)
-  }
+        server = RSocketFactory.receive()
+                .acceptor { _, _ -> Mono.just(requestHandler) }
+                .transport(LocalServerTransport.create("test-local-server-" + testName!!))
+                .start()
+                .block()
 
-  @Test
-  @Throws(Exception::class)
-  fun requestResponse() {
-    main.requestResponse = true
-    main.input = listOf("Hello")
-
-    requestHandler = object : AbstractRSocket() {
-      override fun requestResponse(payload: Payload?): Mono<Payload> {
-        return Mono.just(reverse(bufferToString(payload)))
-      }
+        client = RSocketFactory.connect()
+                .transport(LocalClientTransport.create("test-local-server-" + testName!!))
+                .start()
+                .block()
     }
 
-    expected.showOutput("olleH")
-
-    run()
-
-    assertEquals(expected, output)
-  }
-
-  @Test
-  @Throws(Exception::class)
-  fun requestResponseFromFile() {
-    main.requestResponse = true
-    main.input = listOf("@src/test/resources/hello.text")
-
-    requestHandler = object : AbstractRSocket() {
-      override fun requestResponse(payload: Payload?): Mono<Payload> {
-        return Mono.just(reverse(bufferToString(payload)))
-      }
+    @After
+    fun shutdown() {
+        if (client != null) {
+            client!!.close()
+        }
+        if (server != null) {
+            server!!.close().block()
+        }
     }
 
-    expected.showOutput("!elif a morf olleH")
+    @Test
+    @Throws(Exception::class)
+    fun metadataPush() {
+        main.metadataPush = true
+        main.input = listOf("Hello")
 
-    run()
+        requestHandler = object : AbstractRSocket() {
+            override fun metadataPush(payload: Payload?): Mono<Void> {
+                return Mono.empty()
+            }
+        }
 
-    assertEquals(expected, output)
-  }
+        run()
 
-  @Test
-  @Throws(Exception::class)
-  fun requestResponseFromMissingFile() {
-    main.requestResponse = true
-    main.input = listOf("@src/test/resources/goodbye.text")
-
-    requestHandler = object : AbstractRSocket() {
-      override fun requestResponse(payload: Payload?): Mono<Payload> {
-        return Mono.just(reverse(bufferToString(payload)))
-      }
+        assertEquals(expected, output)
     }
 
-    expected.info("file not found: src/test/resources/goodbye.text")
+    @Test
+    @Throws(Exception::class)
+    fun fireAndForget() {
+        main.fireAndForget = true
+        main.input = listOf("Hello")
 
-    run()
+        requestHandler = object : AbstractRSocket() {
+            override fun fireAndForget(payload: Payload?): Mono<Void> {
+                return Mono.empty()
+            }
+        }
 
-    assertEquals(expected, output)
-  }
+        run()
 
-  @Test
-  @Throws(Exception::class)
-  fun requestResponseError() {
-    main.requestResponse = true
-    main.input = listOf("Hello")
-
-    requestHandler = object : AbstractRSocket() {
-      override fun requestResponse(payload: Payload?): Mono<Payload> {
-        return Mono.error(ApplicationException("server failure"))
-      }
+        assertEquals(expected, output)
     }
 
-    expected.error("error from server", ApplicationException("server failure"))
+    @Test
+    @Throws(Exception::class)
+    fun requestResponse() {
+        main.requestResponse = true
+        main.input = listOf("Hello")
 
-    run()
+        requestHandler = object : AbstractRSocket() {
+            override fun requestResponse(payload: Payload?): Mono<Payload> {
+                return Mono.just(reverse(bufferToString(payload)))
+            }
+        }
 
-    assertEquals(expected, output)
-  }
+        expected.showOutput("olleH")
 
-  @Test
-  @Throws(Exception::class)
-  fun stream() {
-    main.stream = true
-    main.input = listOf("Hello")
+        run()
 
-    requestHandler = object : AbstractRSocket() {
-      override fun requestStream(payload: Payload?): Flux<Payload> {
-        val s = bufferToString(payload)
-        return Flux.range(1, 3).map { _ -> reverse(s) }
-      }
+        assertEquals(expected, output)
     }
 
-    expected.showOutput("olleH")
-    expected.showOutput("olleH")
-    expected.showOutput("olleH")
+    @Test
+    @Throws(Exception::class)
+    fun requestResponseFromFile() {
+        main.requestResponse = true
+        main.input = listOf("@src/test/resources/hello.text")
 
-    run()
+        requestHandler = object : AbstractRSocket() {
+            override fun requestResponse(payload: Payload?): Mono<Payload> {
+                return Mono.just(reverse(bufferToString(payload)))
+            }
+        }
 
-    assertEquals(expected, output)
-  }
+        expected.showOutput("!elif a morf olleH")
 
-  @Test
-  @Throws(Exception::class)
-  fun streamCompletedByFailure() {
-    main.stream = true
-    main.input = listOf("Hello")
+        run()
 
-    requestHandler = object : AbstractRSocket() {
-      override fun requestStream(payload: Payload?): Flux<Payload> {
-        return Flux.range(1, 3)
-            .map { i -> payload("i " + i!!) }
-            .concatWith(Mono.error(ApplicationException("failed")))
-      }
+        assertEquals(expected, output)
     }
 
-    expected.showOutput("i 1")
-    expected.showOutput("i 2")
-    expected.showOutput("i 3")
-    expected.error("error from server", ApplicationException("failed"))
+    @Test
+    @Throws(Exception::class)
+    fun requestResponseFromMissingFile() {
+        main.requestResponse = true
+        main.input = listOf("@src/test/resources/goodbye.text")
 
-    run()
+        requestHandler = object : AbstractRSocket() {
+            override fun requestResponse(payload: Payload?): Mono<Payload> {
+                return Mono.just(reverse(bufferToString(payload)))
+            }
+        }
 
-    assertEquals(expected, output)
-  }
+        expected.info("file not found: src/test/resources/goodbye.text")
 
-  @Throws(Exception::class)
-  private fun run() {
-    connect()
-    main.run(client).blockLast(Duration.ofSeconds(3))
-  }
+        run()
 
-  companion object {
-
-    private fun bufferToString(payload: Payload?): String {
-      return StandardCharsets.UTF_8.decode(payload!!.data).toString()
+        assertEquals(expected, output)
     }
 
-    fun reverse(s: String): Payload {
-      return payload(StringBuilder(s).reverse().toString())
+    @Test
+    @Throws(Exception::class)
+    fun requestResponseError() {
+        main.requestResponse = true
+        main.input = listOf("Hello")
+
+        requestHandler = object : AbstractRSocket() {
+            override fun requestResponse(payload: Payload?): Mono<Payload> {
+                return Mono.error(ApplicationException("server failure"))
+            }
+        }
+
+        expected.error("error from server", ApplicationException("server failure"))
+
+        run()
+
+        assertEquals(expected, output)
     }
 
-    fun payload(data: String): Payload {
-      return PayloadImpl(data)
+    @Test
+    @Throws(Exception::class)
+    fun stream() {
+        main.stream = true
+        main.input = listOf("Hello")
+
+        requestHandler = object : AbstractRSocket() {
+            override fun requestStream(payload: Payload?): Flux<Payload> {
+                val s = bufferToString(payload)
+                return Flux.range(1, 3).map { _ -> reverse(s) }
+            }
+        }
+
+        expected.showOutput("olleH")
+        expected.showOutput("olleH")
+        expected.showOutput("olleH")
+
+        run()
+
+        assertEquals(expected, output)
     }
-  }
+
+    @Test
+    @Throws(Exception::class)
+    fun streamCompletedByFailure() {
+        main.stream = true
+        main.input = listOf("Hello")
+
+        requestHandler = object : AbstractRSocket() {
+            override fun requestStream(payload: Payload?): Flux<Payload> {
+                return Flux.range(1, 3)
+                        .map { i -> payload("i " + i!!) }
+                        .concatWith(Mono.error(ApplicationException("failed")))
+            }
+        }
+
+        expected.showOutput("i 1")
+        expected.showOutput("i 2")
+        expected.showOutput("i 3")
+        expected.error("error from server", ApplicationException("failed"))
+
+        run()
+
+        assertEquals(expected, output)
+    }
+
+    @Throws(Exception::class)
+    private fun run() {
+        connect()
+        main.run(client).blockLast(Duration.ofSeconds(3))
+    }
+
+    companion object {
+
+        private fun bufferToString(payload: Payload?): String {
+            return StandardCharsets.UTF_8.decode(payload!!.data).toString()
+        }
+
+        fun reverse(s: String): Payload {
+            return payload(StringBuilder(s).reverse().toString())
+        }
+
+        fun payload(data: String): Payload {
+            return PayloadImpl(data)
+        }
+    }
 }

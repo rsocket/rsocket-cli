@@ -25,18 +25,18 @@ import java.util.function.Function
 
 object Publishers {
 
-  /**
-   * Return a publisher for consuming each line from the passed stream.
-   *
-   * @param inputStream to read.
-   */
-  fun lines(inputStream: CharSource, metadataFn: Function<String, ByteArray>): Flux<Payload> =
-      splitInLines(inputStream)
-          .map { l -> PayloadImpl(l.toByteArray(StandardCharsets.UTF_8), metadataFn.apply(l)) as Payload }
+    /**
+     * Return a publisher for consuming each line from the passed stream.
+     *
+     * @param inputStream to read.
+     */
+    fun lines(inputStream: CharSource, metadataFn: Function<String, ByteArray>): Flux<Payload> =
+            splitInLines(inputStream)
+                    .map { l -> PayloadImpl(l.toByteArray(StandardCharsets.UTF_8), metadataFn.apply(l)) as Payload }
 
-  fun splitInLines(inputStream: CharSource): Flux<String> = try {
-    Flux.fromStream(inputStream.openBufferedStream().lines())
-  } catch (e: IOException) {
-    Flux.error(e)
-  }
-}// No instances.
+    fun splitInLines(inputStream: CharSource): Flux<String> = try {
+        Flux.fromStream(inputStream.openBufferedStream().lines())
+    } catch (e: IOException) {
+        Flux.error(e)
+    }
+} // No instances.

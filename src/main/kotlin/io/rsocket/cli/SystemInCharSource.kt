@@ -7,10 +7,10 @@ import java.io.Reader
 
 class SystemInCharSource private constructor() : CharSource() {
 
-  @Throws(IOException::class)
-  override fun openStream(): Reader = InputStreamReader(System.`in`)
+    @Throws(IOException::class)
+    override fun openStream(): Reader = InputStreamReader(System.`in`)
 
-  companion object {
-    val INSTANCE: CharSource = SystemInCharSource()
-  }
+    companion object {
+        val INSTANCE: CharSource = SystemInCharSource()
+    }
 }

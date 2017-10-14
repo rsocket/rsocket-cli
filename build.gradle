@@ -13,7 +13,10 @@ plugins {
   id 'com.github.ben-manes.versions' version '0.15.0'
   id 'net.nemerosa.versioning' version '2.6.1'
   id "org.jetbrains.kotlin.jvm" version "1.1.50"
+  id "org.jlleitschuh.gradle.ktlint" version "2.2.1"
 }
+
+buildScan { licenseAgreementUrl = 'https://gradle.com/terms-of-service'; licenseAgree = 'yes' }
 
 description = 'RSocket CLI.'
 
@@ -61,8 +64,8 @@ dependencies {
   compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:${kotlinVersion}"
   compile "org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}"
 
-  compile 'io.rsocket:rsocket-transport-netty:0.9.10'
-  compile 'io.rsocket:rsocket-transport-local:0.9.10'
+  compile 'io.rsocket:rsocket-transport-netty:0.9.11'
+  compile 'io.rsocket:rsocket-transport-local:0.9.11'
 
   compile 'io.airlift:airline:0.8'
   compile 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.9.1'
@@ -104,5 +107,3 @@ dependencies {
 test {
   testLogging.showStandardStreams = false
 }
-
-buildScan { licenseAgreementUrl = 'https://gradle.com/terms-of-service'; licenseAgree = 'yes' }
