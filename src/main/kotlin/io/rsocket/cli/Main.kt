@@ -206,7 +206,7 @@ class Main: HelpOption() {
       }
 
       override fun requestChannel(payloads: Publisher<Payload>): Flux<Payload> {
-        Flux.from(payloads).take(requestN.toLong())
+        Flux.from(payloads).takeN(requestN)
                 .subscribe({ p -> showPayload(p) }, { e -> outputHandler!!.error("channel error", e) })
         return inputPublisher()
       }
@@ -279,7 +279,7 @@ class Main: HelpOption() {
       channel -> client!!.requestChannel(inputPublisher())
       else -> Flux.never()
     }
-        .take(requestN.toLong())
+        .takeN(requestN)
         .map({ it.data })
         .map({ this.toUtf8String(it) })
         .doOnNext({ outputHandler!!.showOutput(it) })
@@ -313,3 +313,7 @@ class Main: HelpOption() {
     }
   }
 }
+
+// Temp shitty workaround
+private fun <T> Flux<T>.takeN(request: Int) =
+        if (request < Int.MAX_VALUE) this.limitRate(request).take(request.toLong()) else this
