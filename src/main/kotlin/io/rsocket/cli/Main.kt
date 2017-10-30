@@ -329,6 +329,3 @@ class Main : HelpOption() {
     }
 }
 
-// Temp shitty workaround
-private fun <T> Flux<T>.takeN(request: Int) =
-        if (request < Int.MAX_VALUE) this.limitRate(request).take(request.toLong()) else this

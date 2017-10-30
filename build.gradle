@@ -30,6 +30,7 @@ apply plugin: 'java'
 apply plugin: 'application'
 apply plugin: 'maven'
 apply plugin: 'org.junit.platform.gradle.plugin'
+apply plugin: 'maven-publish'
 
 group = 'com.baulsupp'
 mainClassName = "io.rsocket.cli.Main"
@@ -40,8 +41,10 @@ versioning {
 
 version = versioning.info.display
 
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
+tasks.withType(JavaCompile) {
+  sourceCompatibility = JavaVersion.VERSION_1_8
+  targetCompatibility = JavaVersion.VERSION_1_8
+}
 
 tasks.withType(JavaCompile) {
   options.encoding = 'UTF-8'
@@ -49,6 +52,22 @@ tasks.withType(JavaCompile) {
 
 distTar {
   compression = Compression.GZIP
+}
+
+task sourceJar(type: Jar) {
+  from sourceSets.main.allSource
+}
+
+publishing {
+  publications {
+    mavenJava(MavenPublication) {
+      from components.java
+
+      artifact sourceJar {
+        classifier "sources"
+      }
+    }
+  }
 }
 
 repositories {
