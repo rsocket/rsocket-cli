@@ -17,6 +17,7 @@ package io.rsocket.cli
 
 import com.google.common.io.CharSource
 import io.rsocket.Payload
+import io.rsocket.util.PayloadImpl
 import reactor.core.publisher.Flux
 import java.io.IOException
 import java.nio.charset.StandardCharsets

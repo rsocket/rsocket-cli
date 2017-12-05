@@ -38,6 +38,7 @@ import io.rsocket.cli.util.MetadataUtil
 import io.rsocket.cli.util.TimeUtil.parseShortDuration
 import io.rsocket.transport.TransportHeaderAware
 import io.rsocket.uri.UriTransportRegistry
+import io.rsocket.util.PayloadImpl
 import org.reactivestreams.Publisher
 import org.slf4j.LoggerFactory
 import reactor.core.publisher.Flux
