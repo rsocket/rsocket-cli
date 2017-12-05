@@ -38,6 +38,8 @@ import io.rsocket.cli.util.MetadataUtil
 import io.rsocket.cli.util.TimeUtil.parseShortDuration
 import io.rsocket.transport.TransportHeaderAware
 import io.rsocket.uri.UriTransportRegistry
+import io.rsocket.util.DefaultPayload
+import io.rsocket.util.EmptyPayload
 import org.reactivestreams.Publisher
 import org.slf4j.LoggerFactory
 import reactor.core.publisher.Flux
@@ -191,9 +193,9 @@ class Main : HelpOption() {
   }
 
   private fun parseSetupPayload(): Payload = when {
-    setup == null -> PayloadImpl.EMPTY
-    setup!!.startsWith("@") -> PayloadImpl(Files.asCharSource(expectedFile(setup!!.substring(1)), StandardCharsets.UTF_8).read())
-    else -> PayloadImpl(setup)
+    setup == null -> EmptyPayload.INSTANCE
+    setup!!.startsWith("@") -> DefaultPayload.create(Files.asCharSource(expectedFile(setup!!.substring(1)), StandardCharsets.UTF_8).read())
+    else -> DefaultPayload.create(setup)
   }
 
   private fun createServerRequestHandler(setupPayload: ConnectionSetupPayload, socket: RSocket): Mono<RSocket> {

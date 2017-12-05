@@ -12,8 +12,8 @@ plugins {
   id "com.gradle.build-scan" version "1.9"
   id 'com.github.ben-manes.versions' version '0.15.0'
   id 'net.nemerosa.versioning' version '2.6.1'
-  id "org.jetbrains.kotlin.jvm" version "1.1.51"
-  id "org.jlleitschuh.gradle.ktlint" version "2.2.1"
+  id "org.jetbrains.kotlin.jvm" version "1.2.0"
+//  id "org.jlleitschuh.gradle.ktlint" version "2.2.1"
 }
 
 buildScan { licenseAgreementUrl = 'https://gradle.com/terms-of-service'; licenseAgree = 'yes' }
@@ -24,7 +24,7 @@ ext.junit4Version = '4.12'
 ext.junitVintageVersion = '4.12.0'
 ext.junitPlatformVersion = '1.0.0'
 ext.junitJupiterVersion = '5.0.0'
-ext.kotlinVersion = '1.1.51'
+ext.kotlinVersion = '1.2.0'
 
 apply plugin: 'java'
 apply plugin: 'application'
@@ -46,8 +46,22 @@ tasks.withType(JavaCompile) {
   targetCompatibility = JavaVersion.VERSION_1_8
 }
 
+compileKotlin {
+  kotlinOptions.jvmTarget = "1.8"
+}
+
+compileTestKotlin {
+  kotlinOptions.jvmTarget = "1.8"
+}
+
 tasks.withType(JavaCompile) {
   options.encoding = 'UTF-8'
+}
+
+jar {
+    manifest {
+        attributes("Implementation-Title": "RSocket-CLI", "Implementation-Version": version)
+    }
 }
 
 distTar {
@@ -83,15 +97,15 @@ dependencies {
   compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:${kotlinVersion}"
   compile "org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}"
 
-  compile 'io.rsocket:rsocket-transport-netty:0.9.11'
-  compile 'io.rsocket:rsocket-transport-local:0.9.11'
+  compile 'io.rsocket:rsocket-transport-netty:0.9.19'
+  compile 'io.rsocket:rsocket-transport-local:0.9.19'
 
   compile 'io.airlift:airline:0.8'
-  compile 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.9.1'
-  compile 'com.fasterxml.jackson.core:jackson-core:2.9.1'
-  compile 'com.fasterxml.jackson.core:jackson-databind:2.9.1'
-  compile 'com.fasterxml.jackson.module:jackson-module-afterburner:2.9.1'
-  compile 'com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.9.1'
+  compile 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.9.2'
+  compile 'com.fasterxml.jackson.core:jackson-core:2.9.2'
+  compile 'com.fasterxml.jackson.core:jackson-databind:2.9.2'
+  compile 'com.fasterxml.jackson.module:jackson-module-afterburner:2.9.2'
+  compile 'com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.9.2'
   compile 'org.slf4j:slf4j-jdk14:1.7.25'
 
   compile 'org.eclipse.jetty.http2:http2-http-client-transport:9.4.6.v20170531'
@@ -117,8 +131,8 @@ dependencies {
 
   testRuntime group: 'org.slf4j', name: 'slf4j-jdk14', version: '1.7.25'
 
-  testCompile group: 'com.squareup.okhttp3', name: 'okhttp-testing-support', version: '3.9.0'
-  testCompile group: 'com.squareup.okhttp3', name: 'mockwebserver', version: '3.9.0'
+  testCompile group: 'com.squareup.okhttp3', name: 'okhttp-testing-support', version: '3.9.1'
+  testCompile group: 'com.squareup.okhttp3', name: 'mockwebserver', version: '3.9.1'
 
   compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:${kotlinVersion}"
 }

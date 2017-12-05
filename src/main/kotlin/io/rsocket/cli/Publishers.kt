@@ -17,6 +17,8 @@ package io.rsocket.cli
 
 import com.google.common.io.CharSource
 import io.rsocket.Payload
+
+import io.rsocket.util.DefaultPayload
 import reactor.core.publisher.Flux
 import java.io.IOException
 import java.nio.charset.StandardCharsets
@@ -31,7 +33,7 @@ object Publishers {
    */
   fun lines(inputStream: CharSource, metadataFn: Function<String, ByteArray>): Flux<Payload> =
           splitInLines(inputStream)
-                  .map { l -> PayloadImpl(l.toByteArray(StandardCharsets.UTF_8), metadataFn.apply(l)) as Payload }
+                  .map { l -> DefaultPayload.create(l.toByteArray(StandardCharsets.UTF_8), metadataFn.apply(l)) as Payload }
 
   fun splitInLines(inputStream: CharSource): Flux<String> = try {
     Flux.fromStream(inputStream.openBufferedStream().lines())
