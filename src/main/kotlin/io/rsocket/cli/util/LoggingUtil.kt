@@ -25,36 +25,36 @@ import java.util.logging.LogManager
 import java.util.logging.Logger
 
 object LoggingUtil {
-    private val activeLoggers = Lists.newArrayList<java.util.logging.Logger>()
+  private val activeLoggers = Lists.newArrayList<java.util.logging.Logger>()
 
-    fun configureLogging(debug: Boolean) {
-        InternalLoggerFactory.setDefaultFactory(JdkLoggerFactory.INSTANCE)
+  fun configureLogging(debug: Boolean) {
+    InternalLoggerFactory.setDefaultFactory(JdkLoggerFactory.INSTANCE)
 
-        LogManager.getLogManager().reset()
+    LogManager.getLogManager().reset()
 
-        val activeLogger = getLogger("")
-        val handler = ConsoleHandler()
-        handler.level = Level.ALL
-        handler.formatter = OneLineLogFormat()
-        activeLogger.addHandler(handler)
+    val activeLogger = getLogger("")
+    val handler = ConsoleHandler()
+    handler.level = Level.ALL
+    handler.formatter = OneLineLogFormat()
+    activeLogger.addHandler(handler)
 
-        if (debug) {
-            getLogger("").level = Level.INFO
-            getLogger("io.netty").level = Level.INFO
-            getLogger("io.reactivex").level = Level.FINE
-            getLogger("io.rsocket").level = Level.FINEST
-            getLogger("reactor.ipc.netty").level = Level.FINEST
-        } else {
-            getLogger("").level = Level.SEVERE
-            getLogger("io.netty").level = Level.SEVERE
-            getLogger("io.reactivex").level = Level.SEVERE
-            getLogger("io.rsocket").level = Level.SEVERE
-        }
+    if (debug) {
+      getLogger("").level = Level.INFO
+      getLogger("io.netty").level = Level.INFO
+      getLogger("io.reactivex").level = Level.FINE
+      getLogger("io.rsocket").level = Level.FINEST
+      getLogger("reactor.ipc.netty").level = Level.FINEST
+    } else {
+      getLogger("").level = Level.SEVERE
+      getLogger("io.netty").level = Level.SEVERE
+      getLogger("io.reactivex").level = Level.SEVERE
+      getLogger("io.rsocket").level = Level.SEVERE
     }
+  }
 
-    private fun getLogger(name: String): java.util.logging.Logger {
-        val logger = java.util.logging.Logger.getLogger(name)
-        activeLoggers.add(logger)
-        return logger
-    }
+  private fun getLogger(name: String): java.util.logging.Logger {
+    val logger = java.util.logging.Logger.getLogger(name)
+    activeLoggers.add(logger)
+    return logger
+  }
 }

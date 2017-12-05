@@ -22,65 +22,65 @@ class Http2ClientTransport @JvmOverloads constructor(
         private val uri: URI,
         private var transportHeadersFn: () -> Map<String, String> = { mutableMapOf() }) : ClientTransport, TransportHeaderAware {
 
-    override fun setTransportHeaders(transportHeaders: Supplier<Map<String, String>>?) {
-        this.transportHeadersFn = { transportHeaders?.get() ?: mapOf() }
+  override fun setTransportHeaders(transportHeaders: Supplier<Map<String, String>>?) {
+    this.transportHeadersFn = { transportHeaders?.get() ?: mapOf() }
+  }
+
+  override fun connect(): Mono<DuplexConnection> =
+          createSession().flatMap { s -> Http2DuplexConnection.create(s, uri, transportHeadersFn()) }
+
+  private fun createSession(): Mono<Session> = Mono.create { c ->
+    val client = HTTP2Client()
+    client.executor = daemonClientExecutor()
+    client.scheduler = daemonClientScheduler()
+    var sslContextFactory: SslContextFactory? = null
+    if (HttpScheme.HTTPS.`is`(uri.scheme)) {
+      sslContextFactory = SslContextFactory()
+      client.addBean(sslContextFactory)
     }
 
-    override fun connect(): Mono<DuplexConnection> =
-            createSession().flatMap { s -> Http2DuplexConnection.create(s, uri, transportHeadersFn()) }
+    try {
+      client.start()
 
-    private fun createSession(): Mono<Session> = Mono.create { c ->
-        val client = HTTP2Client()
-        client.executor = daemonClientExecutor()
-        client.scheduler = daemonClientScheduler()
-        var sslContextFactory: SslContextFactory? = null
-        if (HttpScheme.HTTPS.`is`(uri.scheme)) {
-            sslContextFactory = SslContextFactory()
-            client.addBean(sslContextFactory)
-        }
+      client.connect(
+              sslContextFactory,
+              InetSocketAddress(uri.host, port),
+              ServerSessionListener.Adapter(),
+              object : Promise<Session> {
+                override fun succeeded(result: Session?) {
+                  c.success(result)
+                }
 
-        try {
-            client.start()
+                override fun failed(x: Throwable?) {
+                  c.error(x!!)
+                }
+              })
+    } catch (e: Exception) {
+      c.error(e)
+    }
+  }
 
-            client.connect(
-                    sslContextFactory,
-                    InetSocketAddress(uri.host, port),
-                    ServerSessionListener.Adapter(),
-                    object : Promise<Session> {
-                        override fun succeeded(result: Session?) {
-                            c.success(result)
-                        }
+  private fun daemonClientScheduler(): ScheduledExecutorScheduler =
+          ScheduledExecutorScheduler("jetty-scheduler", true)
 
-                        override fun failed(x: Throwable?) {
-                            c.error(x!!)
-                        }
-                    })
-        } catch (e: Exception) {
-            c.error(e)
-        }
+  private fun daemonClientExecutor(): QueuedThreadPool {
+    val executor = QueuedThreadPool()
+    executor.isDaemon = true
+    return executor
+  }
+
+  private val port: Int
+    get() {
+      if (uri.port != -1) {
+        return uri.port
+      }
+
+      return if (HttpScheme.HTTPS.`is`(uri.scheme)) 443 else 80
     }
 
-    private fun daemonClientScheduler(): ScheduledExecutorScheduler =
-            ScheduledExecutorScheduler("jetty-scheduler", true)
-
-    private fun daemonClientExecutor(): QueuedThreadPool {
-        val executor = QueuedThreadPool()
-        executor.isDaemon = true
-        return executor
+  companion object {
+    init {
+      Log.setLog(JavaUtilLog())
     }
-
-    private val port: Int
-        get() {
-            if (uri.port != -1) {
-                return uri.port
-            }
-
-            return if (HttpScheme.HTTPS.`is`(uri.scheme)) 443 else 80
-        }
-
-    companion object {
-        init {
-            Log.setLog(JavaUtilLog())
-        }
-    }
+  }
 }

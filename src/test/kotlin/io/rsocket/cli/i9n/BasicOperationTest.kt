@@ -10,7 +10,7 @@ import io.rsocket.cli.util.LineInputPublishers
 import io.rsocket.exceptions.ApplicationException
 import io.rsocket.transport.local.LocalClientTransport
 import io.rsocket.transport.local.LocalServerTransport
-import io.rsocket.util.PayloadImpl
+import io.rsocket.util.DefaultPayload
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -242,7 +242,7 @@ class BasicOperationTest {
         }
 
         fun payload(data: String): Payload {
-            return PayloadImpl(data)
+            return DefaultPayload.create(data)
         }
     }
 }
