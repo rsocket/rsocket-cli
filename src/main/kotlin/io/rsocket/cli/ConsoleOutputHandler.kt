@@ -25,44 +25,44 @@ import java.net.ConnectException
  */
 class ConsoleOutputHandler : OutputHandler {
 
-    override fun showOutput(output: String) {
-        println(output)
-    }
+  override fun showOutput(output: String) {
+    println(output)
+  }
 
-    override fun info(msg: String) {
+  override fun info(msg: String) {
+    System.err.println(msg)
+  }
+
+  override fun error(msg: String, e: Throwable) {
+    val ex = unwrap(e)
+    when (ex) {
+      is ConnectException -> {
+        logger.debug(msg, ex)
+        System.err.println(ex.message)
+      }
+      is UsageException -> {
+        logger.debug(msg, ex)
+        System.err.println(ex.message)
+      }
+      else -> {
         System.err.println(msg)
+        ex.printStackTrace()
+      }
+    }
+  }
+
+  private fun unwrap(e: Throwable): Throwable {
+    // check for propogation of non RuntimeExceptions
+    if (e.javaClass == RuntimeException::class.java) {
+      if (e.cause != null && e.cause.toString() == e.message) {
+        return e.cause!!
+      }
     }
 
-    override fun error(msg: String, e: Throwable) {
-        val ex = unwrap(e)
-        when (ex) {
-            is ConnectException -> {
-                logger.debug(msg, ex)
-                System.err.println(ex.message)
-            }
-            is UsageException -> {
-                logger.debug(msg, ex)
-                System.err.println(ex.message)
-            }
-            else -> {
-                System.err.println(msg)
-                ex.printStackTrace()
-            }
-        }
-    }
+    return e
+  }
 
-    private fun unwrap(e: Throwable): Throwable {
-        // check for propogation of non RuntimeExceptions
-        if (e.javaClass == RuntimeException::class.java) {
-            if (e.cause != null && e.cause.toString() == e.message) {
-                return e.cause!!
-            }
-        }
-
-        return e
-    }
-
-    companion object {
-        private val logger = LoggerFactory.getLogger(ConsoleOutputHandler::class.java)
-    }
+  companion object {
+    private val logger = LoggerFactory.getLogger(ConsoleOutputHandler::class.java)
+  }
 }

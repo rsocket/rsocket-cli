@@ -23,23 +23,23 @@ import io.rsocket.cli.UsageException
 
 object MetadataUtil {
 
-    fun encodeMetadataMap(headerMap: Map<String, String>, mimeType: String): ByteArray {
-        return when (mimeType) {
-            "application/json" -> MetadataUtil.jsonEncodeStringMap(headerMap)
-            "application/cbor" -> MetadataUtil.cborEncodeStringMap(headerMap)
-            else -> throw UsageException("headers not supported with mimetype '$mimeType'")
-        }
+  fun encodeMetadataMap(headerMap: Map<String, String>, mimeType: String): ByteArray {
+    return when (mimeType) {
+      "application/json" -> MetadataUtil.jsonEncodeStringMap(headerMap)
+      "application/cbor" -> MetadataUtil.cborEncodeStringMap(headerMap)
+      else -> throw UsageException("headers not supported with mimetype '$mimeType'")
     }
+  }
 
-    private fun jsonEncodeStringMap(headerMap: Map<String, String>): ByteArray = try {
-        ObjectMapper().writeValueAsBytes(headerMap)
-    } catch (e: JsonProcessingException) {
-        throw RuntimeException(e)
-    }
+  private fun jsonEncodeStringMap(headerMap: Map<String, String>): ByteArray = try {
+    ObjectMapper().writeValueAsBytes(headerMap)
+  } catch (e: JsonProcessingException) {
+    throw RuntimeException(e)
+  }
 
-    private fun cborEncodeStringMap(headerMap: Map<String, String>): ByteArray = try {
-        ObjectMapper(CBORFactory()).writeValueAsBytes(headerMap)
-    } catch (e: JsonProcessingException) {
-        throw RuntimeException(e)
-    }
+  private fun cborEncodeStringMap(headerMap: Map<String, String>): ByteArray = try {
+    ObjectMapper(CBORFactory()).writeValueAsBytes(headerMap)
+  } catch (e: JsonProcessingException) {
+    throw RuntimeException(e)
+  }
 }

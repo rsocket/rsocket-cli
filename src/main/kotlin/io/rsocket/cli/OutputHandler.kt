@@ -17,9 +17,9 @@
 package io.rsocket.cli
 
 interface OutputHandler {
-    fun showOutput(output: String)
+  fun showOutput(output: String)
 
-    fun info(msg: String)
+  fun info(msg: String)
 
-    fun error(msg: String, e: Throwable)
+  fun error(msg: String, e: Throwable)
 }
