@@ -5,7 +5,7 @@ import io.rsocket.Payload
 import io.rsocket.cli.OutputHandler
 import io.rsocket.cli.UsageException
 import io.rsocket.cli.util.FileUtil.expectedFile
-import io.rsocket.util.PayloadImpl
+import io.rsocket.util.DefaultPayload
 import reactor.core.publisher.Flux
 import reactor.core.scheduler.Schedulers
 import java.nio.charset.StandardCharsets
@@ -48,7 +48,7 @@ class LineInputPublishers(val outputHandler: OutputHandler) : InputPublisher {
       }
 //    }.zipWith(metadataPublisher.concatWith(Flux.just(NULL_BYTE_ARRAY).repeat()), 1).map { tuple ->
     }.map {
-      PayloadImpl(
+      DefaultPayload.create(
               it.toByteArray(StandardCharsets.UTF_8),
               metadata
       )

@@ -28,5 +28,4 @@ class LineInputPublisherTest {
 
   private fun Flux<Payload>.toStringList() =
           this.map { it.dataUtf8 }.collectList().block()!!.toList()
-
 }

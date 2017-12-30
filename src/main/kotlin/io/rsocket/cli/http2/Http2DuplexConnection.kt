@@ -53,7 +53,6 @@ class Http2DuplexConnection : DuplexConnection {
       } catch (e: Exception) {
         callback.failed(e)
       }
-
     }
 
     override fun onHeaders(stream: Stream?, frame: HeadersFrame?) {
@@ -69,7 +68,7 @@ class Http2DuplexConnection : DuplexConnection {
         receive.onNext(
                 Frame.Error.from(
                         0, ConnectionCloseException("non 200 response: " + response.status)))
-        close().subscribe()
+        dispose()
       }
     }
   }
@@ -84,7 +83,7 @@ class Http2DuplexConnection : DuplexConnection {
                       object : Callback {
                         override fun failed(x: Throwable?) {
                           receive.onError(x!!)
-                          close().subscribe()
+                          dispose()
                         }
                       })
             }
@@ -95,7 +94,7 @@ class Http2DuplexConnection : DuplexConnection {
 
   override fun availability(): Double = if (stream!!.isClosed) 0.0 else 1.0
 
-  override fun close(): Mono<Void> = Mono.defer {
+  override fun dispose() {
     // TODO listen to callback
     if (!stream!!.isClosed) {
       stream!!.reset(
