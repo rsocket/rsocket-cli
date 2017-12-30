@@ -108,8 +108,8 @@ class BasicOperationTest {
     main.input = listOf("Hello")
 
     requestHandler = object : AbstractRSocket() {
-      override fun requestResponse(payload: Payload?): Mono<Payload> {
-        return Mono.just(reverse(bufferToString(payload)))
+      override fun requestResponse(payload: Payload): Mono<Payload> {
+        return Mono.just(DefaultPayload.create(payload.dataUtf8.reversed()))
       }
     }
 
@@ -126,8 +126,8 @@ class BasicOperationTest {
     main.input = listOf("@src/test/resources/hello.text")
 
     requestHandler = object : AbstractRSocket() {
-      override fun requestResponse(payload: Payload?): Mono<Payload> {
-        return Mono.just(reverse(bufferToString(payload)))
+      override fun requestResponse(payload: Payload): Mono<Payload> {
+        return Mono.just(DefaultPayload.create(payload.dataUtf8.reversed()))
       }
     }
 
@@ -144,8 +144,8 @@ class BasicOperationTest {
     main.input = listOf("@src/test/resources/goodbye.text")
 
     requestHandler = object : AbstractRSocket() {
-      override fun requestResponse(payload: Payload?): Mono<Payload> {
-        return Mono.just(reverse(bufferToString(payload)))
+      override fun requestResponse(payload: Payload): Mono<Payload> {
+        return Mono.just(DefaultPayload.create(payload.dataUtf8.reversed()))
       }
     }
 
@@ -180,9 +180,10 @@ class BasicOperationTest {
     main.input = listOf("Hello")
 
     requestHandler = object : AbstractRSocket() {
-      override fun requestStream(payload: Payload?): Flux<Payload> {
-        val s = bufferToString(payload)
-        return Flux.range(1, 3).map { _ -> reverse(s) }
+      override fun requestStream(payload: Payload): Flux<Payload> {
+        val s = payload.dataUtf8
+        val flux = Flux.range(1, 3).map { _ -> DefaultPayload.create(s.reversed()) }
+        return flux
       }
     }
 
@@ -202,10 +203,11 @@ class BasicOperationTest {
     main.input = listOf("Hello")
 
     requestHandler = object : AbstractRSocket() {
-      override fun requestStream(payload: Payload?): Flux<Payload> {
-        return Flux.range(1, 3)
-                .map { i -> payload("i " + i!!) }
-                .concatWith(Mono.error(ApplicationException("failed")))
+      override fun requestStream(payload: Payload): Flux<Payload> {
+        val flux = Flux.range(1, 3)
+          .map { DefaultPayload.create("i $it") }
+          .concatWith(Mono.error(ApplicationException("failed")))
+        return flux
       }
     }
 
@@ -221,21 +223,6 @@ class BasicOperationTest {
 
   private fun run() {
     connect()
-    main.run(client).blockLast(Duration.ofSeconds(3))
-  }
-
-  companion object {
-
-    private fun bufferToString(payload: Payload?): String {
-      return StandardCharsets.UTF_8.decode(payload!!.data).toString()
-    }
-
-    fun reverse(s: String): Payload {
-      return payload(StringBuilder(s).reverse().toString())
-    }
-
-    fun payload(data: String): Payload {
-      return DefaultPayload.create(data)
-    }
+    main.run(client!!).blockLast(Duration.ofSeconds(3))
   }
 }

@@ -44,7 +44,6 @@ import org.reactivestreams.Publisher
 import org.slf4j.LoggerFactory
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.time.Duration
 import java.util.ArrayList
@@ -168,7 +167,7 @@ class Main : HelpOption() {
 
         client = clientRSocketFactory.transport(clientTransport).start().block()
 
-        val run = run(client)
+        val run = run(client!!)
 
         if (timeout != null) {
           run.blockLast(Duration.ofSeconds(timeout!!))
@@ -227,8 +226,8 @@ class Main : HelpOption() {
         return inputPublisher()
       }
 
-      override fun metadataPush(payload: Payload?): Mono<Void> {
-        outputHandler!!.showOutput(toUtf8String(payload!!.metadata))
+      override fun metadataPush(payload: Payload): Mono<Void> {
+        outputHandler!!.showOutput(payload.metadataUtf8)
         return Mono.empty()
       }
     }
@@ -266,13 +265,10 @@ class Main : HelpOption() {
   }
 
   private fun showPayload(payload: Payload) {
-    outputHandler!!.showOutput(toUtf8String(payload.data))
+    outputHandler!!.showOutput(payload.dataUtf8)
   }
 
-  private fun toUtf8String(data: ByteBuffer): String =
-          StandardCharsets.UTF_8.decode(data).toString()
-
-  fun run(client: RSocket?): Flux<Void> = try {
+  fun run(client: RSocket): Flux<Void> = try {
     runAllOperations(client)
   } catch (e: Exception) {
     handleError(e)
@@ -283,21 +279,20 @@ class Main : HelpOption() {
     outputHandler!!.error("error", e)
   }
 
-  private fun runAllOperations(client: RSocket?): Flux<Void> =
+  private fun runAllOperations(client: RSocket): Flux<Void> =
           Flux.range(0, operations).flatMap { runSingleOperation(client) }
 
-  private fun runSingleOperation(client: RSocket?): Flux<Void> = try {
+  private fun runSingleOperation(client: RSocket): Flux<Void> = try {
     when {
-      fireAndForget -> client!!.fireAndForget(singleInputPayload()).thenMany(Flux.empty())
-      metadataPush -> client!!.metadataPush(singleInputPayload()).thenMany(Flux.empty())
-      requestResponse -> client!!.requestResponse(singleInputPayload()).flux()
-      stream -> client!!.requestStream(singleInputPayload())
-      channel -> client!!.requestChannel(inputPublisher())
+      fireAndForget -> client.fireAndForget(singleInputPayload()).thenMany(Flux.empty())
+      metadataPush -> client.metadataPush(singleInputPayload()).thenMany(Flux.empty())
+      requestResponse -> client.requestResponse(singleInputPayload()).flux()
+      stream -> client.requestStream(singleInputPayload())
+      channel -> client.requestChannel(inputPublisher())
       else -> Flux.never()
     }
             .takeN(requestN)
-            .map({ it.data })
-            .map({ this.toUtf8String(it) })
+            .map({ it.dataUtf8 })
             .doOnNext({ outputHandler!!.showOutput(it) })
             .doOnError { e -> outputHandler!!.error("error from server", e) }
             .onErrorResume { Flux.empty() }

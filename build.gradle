@@ -103,6 +103,7 @@ dependencies {
   compile 'org.mortbay.jetty.alpn:alpn-boot:8.1.11.v20170118'
   compile 'com.github.vjames19.kotlin-futures:kotlin-futures-jdk8:0.4.0'
   compile 'com.spotify:completable-futures:0.3.2'
+  compile 'com.spotify:completable-futures:0.3.2'
 
   runtime 'org.slf4j:slf4j-jdk14:1.7.25'
 
