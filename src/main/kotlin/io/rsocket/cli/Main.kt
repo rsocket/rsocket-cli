@@ -329,4 +329,3 @@ class Main : HelpOption() {
     }
   }
 }
-

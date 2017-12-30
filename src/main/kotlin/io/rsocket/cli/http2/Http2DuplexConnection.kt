@@ -53,7 +53,6 @@ class Http2DuplexConnection : DuplexConnection {
       } catch (e: Exception) {
         callback.failed(e)
       }
-
     }
 
     override fun onHeaders(stream: Stream?, frame: HeadersFrame?) {
