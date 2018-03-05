@@ -1,29 +1,33 @@
 buildscript {
-  repositories {
-    jcenter()
-    mavenCentral()
-  }
-  dependencies {
-    classpath 'org.junit.platform:junit-platform-gradle-plugin:1.0.2'
-  }
+    ext.kotlin_version = '1.2.30'
+    repositories {
+        maven { url "http://dl.bintray.com/kotlin/kotlin-dev" }
+        mavenCentral()
+        jcenter()
+    }
+    dependencies {
+        classpath 'org.junit.platform:junit-platform-gradle-plugin:1.1.0'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath "com.github.shyiko:ktlint:0.19.0"
+    }
 }
 
 plugins {
-  id "com.gradle.build-scan" version "1.11"
-  id 'com.github.ben-manes.versions' version '0.17.0'
-  id 'net.nemerosa.versioning' version '2.6.1'
-  id "org.jetbrains.kotlin.jvm" version "1.2.10"
-  id "org.jlleitschuh.gradle.ktlint" version "3.0.0"
+    id "com.gradle.build-scan" version "1.12.1"
+    id 'com.github.ben-manes.versions' version '0.17.0'
+    id 'net.nemerosa.versioning' version '2.6.1'
+    id 'io.codearte.nexus-staging' version '0.11.0'
+    id "org.jlleitschuh.gradle.ktlint" version "3.0.1"
 }
 
 buildScan { licenseAgreementUrl = 'https://gradle.com/terms-of-service'; licenseAgree = 'yes' }
 
 description = 'RSocket CLI.'
 
-ext.junitJupiterVersion = '5.0.2'
-ext.kotlinVersion = '1.2.10'
+ext.junitJupiterVersion = '5.1.0'
 
 apply plugin: 'java'
+apply plugin: 'kotlin'
 apply plugin: 'application'
 apply plugin: 'maven'
 apply plugin: 'org.junit.platform.gradle.plugin'
@@ -85,22 +89,22 @@ repositories {
 }
   
 dependencies {
-  compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:${kotlinVersion}"
-  compile "org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}"
+  compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:${kotlin_version}"
+  compile "org.jetbrains.kotlin:kotlin-reflect:${kotlin_version}"
 
-  compile 'io.rsocket:rsocket-transport-netty:0.10.0'
-  compile 'io.rsocket:rsocket-transport-local:0.10.0'
+  compile 'io.rsocket:rsocket-transport-netty:0.10.3'
+  compile 'io.rsocket:rsocket-transport-local:0.10.3'
 
   compile 'io.airlift:airline:0.8'
-  compile 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.9.3'
-  compile 'com.fasterxml.jackson.core:jackson-core:2.9.3'
-  compile 'com.fasterxml.jackson.core:jackson-databind:2.9.3'
-  compile 'com.fasterxml.jackson.module:jackson-module-afterburner:2.9.3'
-  compile 'com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.9.3'
+  compile 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.9.4'
+  compile 'com.fasterxml.jackson.core:jackson-core:2.9.4'
+  compile 'com.fasterxml.jackson.core:jackson-databind:2.9.4'
+  compile 'com.fasterxml.jackson.module:jackson-module-afterburner:2.9.4'
+  compile 'com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.9.4'
   compile 'org.slf4j:slf4j-jdk14:1.7.25'
 
   compile 'org.eclipse.jetty.http2:http2-http-client-transport:9.4.8.v20171121'
-  compile 'org.mortbay.jetty.alpn:alpn-boot:8.1.11.v20170118'
+  compile 'org.mortbay.jetty.alpn:alpn-boot:8.1.12.v20180117'
   compile 'com.github.vjames19.kotlin-futures:kotlin-futures-jdk8:0.4.0'
   compile 'com.spotify:completable-futures:0.3.2'
   compile 'com.spotify:completable-futures:0.3.2'
@@ -112,21 +116,19 @@ dependencies {
   testRuntime("org.junit.jupiter:junit-jupiter-engine:${junitJupiterVersion}")
 
   // If you also want to support JUnit 3 and JUnit 4 tests
-  testCompile("junit:junit:4.12")
-  testRuntime("org.junit.vintage:junit-vintage-engine:4.12.2")
+  testRuntime("org.junit.vintage:junit-vintage-engine:5.1.0")
 
-  // Only needed to run tests in an (IntelliJ) IDE(A) that bundles an older version
-  testRuntime("org.junit.platform:junit-platform-launcher:1.0.2")
+  testRuntime("org.junit.platform:junit-platform-launcher:1.1.0")
 
-  testCompile "org.jetbrains.kotlin:kotlin-test:${kotlinVersion}"
-  testCompile "org.jetbrains.kotlin:kotlin-test-junit:${kotlinVersion}"
+  testCompile "org.jetbrains.kotlin:kotlin-test:${kotlin_version}"
+  testCompile "org.jetbrains.kotlin:kotlin-test-junit:${kotlin_version}"
 
   testRuntime group: 'org.slf4j', name: 'slf4j-jdk14', version: '1.7.25'
 
-  testCompile group: 'com.squareup.okhttp3', name: 'okhttp-testing-support', version: '3.9.1'
-  testCompile group: 'com.squareup.okhttp3', name: 'mockwebserver', version: '3.9.1'
+  testCompile group: 'com.squareup.okhttp3', name: 'okhttp-testing-support', version: '3.10.0'
+  testCompile group: 'com.squareup.okhttp3', name: 'mockwebserver', version: '3.10.0'
 
-  compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:${kotlinVersion}"
+  compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:${kotlin_version}"
 }
 
 test {
@@ -144,3 +146,13 @@ dependencyUpdates.resolutionStrategy = {
         }
     }
 }
+
+test {
+    useJUnitPlatform {
+        excludeTags 'slow'
+        includeEngines 'junit-jupiter', 'junit-vintage'
+    }
+
+    failFast = true
+}
+
