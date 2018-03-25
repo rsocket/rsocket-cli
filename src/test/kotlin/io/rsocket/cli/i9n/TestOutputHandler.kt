@@ -1,22 +1,22 @@
 package io.rsocket.cli.i9n
 
+import com.baulsupp.oksocial.output.OutputHandler
+import com.baulsupp.oksocial.output.UsageException
 import com.google.common.collect.Lists
-import io.rsocket.cli.OutputHandler
-import io.rsocket.cli.UsageException
 
-class TestOutputHandler : OutputHandler {
+class TestOutputHandler : OutputHandler<Any> {
   private val stdout: MutableList<String> = Lists.newArrayList()
   private val stderr: MutableList<String> = Lists.newArrayList()
 
-  override fun showOutput(output: String) {
-    stdout.add(output)
+  override suspend fun showOutput(output: Any) {
+    stdout.add(output.toString())
   }
 
   override fun info(msg: String) {
     stderr.add(msg)
   }
 
-  override fun error(msg: String, e: Throwable) {
+  override suspend fun showError(msg: String?, e: Throwable?) {
     if (e is UsageException) {
       stderr.add(e.message.toString())
     } else {

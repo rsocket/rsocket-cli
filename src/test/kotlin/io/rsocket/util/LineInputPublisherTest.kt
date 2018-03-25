@@ -2,7 +2,7 @@ package io.rsocket.util
 
 import io.rsocket.Payload
 import io.rsocket.cli.i9n.TestOutputHandler
-import io.rsocket.cli.util.LineInputPublishers
+import io.rsocket.cli.LineInputPublishers
 import org.junit.Test
 import reactor.core.publisher.Flux
 import kotlin.test.assertEquals

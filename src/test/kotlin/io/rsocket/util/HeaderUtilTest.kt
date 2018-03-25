@@ -1,28 +1,28 @@
 package io.rsocket.util
 
-import io.rsocket.cli.util.HeaderUtil
+import io.rsocket.cli.headerMap
+import io.rsocket.cli.stringValue
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.net.URISyntaxException
 import java.nio.file.Paths
-import java.util.Arrays
 
 class HeaderUtilTest {
   @Test
   fun testSimpleValue() {
-    assertEquals("hello", HeaderUtil.stringValue("hello"))
+    assertEquals("hello", stringValue("hello"))
   }
 
   @Test
   @Throws(URISyntaxException::class)
   fun testFileValue() {
-    assertEquals("value", HeaderUtil.stringValue("@" + path("value.txt")))
+    assertEquals("value", stringValue("@" + path("value.txt")))
   }
 
   @Test
   @Throws(URISyntaxException::class)
   fun headerMap() {
-    val map = HeaderUtil.headerMap(Arrays.asList("A: a", "B:b", "C: @" + path("value.txt")))
+    val map = headerMap(listOf("A: a", "B:b", "C: @" + path("value.txt")))
 
     assertEquals(3, map.size.toLong())
     assertEquals("a", map["A"])
@@ -33,7 +33,7 @@ class HeaderUtilTest {
   @Test
   @Throws(URISyntaxException::class)
   fun headerFileMap() {
-    val map = HeaderUtil.headerMap(Arrays.asList("@" + path("headers.txt")))
+    val map = headerMap(listOf("@" + path("headers.txt")))
 
     assertEquals(2, map.size.toLong())
     assertEquals("a", map["A"])

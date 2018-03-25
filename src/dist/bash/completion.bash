@@ -9,7 +9,7 @@ _reactivesocket_complete()
 
 	_get_comp_words_by_ref -n : cur
 
-  case $prev in
+  case ${prev} in
         # options with an argument we don't currently help with, everything else is assumed to be handled
         # below in case statement or has no arguments so drops through to the url handling near the end
         -i | --input | --keepalive | -m | --metadata | --timeout | --setup | --requestn | -r)
@@ -21,7 +21,7 @@ _reactivesocket_complete()
             ;;
   esac
 
-  if [[ $cur == -* ]]; then
+  if [[ ${cur} == -* ]]; then
       # TODO parse help automatically
       #_reactivesocket_options=${_reactivesocket_options:=$(_parse_help reactivesocket-cli --help)}
       _reactivesocket_options="--requestn -r --sub --stream --request --fnf --channel --metadataPush --ops -i --input --debug --server --keepalive -h --help -m --metadata --setup --timeout --metadataFormat --dataFormat -H --header -T --transport-header"

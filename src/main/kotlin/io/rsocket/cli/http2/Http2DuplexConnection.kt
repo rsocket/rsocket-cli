@@ -66,8 +66,8 @@ class Http2DuplexConnection : DuplexConnection {
         log.info("connected")
       } else {
         receive.onNext(
-                Frame.Error.from(
-                        0, ConnectionCloseException("non 200 response: " + response.status)))
+          Frame.Error.from(
+            0, ConnectionCloseException("non 200 response: " + response.status)))
         dispose()
       }
     }
@@ -77,17 +77,17 @@ class Http2DuplexConnection : DuplexConnection {
 
   override fun send(frame: Publisher<Frame>): Mono<Void> {
     return Flux.from(frame)
-            .doOnNext { f ->
-              stream!!.data(
-                      dataFrame(f),
-                      object : Callback {
-                        override fun failed(x: Throwable?) {
-                          receive.onError(x!!)
-                          dispose()
-                        }
-                      })
+      .doOnNext { f ->
+        stream!!.data(
+          dataFrame(f),
+          object : Callback {
+            override fun failed(x: Throwable?) {
+              receive.onError(x!!)
+              dispose()
             }
-            .then()
+          })
+      }
+      .then()
   }
 
   override fun receive(): Flux<Frame> = receive
@@ -98,10 +98,10 @@ class Http2DuplexConnection : DuplexConnection {
     // TODO listen to callback
     if (!stream!!.isClosed) {
       stream!!.reset(
-              ResetFrame(stream!!.id, ErrorCode.STREAM_CLOSED_ERROR.code),
-              object : Callback {
-                override fun failed(x: Throwable?) {}
-              })
+        ResetFrame(stream!!.id, ErrorCode.STREAM_CLOSED_ERROR.code),
+        object : Callback {
+          override fun failed(x: Throwable?) {}
+        })
     }
     onClose.onComplete()
     onClose
@@ -110,7 +110,7 @@ class Http2DuplexConnection : DuplexConnection {
   override fun onClose(): Mono<Void> = onClose
 
   private fun dataFrame(f: Frame): DataFrame =
-          DataFrame(stream!!.id, f.content().nioBuffer(), false)
+    DataFrame(stream!!.id, f.content().nioBuffer(), false)
 
   class MyRSocketLengthCodec : RSocketLengthCodec() {
     @Throws(Exception::class)
@@ -123,25 +123,28 @@ class Http2DuplexConnection : DuplexConnection {
     private val log = Logger.getLogger(Http2DuplexConnection::class.java.name)
 
     fun create(
-            session: Session, uri: URI, headers: Map<String, String>): Mono<Http2DuplexConnection> {
+      session: Session,
+      uri: URI,
+      headers: Map<String, String>
+    ): Mono<Http2DuplexConnection> {
       return Mono.create { s ->
         val c = Http2DuplexConnection()
 
-        headers.forEach { k, v -> log.fine(k + ": " + v) }
+        headers.forEach { k, v -> log.fine("$k: $v") }
 
         session.newStream(
-                headerFrame(uri, headers),
-                object : Promise<Stream> {
-                  override fun succeeded(result: Stream?) {
-                    c.stream = result
-                    s.success(c)
-                  }
+          headerFrame(uri, headers),
+          object : Promise<Stream> {
+            override fun succeeded(result: Stream?) {
+              c.stream = result
+              s.success(c)
+            }
 
-                  override fun failed(x: Throwable?) {
-                    s.error(x!!)
-                  }
-                },
-                c.responseListener)
+            override fun failed(x: Throwable?) {
+              s.error(x!!)
+            }
+          },
+          c.responseListener)
       }
     }
 
@@ -152,7 +155,7 @@ class Http2DuplexConnection : DuplexConnection {
       }
 
       val request = MetaData.Request(
-              "POST", HttpURI(uri.toString()), HttpVersion.HTTP_2, requestFields)
+        "POST", HttpURI(uri.toString()), HttpVersion.HTTP_2, requestFields)
       return HeadersFrame(request, null, false)
     }
   }

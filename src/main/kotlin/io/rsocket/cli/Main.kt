@@ -13,6 +13,9 @@
  */
 package io.rsocket.cli
 
+import com.baulsupp.oksocial.output.ConsoleHandler
+import com.baulsupp.oksocial.output.OutputHandler
+import com.baulsupp.oksocial.output.UsageException
 import com.google.common.io.Files
 import io.airlift.airline.Arguments
 import io.airlift.airline.Command
@@ -28,25 +31,22 @@ import io.rsocket.Payload
 import io.rsocket.RSocket
 import io.rsocket.RSocketFactory
 import io.rsocket.cli.Main.Companion.NAME
-import io.rsocket.cli.util.FileUtil.expectedFile
-import io.rsocket.cli.util.HeaderUtil
-import io.rsocket.cli.util.HeaderUtil.headerMap
-import io.rsocket.cli.util.InputPublisher
-import io.rsocket.cli.util.LineInputPublishers
-import io.rsocket.cli.util.LoggingUtil
-import io.rsocket.cli.util.MetadataUtil
-import io.rsocket.cli.util.TimeUtil.parseShortDuration
 import io.rsocket.transport.TransportHeaderAware
 import io.rsocket.uri.UriTransportRegistry
 import io.rsocket.util.DefaultPayload
 import io.rsocket.util.EmptyPayload
+import kotlinx.coroutines.experimental.reactive.awaitFirst
+import kotlinx.coroutines.experimental.reactive.awaitFirstOrNull
+import kotlinx.coroutines.experimental.reactor.mono
+import kotlinx.coroutines.experimental.runBlocking
+import kotlinx.coroutines.experimental.withTimeout
 import org.reactivestreams.Publisher
 import org.slf4j.LoggerFactory
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.nio.charset.StandardCharsets
-import java.time.Duration
 import java.util.ArrayList
+import java.util.concurrent.TimeUnit
 import java.util.function.Supplier
 import kotlin.system.exitProcess
 
@@ -58,126 +58,142 @@ import kotlin.system.exitProcess
 @Command(name = NAME, description = "CLI for RSocket.")
 class Main : HelpOption() {
 
-  @Option(name = arrayOf("-H", "--header"), description = "Custom header to pass to server")
+  @Option(name = ["-H", "--header"], description = "Custom header to pass to server")
   var headers: List<String>? = null
 
-  @Option(name = arrayOf("-T", "--transport-header"), description = "Custom header to pass to the transport")
+  @Option(name = ["-T", "--transport-header"], description = "Custom header to pass to the transport")
   var transportHeader: List<String>? = null
 
-  @Option(name = arrayOf("--stream"), description = "Request Stream")
+  @Option(name = ["--stream"], description = "Request Stream")
   var stream: Boolean = false
 
-  @Option(name = arrayOf("--request"), description = "Request Response")
+  @Option(name = ["--request"], description = "Request Response")
   var requestResponse: Boolean = false
 
-  @Option(name = arrayOf("--fnf"), description = "Fire and Forget")
+  @Option(name = ["--fnf"], description = "Fire and Forget")
   var fireAndForget: Boolean = false
 
-  @Option(name = arrayOf("--channel"), description = "Channel")
+  @Option(name = ["--channel"], description = "Channel")
   var channel: Boolean = false
 
-  @Option(name = arrayOf("--metadataPush"), description = "Metadata Push")
+  @Option(name = ["--metadataPush"], description = "Metadata Push")
   var metadataPush: Boolean = false
 
-  @Option(name = arrayOf("--server"), description = "Start server instead of client")
+  @Option(name = ["--server"], description = "Start server instead of client")
   var serverMode: Boolean = false
 
-  @Option(name = arrayOf("-i", "--input"), description = "String input, '-' (STDIN) or @path/to/file")
+  @Option(name = ["-i", "--input"], description = "String input, '-' (STDIN) or @path/to/file")
   var input: List<String>? = null
 
-  @Option(name = arrayOf("-m", "--metadata"), description = "Metadata input string input or @path/to/file")
+  @Option(name = ["-m", "--metadata"], description = "Metadata input string input or @path/to/file")
   var metadata: String? = null
 
-  @Option(name = arrayOf("--metadataFormat"), description = "Metadata Format", allowedValues = arrayOf("json", "cbor", "mime-type"))
+  @Option(name = ["--metadataFormat"], description = "Metadata Format", allowedValues = ["json", "cbor", "mime-type"])
   var metadataFormat = "json"
 
-  @Option(name = arrayOf("--dataFormat"), description = "Data Format", allowedValues = arrayOf("json", "cbor", "mime-type"))
+  @Option(name = ["--dataFormat"], description = "Data Format", allowedValues = ["json", "cbor", "mime-type"])
   var dataFormat = "binary"
 
-  @Option(name = arrayOf("--setup"), description = "String input or @path/to/file for setup metadata")
+  @Option(name = ["--setup"], description = "String input or @path/to/file for setup metadata")
   var setup: String? = null
 
-  @Option(name = arrayOf("--debug"), description = "Debug Output")
+  @Option(name = ["--debug"], description = "Debug Output")
   var debug: Boolean = false
 
-  @Option(name = arrayOf("--ops"), description = "Operation Count")
+  @Option(name = ["--ops"], description = "Operation Count")
   var operations = 1
 
-  @Option(name = arrayOf("--timeout"), description = "Timeout in seconds")
+  @Option(name = ["--timeout"], description = "Timeout in seconds")
   var timeout: Long? = null
 
-  @Option(name = arrayOf("--keepalive"), description = "Keepalive period")
+  @Option(name = ["--keepalive"], description = "Keepalive period")
   var keepalive: String? = null
 
-  @Option(name = arrayOf("--requestn", "-r"), description = "Request N credits")
+  @Option(name = ["--requestn", "-r"], description = "Request N credits")
   var requestN = Integer.MAX_VALUE
 
   @Arguments(title = "target", description = "Endpoint URL", required = true)
   var arguments: List<String> = ArrayList()
 
-  var client: RSocket? = null
+  lateinit var client: RSocket
 
-  var outputHandler: OutputHandler? = null
+  lateinit var outputHandler: OutputHandler<Any>
 
-  var inputPublisher: InputPublisher? = null
+  lateinit var inputPublisher: InputPublisher
 
-  private var server: Closeable? = null
+  lateinit var server: Closeable
 
-  fun run() {
-    LoggingUtil.configureLogging(debug)
+  suspend fun run() {
+    configureLogging(debug)
 
-    if (outputHandler == null) {
-      outputHandler = ConsoleOutputHandler()
+    if (!this::outputHandler.isInitialized) {
+      outputHandler = ConsoleHandler.instance()
     }
 
-    if (inputPublisher == null) {
-      inputPublisher = LineInputPublishers(outputHandler!!)
+    if (!this::inputPublisher.isInitialized) {
+      inputPublisher = LineInputPublishers(outputHandler)
     }
 
     try {
       val uri = arguments[0]
 
       if (serverMode) {
-        val transport = RSocketFactory.receive()
-                .acceptor(this::createServerRequestHandler)
-                .transport(UriTransportRegistry.serverForUri(uri))
-        server = transport.start().block()
+        server = buildServer(uri)
 
-        server!!.onClose().block()
+        server.onClose().awaitFirstOrNull()
       } else {
-        val clientRSocketFactory = RSocketFactory.connect()
-
-        if (keepalive != null) {
-          clientRSocketFactory.keepAliveTickPeriod(parseShortDuration(keepalive!!))
-        }
-        clientRSocketFactory.errorConsumer { t -> outputHandler!!.error("client error", t) }
-        clientRSocketFactory.metadataMimeType(standardMimeType(metadataFormat))
-        clientRSocketFactory.dataMimeType(standardMimeType(dataFormat))
-        if (setup != null) {
-          clientRSocketFactory.setupPayload(parseSetupPayload())
+        if (!this::client.isInitialized) {
+          client = buildClient(uri)
         }
 
-        val clientTransport = UriTransportRegistry.clientForUri(uri)
-
-        if (transportHeader != null && clientTransport is TransportHeaderAware) {
-          clientTransport.setTransportHeaders({ headerMap(transportHeader) })
-        }
-
-        clientRSocketFactory.acceptor(this::createClientRequestHandler)
-
-        client = clientRSocketFactory.transport(clientTransport).start().block()
-
-        val run = run(client!!)
+        val run = run(client)
 
         if (timeout != null) {
-          run.blockLast(Duration.ofSeconds(timeout!!))
+          withTimeout(timeout!!, TimeUnit.SECONDS) {
+            run.then().awaitFirstOrNull()
+          }
         } else {
-          run.blockLast()
+          run.then().awaitFirstOrNull()
         }
       }
     } catch (e: Exception) {
-      handleError(e)
+      outputHandler.showError("error", e)
     }
+  }
+
+  suspend fun buildServer(uri: String): Closeable {
+    val transport = RSocketFactory.receive()
+      .acceptor(this::createServerRequestHandler)
+      .transport(UriTransportRegistry.serverForUri(uri))
+    return transport.start().awaitFirst()
+  }
+
+  suspend fun buildClient(uri: String): RSocket {
+    val clientRSocketFactory = RSocketFactory.connect()
+
+    if (keepalive != null) {
+      clientRSocketFactory.keepAliveTickPeriod(parseShortDuration(keepalive!!))
+    }
+    clientRSocketFactory.errorConsumer { t ->
+      runBlocking {
+        outputHandler.showError("client error", t)
+      }
+    }
+    clientRSocketFactory.metadataMimeType(standardMimeType(metadataFormat))
+    clientRSocketFactory.dataMimeType(standardMimeType(dataFormat))
+    if (setup != null) {
+      clientRSocketFactory.setupPayload(parseSetupPayload())
+    }
+
+    val clientTransport = UriTransportRegistry.clientForUri(uri)
+
+    if (transportHeader != null && clientTransport is TransportHeaderAware) {
+      clientTransport.setTransportHeaders({ headerMap(transportHeader) })
+    }
+
+    clientRSocketFactory.acceptor(this::createClientRequestHandler)
+
+    return clientRSocketFactory.transport(clientTransport).start().awaitFirst()
   }
 
   private fun createClientRequestHandler(socket: RSocket): RSocket = createResponder()
@@ -194,11 +210,11 @@ class Main : HelpOption() {
   private fun parseSetupPayload(): Payload = when {
     setup == null -> EmptyPayload.INSTANCE
     setup!!.startsWith("@") -> DefaultPayload.create(Files.asCharSource(expectedFile(setup!!.substring(1)), StandardCharsets.UTF_8).read())
-    else -> DefaultPayload.create(setup)
+    else -> DefaultPayload.create(setup!!)
   }
 
   private fun createServerRequestHandler(setupPayload: ConnectionSetupPayload, socket: RSocket): Mono<RSocket> {
-    LoggerFactory.getLogger(Main::class.java).debug("setup payload " + setupPayload)
+    LoggerFactory.getLogger(Main::class.java).debug("setup payload $setupPayload")
 
     runAllOperations(socket).subscribe()
 
@@ -207,42 +223,44 @@ class Main : HelpOption() {
 
   private fun createResponder(): AbstractRSocket {
     return object : AbstractRSocket() {
-      override fun fireAndForget(payload: Payload): Mono<Void> {
-        showPayload(payload)
-        return Mono.empty()
-      }
+      override fun fireAndForget(payload: Payload): Mono<Void> = mono {
+        outputHandler.showOutput(payload.dataUtf8)
+      }.then()
 
-      override fun requestResponse(payload: Payload): Mono<Payload> {
-        return handleIncomingPayload(payload).single()
-      }
+      override fun requestResponse(payload: Payload): Mono<Payload> = handleIncomingPayload(payload).single()
 
-      override fun requestStream(payload: Payload): Flux<Payload> {
-        return handleIncomingPayload(payload)
-      }
+      override fun requestStream(payload: Payload): Flux<Payload> = handleIncomingPayload(payload)
 
       override fun requestChannel(payloads: Publisher<Payload>): Flux<Payload> {
-        Flux.from(payloads).takeN(requestN)
-                .subscribe({ p -> showPayload(p) }, { e -> outputHandler!!.error("channel error", e) })
-        return inputPublisher()
+        val flux = Flux.from(payloads).takeN(requestN)
+        flux
+          .subscribe({ p ->
+            runBlocking {
+              outputHandler.showOutput(p.dataUtf8)
+            }
+          }, { e ->
+            runBlocking {
+              outputHandler.showError("channel error", e)
+            }
+          })
+        return inputPublisherX()
       }
 
-      override fun metadataPush(payload: Payload): Mono<Void> {
-        outputHandler!!.showOutput(payload.metadataUtf8)
-        return Mono.empty()
-      }
+      override fun metadataPush(payload: Payload): Mono<Void> = mono {
+        outputHandler.showOutput(payload.metadataUtf8)
+      }.then()
     }
   }
 
-  private fun handleIncomingPayload(payload: Payload): Flux<Payload> {
-    showPayload(payload)
-    return inputPublisher()
-  }
+  private fun handleIncomingPayload(payload: Payload): Flux<Payload> = mono {
+    outputHandler.showOutput(payload.dataUtf8)
+  }.thenMany(inputPublisherX())
 
   fun getInputFromSource(source: String?, nullHandler: Supplier<String>): String =
-          when (source) {
-            null -> nullHandler.get()
-            else -> HeaderUtil.stringValue(source)
-          }
+    when (source) {
+      null -> nullHandler.get()
+      else -> stringValue(source)
+    }
 
   fun buildMetadata(): ByteArray? = when {
     this.metadata != null -> {
@@ -252,35 +270,27 @@ class Main : HelpOption() {
 
       getInputFromSource(this.metadata, Supplier { ""; }).toByteArray(StandardCharsets.UTF_8)
     }
-    this.headers != null -> MetadataUtil.encodeMetadataMap(HeaderUtil.headerMap(headers), standardMimeType(metadataFormat))
+    this.headers != null -> encodeMetadataMap(headerMap(headers), standardMimeType(metadataFormat))
     else -> ByteArray(0)
   }
 
-  private fun inputPublisher(): Flux<Payload> {
-    return inputPublisher!!.inputPublisher(input ?: listOf("-"), buildMetadata())
+  private fun inputPublisherX(): Flux<Payload> {
+    return inputPublisher.inputPublisher(input ?: listOf("-"), buildMetadata())
   }
 
   private fun singleInputPayload(): Payload {
-    return inputPublisher!!.singleInputPayload(input ?: listOf("-"), buildMetadata())
+    return inputPublisher.singleInputPayload(input ?: listOf("-"), buildMetadata())
   }
 
-  private fun showPayload(payload: Payload) {
-    outputHandler!!.showOutput(payload.dataUtf8)
-  }
-
-  fun run(client: RSocket): Flux<Void> = try {
+  suspend fun run(client: RSocket): Flux<Void> = try {
     runAllOperations(client)
   } catch (e: Exception) {
-    handleError(e)
+    outputHandler.showError("error", e)
     Flux.empty()
   }
 
-  private fun handleError(e: Throwable) {
-    outputHandler!!.error("error", e)
-  }
-
   private fun runAllOperations(client: RSocket): Flux<Void> =
-          Flux.range(0, operations).flatMap { runSingleOperation(client) }
+    Flux.range(0, operations).flatMap { runSingleOperation(client) }
 
   private fun runSingleOperation(client: RSocket): Flux<Void> = try {
     when {
@@ -288,19 +298,27 @@ class Main : HelpOption() {
       metadataPush -> client.metadataPush(singleInputPayload()).thenMany(Flux.empty())
       requestResponse -> client.requestResponse(singleInputPayload()).flux()
       stream -> client.requestStream(singleInputPayload())
-      channel -> client.requestChannel(inputPublisher())
+      channel -> client.requestChannel(inputPublisherX())
       else -> Flux.never()
     }
-            .takeN(requestN)
-            .map({ it.dataUtf8 })
-            .doOnNext({ outputHandler!!.showOutput(it) })
-            .doOnError { e -> outputHandler!!.error("error from server", e) }
-            .onErrorResume { Flux.empty() }
-            .thenMany(Flux.empty())
+      .takeN(requestN)
+      .map({ it.dataUtf8 })
+      .doOnNext({
+        runBlocking {
+          outputHandler.showOutput(it)
+        }
+      })
+      .doOnError { e ->
+        runBlocking {
+          outputHandler.showError("error from server", e)
+        }
+      }
+      .onErrorResume { Flux.empty() }
+      .then().flux()
   } catch (ex: Exception) {
-    Flux.error<Void>(ex)
-            .doOnError { e -> outputHandler!!.error("error before query", e) }
-            .onErrorResume { Flux.empty() }
+    mono {
+      outputHandler.showError("error before query", ex)
+    }.then().flux()
   }
 
   companion object {
@@ -317,10 +335,11 @@ class Main : HelpOption() {
       }
     }
 
-    @Throws(Exception::class)
     @JvmStatic
     fun main(vararg args: String) {
-      fromArgs(*args).run()
+      runBlocking {
+        fromArgs(*args).run()
+      }
     }
   }
 }
