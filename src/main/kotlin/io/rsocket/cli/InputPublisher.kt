@@ -1,4 +1,4 @@
-package io.rsocket.cli.util
+package io.rsocket.cli
 
 import io.rsocket.Payload
 import reactor.core.publisher.Flux

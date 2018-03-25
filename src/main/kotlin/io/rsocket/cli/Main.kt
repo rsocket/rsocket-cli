@@ -13,6 +13,9 @@
  */
 package io.rsocket.cli
 
+import com.baulsupp.oksocial.output.ConsoleHandler
+import com.baulsupp.oksocial.output.OutputHandler
+import com.baulsupp.oksocial.output.UsageException
 import com.google.common.io.Files
 import io.airlift.airline.Arguments
 import io.airlift.airline.Command
@@ -28,18 +31,11 @@ import io.rsocket.Payload
 import io.rsocket.RSocket
 import io.rsocket.RSocketFactory
 import io.rsocket.cli.Main.Companion.NAME
-import io.rsocket.cli.util.FileUtil.expectedFile
-import io.rsocket.cli.util.HeaderUtil
-import io.rsocket.cli.util.HeaderUtil.headerMap
-import io.rsocket.cli.util.InputPublisher
-import io.rsocket.cli.util.LineInputPublishers
-import io.rsocket.cli.util.LoggingUtil
-import io.rsocket.cli.util.MetadataUtil
-import io.rsocket.cli.util.TimeUtil.parseShortDuration
 import io.rsocket.transport.TransportHeaderAware
 import io.rsocket.uri.UriTransportRegistry
 import io.rsocket.util.DefaultPayload
 import io.rsocket.util.EmptyPayload
+import kotlinx.coroutines.experimental.runBlocking
 import org.reactivestreams.Publisher
 import org.slf4j.LoggerFactory
 import reactor.core.publisher.Flux
@@ -117,21 +113,21 @@ class Main : HelpOption() {
 
   var client: RSocket? = null
 
-  var outputHandler: OutputHandler? = null
+  lateinit var outputHandler: OutputHandler<Any>
 
-  var inputPublisher: InputPublisher? = null
+  lateinit var inputPublisher: InputPublisher
 
   private var server: Closeable? = null
 
   fun run() {
-    LoggingUtil.configureLogging(debug)
+    configureLogging(debug)
 
-    if (outputHandler == null) {
-      outputHandler = ConsoleOutputHandler()
+    if (!this::outputHandler.isInitialized) {
+      outputHandler = ConsoleHandler.instance()
     }
 
-    if (inputPublisher == null) {
-      inputPublisher = LineInputPublishers(outputHandler!!)
+    if (!this::inputPublisher.isInitialized) {
+      inputPublisher = LineInputPublishers(outputHandler)
     }
 
     try {
@@ -139,8 +135,8 @@ class Main : HelpOption() {
 
       if (serverMode) {
         val transport = RSocketFactory.receive()
-                .acceptor(this::createServerRequestHandler)
-                .transport(UriTransportRegistry.serverForUri(uri))
+          .acceptor(this::createServerRequestHandler)
+          .transport(UriTransportRegistry.serverForUri(uri))
         server = transport.start().block()
 
         server!!.onClose().block()
@@ -150,7 +146,7 @@ class Main : HelpOption() {
         if (keepalive != null) {
           clientRSocketFactory.keepAliveTickPeriod(parseShortDuration(keepalive!!))
         }
-        clientRSocketFactory.errorConsumer { t -> outputHandler!!.error("client error", t) }
+        clientRSocketFactory.errorConsumer { t -> showError("client error", t) }
         clientRSocketFactory.metadataMimeType(standardMimeType(metadataFormat))
         clientRSocketFactory.dataMimeType(standardMimeType(dataFormat))
         if (setup != null) {
@@ -176,7 +172,13 @@ class Main : HelpOption() {
         }
       }
     } catch (e: Exception) {
-      handleError(e)
+      showError("error", e)
+    }
+  }
+
+  private fun showError(s: String, t: Throwable?) {
+    runBlocking {
+      outputHandler.showError(s, t)
     }
   }
 
@@ -222,27 +224,33 @@ class Main : HelpOption() {
 
       override fun requestChannel(payloads: Publisher<Payload>): Flux<Payload> {
         Flux.from(payloads).takeN(requestN)
-                .subscribe({ p -> showPayload(p) }, { e -> outputHandler!!.error("channel error", e) })
-        return inputPublisher()
+          .subscribe({ p -> showPayload(p) }, { e -> showError("channel error", e) })
+        return inputPublisherX()
       }
 
       override fun metadataPush(payload: Payload): Mono<Void> {
-        outputHandler!!.showOutput(payload.metadataUtf8)
+        showOutput(payload.metadataUtf8)
         return Mono.empty()
       }
     }
   }
 
+  private fun showOutput(metadataUtf8: String) {
+    runBlocking {
+      outputHandler.showOutput(metadataUtf8)
+    }
+  }
+
   private fun handleIncomingPayload(payload: Payload): Flux<Payload> {
     showPayload(payload)
-    return inputPublisher()
+    return inputPublisherX()
   }
 
   fun getInputFromSource(source: String?, nullHandler: Supplier<String>): String =
-          when (source) {
-            null -> nullHandler.get()
-            else -> HeaderUtil.stringValue(source)
-          }
+    when (source) {
+      null -> nullHandler.get()
+      else -> stringValue(source)
+    }
 
   fun buildMetadata(): ByteArray? = when {
     this.metadata != null -> {
@@ -252,35 +260,31 @@ class Main : HelpOption() {
 
       getInputFromSource(this.metadata, Supplier { ""; }).toByteArray(StandardCharsets.UTF_8)
     }
-    this.headers != null -> MetadataUtil.encodeMetadataMap(HeaderUtil.headerMap(headers), standardMimeType(metadataFormat))
+    this.headers != null -> encodeMetadataMap(headerMap(headers), standardMimeType(metadataFormat))
     else -> ByteArray(0)
   }
 
-  private fun inputPublisher(): Flux<Payload> {
-    return inputPublisher!!.inputPublisher(input ?: listOf("-"), buildMetadata())
+  private fun inputPublisherX(): Flux<Payload> {
+    return inputPublisher.inputPublisher(input ?: listOf("-"), buildMetadata())
   }
 
   private fun singleInputPayload(): Payload {
-    return inputPublisher!!.singleInputPayload(input ?: listOf("-"), buildMetadata())
+    return inputPublisher.singleInputPayload(input ?: listOf("-"), buildMetadata())
   }
 
   private fun showPayload(payload: Payload) {
-    outputHandler!!.showOutput(payload.dataUtf8)
+    showOutput(payload.dataUtf8)
   }
 
   fun run(client: RSocket): Flux<Void> = try {
     runAllOperations(client)
   } catch (e: Exception) {
-    handleError(e)
+    showError("error", e)
     Flux.empty()
   }
 
-  private fun handleError(e: Throwable) {
-    outputHandler!!.error("error", e)
-  }
-
   private fun runAllOperations(client: RSocket): Flux<Void> =
-          Flux.range(0, operations).flatMap { runSingleOperation(client) }
+    Flux.range(0, operations).flatMap { runSingleOperation(client) }
 
   private fun runSingleOperation(client: RSocket): Flux<Void> = try {
     when {
@@ -288,19 +292,19 @@ class Main : HelpOption() {
       metadataPush -> client.metadataPush(singleInputPayload()).thenMany(Flux.empty())
       requestResponse -> client.requestResponse(singleInputPayload()).flux()
       stream -> client.requestStream(singleInputPayload())
-      channel -> client.requestChannel(inputPublisher())
+      channel -> client.requestChannel(inputPublisherX())
       else -> Flux.never()
     }
-            .takeN(requestN)
-            .map({ it.dataUtf8 })
-            .doOnNext({ outputHandler!!.showOutput(it) })
-            .doOnError { e -> outputHandler!!.error("error from server", e) }
-            .onErrorResume { Flux.empty() }
-            .thenMany(Flux.empty())
+      .takeN(requestN)
+      .map({ it.dataUtf8 })
+      .doOnNext({ showOutput(it) })
+      .doOnError { e -> showError("error from server", e) }
+      .onErrorResume { Flux.empty() }
+      .thenMany(Flux.empty())
   } catch (ex: Exception) {
     Flux.error<Void>(ex)
-            .doOnError { e -> outputHandler!!.error("error before query", e) }
-            .onErrorResume { Flux.empty() }
+      .doOnError { e -> showError("error before query", e) }
+      .onErrorResume { Flux.empty() }
   }
 
   companion object {

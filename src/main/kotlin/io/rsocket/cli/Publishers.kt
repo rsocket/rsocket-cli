@@ -31,8 +31,8 @@ object Publishers {
    * @param inputStream to read.
    */
   fun lines(inputStream: CharSource, metadataFn: Function<String, ByteArray>): Flux<Payload> =
-          splitInLines(inputStream)
-                  .map { l -> DefaultPayload.create(l.toByteArray(StandardCharsets.UTF_8), metadataFn.apply(l)) }
+    splitInLines(inputStream)
+      .map { l -> DefaultPayload.create(l.toByteArray(StandardCharsets.UTF_8), metadataFn.apply(l)) }
 
   fun splitInLines(inputStream: CharSource): Flux<String> = try {
     Flux.fromStream(inputStream.openBufferedStream().lines())

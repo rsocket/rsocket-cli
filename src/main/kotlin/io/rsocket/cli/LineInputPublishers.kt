@@ -1,17 +1,16 @@
-package io.rsocket.cli.util
+package io.rsocket.cli
 
+import com.baulsupp.oksocial.output.OutputHandler
+import com.baulsupp.oksocial.output.UsageException
 import com.google.common.io.Files
 import io.rsocket.Payload
-import io.rsocket.cli.OutputHandler
-import io.rsocket.cli.UsageException
-import io.rsocket.cli.util.FileUtil.expectedFile
 import io.rsocket.util.DefaultPayload
 import reactor.core.publisher.Flux
 import reactor.core.scheduler.Schedulers
 import java.nio.charset.StandardCharsets
 import java.util.Scanner
 
-class LineInputPublishers(val outputHandler: OutputHandler) : InputPublisher {
+class LineInputPublishers(val outputHandler: OutputHandler<*>) : InputPublisher {
   private fun filePublisher(filename: String): Flux<String> {
     return Flux.defer({
       val file = expectedFile(filename)
@@ -39,18 +38,16 @@ class LineInputPublishers(val outputHandler: OutputHandler) : InputPublisher {
   }
 
   override fun inputPublisher(input: List<String>, metadata: ByteArray?): Flux<Payload> {
-//    val metadataPublisher = if (metadata != null) Flux.just(metadata) else Flux.empty()
     return Flux.fromIterable(input).concatMap {
       when {
         it == "-" -> systemInLines()
         it.startsWith("@") -> filePublisher(it.substring(1))
         else -> Flux.just(it)
       }
-//    }.zipWith(metadataPublisher.concatWith(Flux.just(NULL_BYTE_ARRAY).repeat()), 1).map { tuple ->
     }.map {
       DefaultPayload.create(
-              it.toByteArray(StandardCharsets.UTF_8),
-              metadata
+        it.toByteArray(StandardCharsets.UTF_8),
+        metadata
       )
     }
   }
@@ -68,6 +65,4 @@ class LineInputPublishers(val outputHandler: OutputHandler) : InputPublisher {
       outputHandler.info("Type commands to send to the server.")
     }).subscribeOn(Schedulers.elastic())
   }
-
-//  private val NULL_BYTE_ARRAY = ByteArray(0)
 }

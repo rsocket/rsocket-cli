@@ -6,11 +6,12 @@ import io.rsocket.Payload
 import io.rsocket.RSocket
 import io.rsocket.RSocketFactory
 import io.rsocket.cli.Main
-import io.rsocket.cli.util.LineInputPublishers
+import io.rsocket.cli.LineInputPublishers
 import io.rsocket.exceptions.ApplicationException
 import io.rsocket.transport.local.LocalClientTransport
 import io.rsocket.transport.local.LocalServerTransport
 import io.rsocket.util.DefaultPayload
+import kotlinx.coroutines.experimental.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Ignore
@@ -48,15 +49,15 @@ class BasicOperationTest {
     main.inputPublisher = LineInputPublishers(output)
 
     server = RSocketFactory.receive()
-            .acceptor { _, _ -> Mono.just(requestHandler) }
-            .transport(LocalServerTransport.create("test-local-server-" + testName!!))
-            .start()
-            .block()
+      .acceptor { _, _ -> Mono.just(requestHandler) }
+      .transport(LocalServerTransport.create("test-local-server-" + testName!!))
+      .start()
+      .block()
 
     client = RSocketFactory.connect()
-            .transport(LocalClientTransport.create("test-local-server-" + testName!!))
-            .start()
-            .block()
+      .transport(LocalClientTransport.create("test-local-server-" + testName!!))
+      .start()
+      .block()
   }
 
   @After
@@ -112,7 +113,7 @@ class BasicOperationTest {
       }
     }
 
-    expected.showOutput("olleH")
+    expectedShowOutput("olleH")
 
     run()
 
@@ -130,7 +131,7 @@ class BasicOperationTest {
       }
     }
 
-    expected.showOutput("!elif a morf olleH")
+    expectedShowOutput("!elif a morf olleH")
 
     run()
 
@@ -166,7 +167,7 @@ class BasicOperationTest {
       }
     }
 
-    expected.error("error from server", ApplicationException("server failure"))
+    expectedShowError("error from server", ApplicationException("server failure"))
 
     run()
 
@@ -186,9 +187,9 @@ class BasicOperationTest {
       }
     }
 
-    expected.showOutput("olleH")
-    expected.showOutput("olleH")
-    expected.showOutput("olleH")
+    expectedShowOutput("olleH")
+    expectedShowOutput("olleH")
+    expectedShowOutput("olleH")
 
     run()
 
@@ -210,14 +211,26 @@ class BasicOperationTest {
       }
     }
 
-    expected.showOutput("i 1")
-    expected.showOutput("i 2")
-    expected.showOutput("i 3")
-    expected.error("error from server", ApplicationException("failed"))
+    expectedShowOutput("i 1")
+    expectedShowOutput("i 2")
+    expectedShowOutput("i 3")
+    expectedShowError("error from server", ApplicationException("failed"))
 
     run()
 
     assertEquals(expected, output)
+  }
+
+  private fun expectedShowError(msg: String, e: Throwable) {
+    runBlocking {
+      expected.showError(msg, e)
+    }
+  }
+
+  private fun expectedShowOutput(s: String) {
+    runBlocking {
+      expected.showOutput(s)
+    }
   }
 
   private fun run() {
