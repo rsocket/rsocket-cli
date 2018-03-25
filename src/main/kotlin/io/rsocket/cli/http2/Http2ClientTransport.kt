@@ -20,7 +20,8 @@ import java.util.function.Supplier
 
 class Http2ClientTransport @JvmOverloads constructor(
   private val uri: URI,
-  private var transportHeadersFn: () -> Map<String, String> = { mutableMapOf() }) : ClientTransport, TransportHeaderAware {
+  private var transportHeadersFn: () -> Map<String, String> = { mutableMapOf() }
+) : ClientTransport, TransportHeaderAware {
 
   override fun setTransportHeaders(transportHeaders: Supplier<Map<String, String>>?) {
     this.transportHeadersFn = { transportHeaders?.get() ?: mapOf() }

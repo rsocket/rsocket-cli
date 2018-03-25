@@ -123,7 +123,10 @@ class Http2DuplexConnection : DuplexConnection {
     private val log = Logger.getLogger(Http2DuplexConnection::class.java.name)
 
     fun create(
-      session: Session, uri: URI, headers: Map<String, String>): Mono<Http2DuplexConnection> {
+      session: Session,
+      uri: URI,
+      headers: Map<String, String>
+    ): Mono<Http2DuplexConnection> {
       return Mono.create { s ->
         val c = Http2DuplexConnection()
 
