@@ -54,58 +54,58 @@ import kotlin.system.exitProcess
 @Command(name = NAME, description = "CLI for RSocket.")
 class Main : HelpOption() {
 
-  @Option(name = arrayOf("-H", "--header"), description = "Custom header to pass to server")
+  @Option(name = ["-H", "--header"], description = "Custom header to pass to server")
   var headers: List<String>? = null
 
-  @Option(name = arrayOf("-T", "--transport-header"), description = "Custom header to pass to the transport")
+  @Option(name = ["-T", "--transport-header"], description = "Custom header to pass to the transport")
   var transportHeader: List<String>? = null
 
-  @Option(name = arrayOf("--stream"), description = "Request Stream")
+  @Option(name = ["--stream"], description = "Request Stream")
   var stream: Boolean = false
 
-  @Option(name = arrayOf("--request"), description = "Request Response")
+  @Option(name = ["--request"], description = "Request Response")
   var requestResponse: Boolean = false
 
-  @Option(name = arrayOf("--fnf"), description = "Fire and Forget")
+  @Option(name = ["--fnf"], description = "Fire and Forget")
   var fireAndForget: Boolean = false
 
-  @Option(name = arrayOf("--channel"), description = "Channel")
+  @Option(name = ["--channel"], description = "Channel")
   var channel: Boolean = false
 
-  @Option(name = arrayOf("--metadataPush"), description = "Metadata Push")
+  @Option(name = ["--metadataPush"], description = "Metadata Push")
   var metadataPush: Boolean = false
 
-  @Option(name = arrayOf("--server"), description = "Start server instead of client")
+  @Option(name = ["--server"], description = "Start server instead of client")
   var serverMode: Boolean = false
 
-  @Option(name = arrayOf("-i", "--input"), description = "String input, '-' (STDIN) or @path/to/file")
+  @Option(name = ["-i", "--input"], description = "String input, '-' (STDIN) or @path/to/file")
   var input: List<String>? = null
 
-  @Option(name = arrayOf("-m", "--metadata"), description = "Metadata input string input or @path/to/file")
+  @Option(name = ["-m", "--metadata"], description = "Metadata input string input or @path/to/file")
   var metadata: String? = null
 
-  @Option(name = arrayOf("--metadataFormat"), description = "Metadata Format", allowedValues = arrayOf("json", "cbor", "mime-type"))
+  @Option(name = ["--metadataFormat"], description = "Metadata Format", allowedValues = ["json", "cbor", "mime-type"])
   var metadataFormat = "json"
 
-  @Option(name = arrayOf("--dataFormat"), description = "Data Format", allowedValues = arrayOf("json", "cbor", "mime-type"))
+  @Option(name = ["--dataFormat"], description = "Data Format", allowedValues = ["json", "cbor", "mime-type"])
   var dataFormat = "binary"
 
-  @Option(name = arrayOf("--setup"), description = "String input or @path/to/file for setup metadata")
+  @Option(name = ["--setup"], description = "String input or @path/to/file for setup metadata")
   var setup: String? = null
 
-  @Option(name = arrayOf("--debug"), description = "Debug Output")
+  @Option(name = ["--debug"], description = "Debug Output")
   var debug: Boolean = false
 
-  @Option(name = arrayOf("--ops"), description = "Operation Count")
+  @Option(name = ["--ops"], description = "Operation Count")
   var operations = 1
 
-  @Option(name = arrayOf("--timeout"), description = "Timeout in seconds")
+  @Option(name = ["--timeout"], description = "Timeout in seconds")
   var timeout: Long? = null
 
-  @Option(name = arrayOf("--keepalive"), description = "Keepalive period")
+  @Option(name = ["--keepalive"], description = "Keepalive period")
   var keepalive: String? = null
 
-  @Option(name = arrayOf("--requestn", "-r"), description = "Request N credits")
+  @Option(name = ["--requestn", "-r"], description = "Request N credits")
   var requestN = Integer.MAX_VALUE
 
   @Arguments(title = "target", description = "Endpoint URL", required = true)
@@ -119,7 +119,7 @@ class Main : HelpOption() {
 
   private var server: Closeable? = null
 
-  fun run() {
+  suspend fun run() {
     configureLogging(debug)
 
     if (!this::outputHandler.isInitialized) {
@@ -172,7 +172,7 @@ class Main : HelpOption() {
         }
       }
     } catch (e: Exception) {
-      showError("error", e)
+      outputHandler.showError("error", e)
     }
   }
 
@@ -196,11 +196,11 @@ class Main : HelpOption() {
   private fun parseSetupPayload(): Payload = when {
     setup == null -> EmptyPayload.INSTANCE
     setup!!.startsWith("@") -> DefaultPayload.create(Files.asCharSource(expectedFile(setup!!.substring(1)), StandardCharsets.UTF_8).read())
-    else -> DefaultPayload.create(setup)
+    else -> DefaultPayload.create(setup!!)
   }
 
   private fun createServerRequestHandler(setupPayload: ConnectionSetupPayload, socket: RSocket): Mono<RSocket> {
-    LoggerFactory.getLogger(Main::class.java).debug("setup payload " + setupPayload)
+    LoggerFactory.getLogger(Main::class.java).debug("setup payload $setupPayload")
 
     runAllOperations(socket).subscribe()
 
@@ -324,7 +324,9 @@ class Main : HelpOption() {
     @Throws(Exception::class)
     @JvmStatic
     fun main(vararg args: String) {
-      fromArgs(*args).run()
+      runBlocking {
+        fromArgs(*args).run()
+      }
     }
   }
 }

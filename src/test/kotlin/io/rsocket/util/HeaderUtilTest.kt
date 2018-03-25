@@ -6,7 +6,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.net.URISyntaxException
 import java.nio.file.Paths
-import java.util.Arrays
 
 class HeaderUtilTest {
   @Test

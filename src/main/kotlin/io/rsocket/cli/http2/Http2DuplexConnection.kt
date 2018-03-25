@@ -127,7 +127,7 @@ class Http2DuplexConnection : DuplexConnection {
       return Mono.create { s ->
         val c = Http2DuplexConnection()
 
-        headers.forEach { k, v -> log.fine(k + ": " + v) }
+        headers.forEach { k, v -> log.fine("$k: $v") }
 
         session.newStream(
           headerFrame(uri, headers),

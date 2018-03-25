@@ -33,7 +33,7 @@ fun expectedFile(name: String): File {
   val file = File(normalize(name))
 
   if (!file.isFile) {
-    throw UsageException("file not found: " + file)
+    throw UsageException("file not found: $file")
   }
 
   return file
@@ -56,7 +56,7 @@ fun headerMap(headers: List<String>?): Map<String, String> {
         // TODO: consider better strategy than simple trim
         val name = parts[0].trim({ it <= ' ' })
         val value = stringValue(parts[1].trim({ it <= ' ' }))
-        headerMap.put(name, value)
+        headerMap[name] = value
       }
     }
   }
@@ -179,5 +179,5 @@ fun parseShortDuration(keepalive: String): Duration {
   }
 }
 
-fun <T> Flux<T>.takeN(request: Int) =
+fun <T> Flux<T>.takeN(request: Int): Flux<T> =
   if (request < Int.MAX_VALUE) this.limitRate(request).take(request.toLong()) else this
