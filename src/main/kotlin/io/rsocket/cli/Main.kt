@@ -35,14 +35,19 @@ import io.rsocket.transport.TransportHeaderAware
 import io.rsocket.uri.UriTransportRegistry
 import io.rsocket.util.DefaultPayload
 import io.rsocket.util.EmptyPayload
+import kotlinx.coroutines.experimental.reactive.awaitFirst
+import kotlinx.coroutines.experimental.reactive.awaitFirstOrNull
+import kotlinx.coroutines.experimental.reactive.awaitLast
+import kotlinx.coroutines.experimental.reactor.mono
 import kotlinx.coroutines.experimental.runBlocking
+import kotlinx.coroutines.experimental.withTimeout
 import org.reactivestreams.Publisher
 import org.slf4j.LoggerFactory
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.nio.charset.StandardCharsets
-import java.time.Duration
 import java.util.ArrayList
+import java.util.concurrent.TimeUnit
 import java.util.function.Supplier
 import kotlin.system.exitProcess
 
@@ -111,13 +116,13 @@ class Main : HelpOption() {
   @Arguments(title = "target", description = "Endpoint URL", required = true)
   var arguments: List<String> = ArrayList()
 
-  var client: RSocket? = null
+  lateinit var client: RSocket
 
   lateinit var outputHandler: OutputHandler<Any>
 
   lateinit var inputPublisher: InputPublisher
 
-  private var server: Closeable? = null
+  lateinit var server: Closeable
 
   suspend fun run() {
     configureLogging(debug)
@@ -134,41 +139,22 @@ class Main : HelpOption() {
       val uri = arguments[0]
 
       if (serverMode) {
-        val transport = RSocketFactory.receive()
-          .acceptor(this::createServerRequestHandler)
-          .transport(UriTransportRegistry.serverForUri(uri))
-        server = transport.start().block()
+        server = buildServer(uri)
 
-        server!!.onClose().block()
+        server.onClose().awaitFirstOrNull()
       } else {
-        val clientRSocketFactory = RSocketFactory.connect()
-
-        if (keepalive != null) {
-          clientRSocketFactory.keepAliveTickPeriod(parseShortDuration(keepalive!!))
-        }
-        clientRSocketFactory.errorConsumer { t -> showError("client error", t) }
-        clientRSocketFactory.metadataMimeType(standardMimeType(metadataFormat))
-        clientRSocketFactory.dataMimeType(standardMimeType(dataFormat))
-        if (setup != null) {
-          clientRSocketFactory.setupPayload(parseSetupPayload())
+        if (!this::client.isInitialized) {
+          client = buildClient(uri)
         }
 
-        val clientTransport = UriTransportRegistry.clientForUri(uri)
-
-        if (transportHeader != null && clientTransport is TransportHeaderAware) {
-          clientTransport.setTransportHeaders({ headerMap(transportHeader) })
-        }
-
-        clientRSocketFactory.acceptor(this::createClientRequestHandler)
-
-        client = clientRSocketFactory.transport(clientTransport).start().block()
-
-        val run = run(client!!)
+        val run = run(client)
 
         if (timeout != null) {
-          run.blockLast(Duration.ofSeconds(timeout!!))
+          withTimeout(timeout!!, TimeUnit.SECONDS) {
+            run.then().awaitFirstOrNull()
+          }
         } else {
-          run.blockLast()
+          run.then().awaitFirstOrNull()
         }
       }
     } catch (e: Exception) {
@@ -176,10 +162,39 @@ class Main : HelpOption() {
     }
   }
 
-  private fun showError(s: String, t: Throwable?) {
-    runBlocking {
-      outputHandler.showError(s, t)
+  suspend fun buildServer(uri: String): Closeable {
+    val transport = RSocketFactory.receive()
+      .acceptor(this::createServerRequestHandler)
+      .transport(UriTransportRegistry.serverForUri(uri))
+    return transport.start().awaitFirst()
+  }
+
+  suspend fun buildClient(uri: String): RSocket {
+    val clientRSocketFactory = RSocketFactory.connect()
+
+    if (keepalive != null) {
+      clientRSocketFactory.keepAliveTickPeriod(parseShortDuration(keepalive!!))
     }
+    clientRSocketFactory.errorConsumer { t ->
+      runBlocking {
+        outputHandler.showError("client error", t)
+      }
+    }
+    clientRSocketFactory.metadataMimeType(standardMimeType(metadataFormat))
+    clientRSocketFactory.dataMimeType(standardMimeType(dataFormat))
+    if (setup != null) {
+      clientRSocketFactory.setupPayload(parseSetupPayload())
+    }
+
+    val clientTransport = UriTransportRegistry.clientForUri(uri)
+
+    if (transportHeader != null && clientTransport is TransportHeaderAware) {
+      clientTransport.setTransportHeaders({ headerMap(transportHeader) })
+    }
+
+    clientRSocketFactory.acceptor(this::createClientRequestHandler)
+
+    return clientRSocketFactory.transport(clientTransport).start().awaitFirst()
   }
 
   private fun createClientRequestHandler(socket: RSocket): RSocket = createResponder()
@@ -209,42 +224,38 @@ class Main : HelpOption() {
 
   private fun createResponder(): AbstractRSocket {
     return object : AbstractRSocket() {
-      override fun fireAndForget(payload: Payload): Mono<Void> {
-        showPayload(payload)
-        return Mono.empty()
-      }
+      override fun fireAndForget(payload: Payload): Mono<Void> = mono {
+        outputHandler.showOutput(payload.dataUtf8)
+      }.then()
 
-      override fun requestResponse(payload: Payload): Mono<Payload> {
-        return handleIncomingPayload(payload).single()
-      }
+      override fun requestResponse(payload: Payload): Mono<Payload> = handleIncomingPayload(payload).single()
 
-      override fun requestStream(payload: Payload): Flux<Payload> {
-        return handleIncomingPayload(payload)
-      }
+      override fun requestStream(payload: Payload): Flux<Payload> = handleIncomingPayload(payload)
 
       override fun requestChannel(payloads: Publisher<Payload>): Flux<Payload> {
-        Flux.from(payloads).takeN(requestN)
-          .subscribe({ p -> showPayload(p) }, { e -> showError("channel error", e) })
+        val flux = Flux.from(payloads).takeN(requestN)
+        flux
+          .subscribe({ p ->
+            runBlocking {
+              outputHandler.showOutput(p.dataUtf8)
+            }
+          }, { e ->
+            runBlocking {
+              outputHandler.showError("channel error", e)
+            }
+          })
         return inputPublisherX()
       }
 
-      override fun metadataPush(payload: Payload): Mono<Void> {
-        showOutput(payload.metadataUtf8)
-        return Mono.empty()
-      }
+      override fun metadataPush(payload: Payload): Mono<Void> = mono {
+        outputHandler.showOutput(payload.metadataUtf8)
+      }.then()
     }
   }
 
-  private fun showOutput(metadataUtf8: String) {
-    runBlocking {
-      outputHandler.showOutput(metadataUtf8)
-    }
-  }
-
-  private fun handleIncomingPayload(payload: Payload): Flux<Payload> {
-    showPayload(payload)
-    return inputPublisherX()
-  }
+  private fun handleIncomingPayload(payload: Payload): Flux<Payload> = mono {
+    outputHandler.showOutput(payload.dataUtf8)
+  }.thenMany(inputPublisherX())
 
   fun getInputFromSource(source: String?, nullHandler: Supplier<String>): String =
     when (source) {
@@ -272,14 +283,10 @@ class Main : HelpOption() {
     return inputPublisher.singleInputPayload(input ?: listOf("-"), buildMetadata())
   }
 
-  private fun showPayload(payload: Payload) {
-    showOutput(payload.dataUtf8)
-  }
-
-  fun run(client: RSocket): Flux<Void> = try {
+  suspend fun run(client: RSocket): Flux<Void> = try {
     runAllOperations(client)
   } catch (e: Exception) {
-    showError("error", e)
+    outputHandler.showError("error", e)
     Flux.empty()
   }
 
@@ -297,14 +304,22 @@ class Main : HelpOption() {
     }
       .takeN(requestN)
       .map({ it.dataUtf8 })
-      .doOnNext({ showOutput(it) })
-      .doOnError { e -> showError("error from server", e) }
+      .doOnNext({
+        runBlocking {
+          outputHandler.showOutput(it)
+        }
+      })
+      .doOnError { e ->
+        runBlocking {
+          outputHandler.showError("error from server", e)
+        }
+      }
       .onErrorResume { Flux.empty() }
-      .thenMany(Flux.empty())
+      .then().flux()
   } catch (ex: Exception) {
-    Flux.error<Void>(ex)
-      .doOnError { e -> showError("error before query", e) }
-      .onErrorResume { Flux.empty() }
+    mono {
+      outputHandler.showError("error before query", ex)
+    }.then().flux()
   }
 
   companion object {
@@ -321,7 +336,6 @@ class Main : HelpOption() {
       }
     }
 
-    @Throws(Exception::class)
     @JvmStatic
     fun main(vararg args: String) {
       runBlocking {
