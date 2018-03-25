@@ -5,12 +5,13 @@ import io.rsocket.Closeable
 import io.rsocket.Payload
 import io.rsocket.RSocket
 import io.rsocket.RSocketFactory
-import io.rsocket.cli.Main
 import io.rsocket.cli.LineInputPublishers
+import io.rsocket.cli.Main
 import io.rsocket.exceptions.ApplicationException
 import io.rsocket.transport.local.LocalClientTransport
 import io.rsocket.transport.local.LocalServerTransport
 import io.rsocket.util.DefaultPayload
+import kotlinx.coroutines.experimental.reactive.awaitFirstOrNull
 import kotlinx.coroutines.experimental.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -44,7 +45,7 @@ class BasicOperationTest {
     }
   }
 
-  private fun connect() {
+  suspend fun connect() {
     main.outputHandler = output
     main.inputPublisher = LineInputPublishers(output)
 
@@ -52,12 +53,12 @@ class BasicOperationTest {
       .acceptor { _, _ -> Mono.just(requestHandler) }
       .transport(LocalServerTransport.create("test-local-server-" + testName!!))
       .start()
-      .block()
+      .awaitFirstOrNull()
 
     client = RSocketFactory.connect()
       .transport(LocalClientTransport.create("test-local-server-" + testName!!))
       .start()
-      .block()
+      .awaitFirstOrNull()
   }
 
   @After
@@ -234,7 +235,9 @@ class BasicOperationTest {
   }
 
   private fun run() {
-    connect()
-    main.run(client!!).blockLast(Duration.ofSeconds(3))
+    runBlocking {
+      connect()
+      main.run(client!!).blockLast(Duration.ofSeconds(3))
+    }
   }
 }
