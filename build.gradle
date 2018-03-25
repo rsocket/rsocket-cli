@@ -1,5 +1,5 @@
 buildscript {
-    ext.kotlin_version = '1.2.30'
+    ext.kotlin_version = '1.2.31'
     repositories {
         maven { url "http://dl.bintray.com/kotlin/kotlin-dev" }
         mavenCentral()
@@ -8,7 +8,7 @@ buildscript {
     dependencies {
         classpath 'org.junit.platform:junit-platform-gradle-plugin:1.1.0'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-        classpath "com.github.shyiko:ktlint:0.19.0"
+        classpath "com.github.shyiko:ktlint:0.20.0"
     }
 }
 
@@ -17,7 +17,7 @@ plugins {
     id 'com.github.ben-manes.versions' version '0.17.0'
     id 'net.nemerosa.versioning' version '2.6.1'
     id 'io.codearte.nexus-staging' version '0.11.0'
-    id "org.jlleitschuh.gradle.ktlint" version "3.0.1"
+    id "org.jlleitschuh.gradle.ktlint" version "3.2.0"
 }
 
 buildScan { licenseAgreementUrl = 'https://gradle.com/terms-of-service'; licenseAgree = 'yes' }
@@ -87,7 +87,7 @@ repositories {
   maven { url "https://jitpack.io" }
   mavenCentral()
 }
-  
+
 dependencies {
   compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:${kotlin_version}"
   compile "org.jetbrains.kotlin:kotlin-reflect:${kotlin_version}"
@@ -138,7 +138,7 @@ test {
 dependencyUpdates.resolutionStrategy = {
     componentSelection { rules ->
         rules.all { ComponentSelection selection ->
-            boolean rejected = (selection.candidate.group == "io.netty" && selection.candidate.version ==~ /5\..*/) || 
+            boolean rejected = (selection.candidate.group == "io.netty" && selection.candidate.version ==~ /5\..*/) ||
             	(selection.candidate.version ==~ /.*(beta.*|M\d|alpha.*)/)
             if (rejected) {
                 selection.reject('Release candidate')
