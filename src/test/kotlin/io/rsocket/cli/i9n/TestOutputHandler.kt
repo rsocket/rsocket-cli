@@ -8,19 +8,19 @@ class TestOutputHandler : OutputHandler<Any> {
   private val stdout: MutableList<String> = Lists.newArrayList()
   private val stderr: MutableList<String> = Lists.newArrayList()
 
-  override suspend fun showOutput(output: Any) {
-    stdout.add(output.toString())
+  override suspend fun showOutput(response: Any) {
+    stdout.add(response.toString())
   }
 
-  override fun info(msg: String) {
-    stderr.add(msg)
+  override fun info(message: String) {
+    stderr.add(message)
   }
 
-  override suspend fun showError(msg: String?, e: Throwable?) {
+  override suspend fun showError(message: String?, e: Throwable?) {
     if (e is UsageException) {
       stderr.add(e.message.toString())
     } else {
-      stderr.add(msg + ": " + e.toString())
+      stderr.add(message + ": " + e.toString())
     }
   }
 

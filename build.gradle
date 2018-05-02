@@ -1,36 +1,34 @@
 buildscript {
-    ext.kotlin_version = '1.2.31'
+    ext.kotlin_version = '1.2.41'
     repositories {
         maven { url "http://dl.bintray.com/kotlin/kotlin-dev" }
         mavenCentral()
         jcenter()
     }
     dependencies {
-        classpath 'org.junit.platform:junit-platform-gradle-plugin:1.1.0'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-        classpath "com.github.shyiko:ktlint:0.20.0"
+        classpath "com.github.shyiko:ktlint:0.22.0"
     }
 }
 
 plugins {
-    id "com.gradle.build-scan" version "1.12.1"
+    id "com.gradle.build-scan" version "1.13.1"
     id 'com.github.ben-manes.versions' version '0.17.0'
     id 'net.nemerosa.versioning' version '2.6.1'
     id 'io.codearte.nexus-staging' version '0.11.0'
-    id "org.jlleitschuh.gradle.ktlint" version "3.2.0"
+    id "org.jlleitschuh.gradle.ktlint" version "3.3.0"
 }
 
 buildScan { licenseAgreementUrl = 'https://gradle.com/terms-of-service'; licenseAgree = 'yes' }
 
 description = 'RSocket CLI.'
 
-ext.junitJupiterVersion = '5.1.0'
+ext.junitJupiterVersion = '5.2.0'
 
 apply plugin: 'java'
 apply plugin: 'kotlin'
 apply plugin: 'application'
 apply plugin: 'maven'
-apply plugin: 'org.junit.platform.gradle.plugin'
 apply plugin: 'maven-publish'
 
 group = 'com.baulsupp'
@@ -97,28 +95,28 @@ dependencies {
 
   implementation 'io.rsocket:rsocket-transport-netty:0.10.3'
   implementation 'io.rsocket:rsocket-transport-local:0.10.3'
-  implementation 'io.netty:netty-buffer:4.1.22.Final'
-  implementation 'io.netty:netty-codec:4.1.22.Final'
-  implementation 'io.netty:netty-codec-http:4.1.22.Final'
-  implementation 'io.netty:netty-codec-socks:4.1.22.Final'
-  implementation 'io.netty:netty-common:4.1.22.Final'
-  implementation 'io.netty:netty-handler:4.1.22.Final'
-  implementation 'io.netty:netty-handler-proxy:4.1.22.Final'
-  implementation 'io.netty:netty-resolver:4.1.22.Final'
-  implementation 'io.netty:netty-transport:4.1.22.Final'
+  implementation 'io.netty:netty-buffer:4.1.24.Final'
+  implementation 'io.netty:netty-codec:4.1.24.Final'
+  implementation 'io.netty:netty-codec-http:4.1.24.Final'
+  implementation 'io.netty:netty-codec-socks:4.1.24.Final'
+  implementation 'io.netty:netty-common:4.1.24.Final'
+  implementation 'io.netty:netty-handler:4.1.24.Final'
+  implementation 'io.netty:netty-handler-proxy:4.1.24.Final'
+  implementation 'io.netty:netty-resolver:4.1.24.Final'
+  implementation 'io.netty:netty-transport:4.1.24.Final'
 
   implementation 'io.airlift:airline:0.8'
-  implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.9.4'
-  implementation 'com.fasterxml.jackson.core:jackson-core:2.9.4'
-  implementation 'com.fasterxml.jackson.core:jackson-databind:2.9.4'
-  implementation 'com.fasterxml.jackson.module:jackson-module-afterburner:2.9.4'
-  implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.9.4'
+  implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.9.5'
+  implementation 'com.fasterxml.jackson.core:jackson-core:2.9.5'
+  implementation 'com.fasterxml.jackson.core:jackson-databind:2.9.5'
+  implementation 'com.fasterxml.jackson.module:jackson-module-afterburner:2.9.5'
+  implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.9.5'
 
   implementation 'org.eclipse.jetty.http2:http2-http-client-transport:9.4.9.v20180320'
   implementation 'org.mortbay.jetty.alpn:alpn-boot:8.1.12.v20180117'
   implementation 'com.spotify:completable-futures:0.3.2'
 
-  implementation 'com.baulsupp:oksocial-output:1.8.0'
+  implementation 'com.baulsupp:oksocial-output:4.9.0'
 
   implementation 'org.slf4j:slf4j-jdk14:1.8.0-beta2'
 
@@ -127,9 +125,9 @@ dependencies {
   testRuntime "org.junit.jupiter:junit-jupiter-engine:${junitJupiterVersion}"
 
   // If you also want to support JUnit 3 and JUnit 4 tests
-  testRuntime "org.junit.vintage:junit-vintage-engine:5.1.0"
+  testRuntime "org.junit.vintage:junit-vintage-engine:5.2.0"
 
-  testRuntime "org.junit.platform:junit-platform-launcher:1.1.0"
+  testRuntime "org.junit.platform:junit-platform-launcher:1.2.0"
 
   testCompile "org.jetbrains.kotlin:kotlin-test:${kotlin_version}"
   testCompile "org.jetbrains.kotlin:kotlin-test-junit:${kotlin_version}"
