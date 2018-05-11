@@ -185,7 +185,7 @@ fun <T> Flux<T>.takeN(request: Int): Flux<T> =
   if (request < Int.MAX_VALUE) this.limitRate(request).take(request.toLong()) else this
 
 fun <T> Flux<T>.onNext(block: suspend (T) -> Unit): Flux<T> {
-  return this.flatMap {
+  return this.concatMap {
     mono {
       block.invoke(it)
     }.thenMany(Flux.just(it))

@@ -234,7 +234,7 @@ class Main : HelpOption() {
       override fun requestChannel(payloads: Publisher<Payload>): Flux<Payload> {
         Flux.from(payloads).takeN(requestN)
           .onNext { outputHandler.showOutput(it.dataUtf8) }
-          .onError {outputHandler.showError("channel error", it) }.subscribe()
+          .onError { outputHandler.showError("channel error", it) }.subscribe()
         return inputPublisherX()
       }
 
@@ -295,7 +295,7 @@ class Main : HelpOption() {
     }
       .takeN(requestN)
       .map { it.dataUtf8 }
-      .onNext {outputHandler.showOutput(it) }
+      .onNext { outputHandler.showOutput(it) }
       .onError { outputHandler.showError("error from server", it) }
       .onErrorResume { Flux.empty() }
       .then().flux()
