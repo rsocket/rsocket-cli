@@ -12,7 +12,7 @@ buildscript {
 }
 
 plugins {
-    id "com.gradle.build-scan" version "1.13.1"
+    id "com.gradle.build-scan" version "1.14"
     id 'com.github.ben-manes.versions' version '0.17.0'
     id 'net.nemerosa.versioning' version '2.6.1'
     id 'io.codearte.nexus-staging' version '0.11.0'
@@ -93,17 +93,20 @@ dependencies {
   implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:0.22.5'
   implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-reactor:0.22.5'
 
-  implementation 'io.rsocket:rsocket-transport-netty:0.10.3'
-  implementation 'io.rsocket:rsocket-transport-local:0.10.3'
-  implementation 'io.netty:netty-buffer:4.1.24.Final'
-  implementation 'io.netty:netty-codec:4.1.24.Final'
-  implementation 'io.netty:netty-codec-http:4.1.24.Final'
-  implementation 'io.netty:netty-codec-socks:4.1.24.Final'
-  implementation 'io.netty:netty-common:4.1.24.Final'
-  implementation 'io.netty:netty-handler:4.1.24.Final'
-  implementation 'io.netty:netty-handler-proxy:4.1.24.Final'
-  implementation 'io.netty:netty-resolver:4.1.24.Final'
-  implementation 'io.netty:netty-transport:4.1.24.Final'
+  implementation 'io.projectreactor:reactor-core:Bismuth-SR10'
+  implementation 'io.rsocket:rsocket-transport-netty:0.11.3'
+  implementation 'io.rsocket:rsocket-transport-local:0.11.3'
+  implementation 'io.rsocket:rsocket-core:0.11.3'
+  implementation 'io.projectreactor.ipc:reactor-netty:Bismuth-SR10'
+  implementation 'io.netty:netty-buffer:4.1.25.Final'
+  implementation 'io.netty:netty-codec:4.1.25.Final'
+  implementation 'io.netty:netty-codec-http:4.1.25.Final'
+  implementation 'io.netty:netty-codec-socks:4.1.25.Final'
+  implementation 'io.netty:netty-common:4.1.25.Final'
+  implementation 'io.netty:netty-handler:4.1.25.Final'
+  implementation 'io.netty:netty-handler-proxy:4.1.25.Final'
+  implementation 'io.netty:netty-resolver:4.1.25.Final'
+  implementation 'io.netty:netty-transport:4.1.25.Final'
 
   implementation 'io.airlift:airline:0.8'
   implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.9.5'
