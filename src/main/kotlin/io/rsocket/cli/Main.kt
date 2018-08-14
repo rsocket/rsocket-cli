@@ -35,11 +35,11 @@ import io.rsocket.transport.TransportHeaderAware
 import io.rsocket.uri.UriTransportRegistry
 import io.rsocket.util.DefaultPayload
 import io.rsocket.util.EmptyPayload
-import kotlinx.coroutines.experimental.reactive.awaitFirst
-import kotlinx.coroutines.experimental.reactive.awaitFirstOrNull
-import kotlinx.coroutines.experimental.reactor.mono
-import kotlinx.coroutines.experimental.runBlocking
-import kotlinx.coroutines.experimental.withTimeout
+import kotlinx.coroutines.reactive.awaitFirst
+import kotlinx.coroutines.reactive.awaitFirstOrNull
+import kotlinx.coroutines.reactor.mono
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.reactivestreams.Publisher
 import org.slf4j.LoggerFactory
 import reactor.core.publisher.Flux

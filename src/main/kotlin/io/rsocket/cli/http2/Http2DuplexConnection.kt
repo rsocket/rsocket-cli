@@ -3,10 +3,12 @@ package io.rsocket.cli.http2
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.Unpooled
 import io.netty.channel.ChannelHandlerContext
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder
 import io.rsocket.DuplexConnection
 import io.rsocket.Frame
 import io.rsocket.exceptions.ConnectionCloseException
-import io.rsocket.transport.netty.RSocketLengthCodec
+import io.rsocket.frame.FrameHeaderFlyweight.FRAME_LENGTH_MASK
+import io.rsocket.frame.FrameHeaderFlyweight.FRAME_LENGTH_SIZE
 import org.eclipse.jetty.http.HttpFields
 import org.eclipse.jetty.http.HttpURI
 import org.eclipse.jetty.http.HttpVersion
@@ -112,8 +114,7 @@ class Http2DuplexConnection : DuplexConnection {
   private fun dataFrame(f: Frame): DataFrame =
     DataFrame(stream!!.id, f.content().nioBuffer(), false)
 
-  class MyRSocketLengthCodec : RSocketLengthCodec() {
-    @Throws(Exception::class)
+  class MyRSocketLengthCodec : LengthFieldBasedFrameDecoder(FRAME_LENGTH_MASK, 0, FRAME_LENGTH_SIZE, 0, 0) {
     public override fun decode(ctx: ChannelHandlerContext?, `in`: ByteBuf): ByteBuf? {
       return super.decode(ctx, `in`) as ByteBuf?
     }

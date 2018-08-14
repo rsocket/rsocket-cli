@@ -10,7 +10,7 @@ import com.google.common.io.Files
 import io.airlift.airline.ParseException
 import io.netty.util.internal.logging.InternalLoggerFactory
 import io.netty.util.internal.logging.JdkLoggerFactory
-import kotlinx.coroutines.experimental.reactor.mono
+import kotlinx.coroutines.reactor.mono
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.io.File

@@ -1,22 +1,22 @@
 buildscript {
-    ext.kotlin_version = '1.2.51'
-    repositories {
-        maven { url "http://dl.bintray.com/kotlin/kotlin-dev" }
-        mavenCentral()
-        jcenter()
-    }
-    dependencies {
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-        classpath "com.github.shyiko:ktlint:0.24.0"
-    }
+  ext.kotlin_version = '1.3-M1'
+  repositories {
+    maven { url "http://dl.bintray.com/kotlin/kotlin-eap" }
+    mavenCentral()
+    jcenter()
+  }
+  dependencies {
+    classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    classpath "com.github.shyiko:ktlint:0.27.0"
+  }
 }
 
 plugins {
-    id "com.gradle.build-scan" version "1.15.1"
-    id 'com.github.ben-manes.versions' version '0.20.0'
-    id 'net.nemerosa.versioning' version '2.7.1'
-    id 'io.codearte.nexus-staging' version '0.11.0'
-    id "org.jlleitschuh.gradle.ktlint" version "3.3.0"
+  id "com.gradle.build-scan" version "1.15.2"
+  id 'com.github.ben-manes.versions' version '0.20.0'
+  id 'net.nemerosa.versioning' version '2.7.1'
+  id 'io.codearte.nexus-staging' version '0.11.0'
+  id 'org.jmailen.kotlinter' version '1.16.0'
 }
 
 buildScan { licenseAgreementUrl = 'https://gradle.com/terms-of-service'; licenseAgree = 'yes' }
@@ -84,19 +84,20 @@ repositories {
   maven { url 'https://dl.bintray.com/reactivesocket/RSocket' }
   maven { url "https://oss.sonatype.org/content/repositories/releases" }
   maven { url "https://jitpack.io" }
+  maven { url "http://dl.bintray.com/kotlin/kotlin-eap" }
   mavenCentral()
   jcenter()
 }
 
 dependencies {
   implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:${kotlin_version}"
-  implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:0.23.4'
-  implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-reactor:0.23.4'
+  implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:0.24.0-eap13'
+  implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-reactor:0.24.0-eap13'
 
 //  implementation 'io.projectreactor:reactor-core:Bismuth-SR10'
-  implementation 'io.rsocket:rsocket-transport-netty:0.11.3'
-  implementation 'io.rsocket:rsocket-transport-local:0.11.3'
-  implementation 'io.rsocket:rsocket-core:0.11.3'
+  implementation 'io.rsocket:rsocket-transport-netty:0.11.5'
+  implementation 'io.rsocket:rsocket-transport-local:0.11.5'
+  implementation 'io.rsocket:rsocket-core:0.11.5'
 //  implementation 'io.netty:netty-buffer:4.1.27.Final'
 //  implementation 'io.netty:netty-codec:4.1.27.Final'
 //  implementation 'io.netty:netty-codec-http:4.1.27.Final'
@@ -118,7 +119,7 @@ dependencies {
   implementation 'org.mortbay.jetty.alpn:alpn-boot:8.1.12.v20180117'
   implementation 'com.spotify:completable-futures:0.3.2'
 
-  implementation 'com.baulsupp:oksocial-output:4.9.0'
+  implementation 'com.baulsupp:oksocial-output:4.15.0'
 
   implementation 'org.slf4j:slf4j-jdk14:1.8.0-beta2'
 
@@ -145,24 +146,24 @@ test {
 }
 
 dependencyUpdates.resolutionStrategy = {
-    componentSelection { rules ->
-        rules.all { ComponentSelection selection ->
-            boolean rejected = (selection.candidate.group == "io.netty" && selection.candidate.version ==~ /5\..*/) ||
-            	(selection.candidate.version ==~ /.*(beta.*|M\d|alpha.*)/)
-            if (rejected) {
-                selection.reject('Release candidate')
-            }
-        }
+  componentSelection { rules ->
+    rules.all { ComponentSelection selection ->
+      boolean rejected = (selection.candidate.group == "io.netty" && selection.candidate.version ==~ /5\..*/) ||
+        (selection.candidate.version ==~ /.*(beta.*|M\d|alpha.*)/)
+      if (rejected) {
+        selection.reject('Release candidate')
+      }
     }
+  }
 }
 
 test {
-    useJUnitPlatform {
-        excludeTags 'slow'
-        includeEngines 'junit-jupiter', 'junit-vintage'
-    }
+  useJUnitPlatform {
+    excludeTags 'slow'
+    includeEngines 'junit-jupiter', 'junit-vintage'
+  }
 
-    failFast = true
+  failFast = true
 }
 
 kotlin {

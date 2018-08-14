@@ -7,12 +7,12 @@ import io.rsocket.RSocket
 import io.rsocket.RSocketFactory
 import io.rsocket.cli.LineInputPublishers
 import io.rsocket.cli.Main
-import io.rsocket.exceptions.ApplicationException
+import io.rsocket.exceptions.ApplicationErrorException
 import io.rsocket.transport.local.LocalClientTransport
 import io.rsocket.transport.local.LocalServerTransport
 import io.rsocket.util.DefaultPayload
-import kotlinx.coroutines.experimental.reactive.awaitFirstOrNull
-import kotlinx.coroutines.experimental.runBlocking
+import kotlinx.coroutines.reactive.awaitFirstOrNull
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Ignore
@@ -164,11 +164,11 @@ class BasicOperationTest {
 
     requestHandler = object : AbstractRSocket() {
       override fun requestResponse(payload: Payload?): Mono<Payload> {
-        return Mono.error(ApplicationException("server failure"))
+        return Mono.error(ApplicationErrorException("server failure"))
       }
     }
 
-    expectedShowError("error from server", ApplicationException("server failure"))
+    expectedShowError("error from server", ApplicationErrorException("server failure"))
 
     run()
 
@@ -207,7 +207,7 @@ class BasicOperationTest {
       override fun requestStream(payload: Payload): Flux<Payload> {
         val flux = Flux.range(1, 3)
           .map { DefaultPayload.create("i $it") }
-          .concatWith(Mono.error(ApplicationException("failed")))
+          .concatWith(Mono.error(ApplicationErrorException("failed")))
         return flux
       }
     }
@@ -215,7 +215,7 @@ class BasicOperationTest {
     expectedShowOutput("i 1")
     expectedShowOutput("i 2")
     expectedShowOutput("i 3")
-    expectedShowError("error from server", ApplicationException("failed"))
+    expectedShowError("error from server", ApplicationErrorException("failed"))
 
     run()
 
