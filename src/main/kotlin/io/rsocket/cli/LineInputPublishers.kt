@@ -12,7 +12,7 @@ import java.util.Scanner
 
 class LineInputPublishers(val outputHandler: OutputHandler<*>) : InputPublisher {
   private fun filePublisher(filename: String): Flux<String> {
-    return Flux.defer({
+    return Flux.defer {
       val file = expectedFile(filename)
 
       if (!file.exists()) {
@@ -28,9 +28,9 @@ class LineInputPublishers(val outputHandler: OutputHandler<*>) : InputPublisher 
           } else {
             s.complete()
           }
-        }.doFinally({ r.close() }).subscribeOn(Schedulers.elastic())
+        }.doFinally { r.close() }.subscribeOn(Schedulers.elastic())
       }
-    })
+    }
   }
 
   override fun singleInputPayload(input: List<String>, metadata: ByteArray?): Payload {
@@ -61,8 +61,8 @@ class LineInputPublishers(val outputHandler: OutputHandler<*>) : InputPublisher 
       } else {
         s.complete()
       }
-    }.doOnSubscribe({
+    }.doOnSubscribe {
       outputHandler.info("Type commands to send to the server.")
-    }).subscribeOn(Schedulers.elastic())
+    }.subscribeOn(Schedulers.elastic())
   }
 }

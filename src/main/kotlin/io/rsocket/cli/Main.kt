@@ -188,7 +188,7 @@ class Main : HelpOption() {
     val clientTransport = UriTransportRegistry.clientForUri(uri)
 
     if (transportHeader != null && clientTransport is TransportHeaderAware) {
-      clientTransport.setTransportHeaders({ headerMap(transportHeader) })
+      clientTransport.setTransportHeaders { headerMap(transportHeader) }
     }
 
     clientRSocketFactory.acceptor(this::createClientRequestHandler)

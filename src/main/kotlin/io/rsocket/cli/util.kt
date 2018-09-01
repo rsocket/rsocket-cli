@@ -56,8 +56,8 @@ fun headerMap(headers: List<String>?): Map<String, String> {
       } else {
         val parts = header.split(":".toRegex(), 2).toTypedArray()
         // TODO: consider better strategy than simple trim
-        val name = parts[0].trim({ it <= ' ' })
-        val value = stringValue(parts[1].trim({ it <= ' ' }))
+        val name = parts[0].trim { it <= ' ' }
+        val value = stringValue(parts[1].trim { it <= ' ' })
         headerMap[name] = value
       }
     }

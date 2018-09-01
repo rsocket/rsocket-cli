@@ -183,8 +183,7 @@ class BasicOperationTest {
     requestHandler = object : AbstractRSocket() {
       override fun requestStream(payload: Payload): Flux<Payload> {
         val s = payload.dataUtf8
-        val flux = Flux.range(1, 3).map { _ -> DefaultPayload.create(s.reversed()) }
-        return flux
+        return Flux.range(1, 3).map { _ -> DefaultPayload.create(s.reversed()) }
       }
     }
 
@@ -205,10 +204,9 @@ class BasicOperationTest {
 
     requestHandler = object : AbstractRSocket() {
       override fun requestStream(payload: Payload): Flux<Payload> {
-        val flux = Flux.range(1, 3)
+        return Flux.range(1, 3)
           .map { DefaultPayload.create("i $it") }
           .concatWith(Mono.error(ApplicationErrorException("failed")))
-        return flux
       }
     }
 
