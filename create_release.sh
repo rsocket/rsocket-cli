@@ -36,4 +36,4 @@ echo Created "https://api.github.com/repos/rsocket/rsocket-cli/releases/${RELEAS
 
 ./gradlew -q clean distTar
 
-oksocial -H "Content-Type: application/x-gzip" -d "@build/distributions/rsocket-cli-${TAG_VERSION}.tgz" "https://uploads.github.com/repos/rsocket/rsocket-cli/releases/${RELEASE_ID}/assets?name=rsocket-cli-${TAG_VERSION}.tgz" | jq ".browser_download_url"
+okurl -H "Content-Type: application/x-gzip" -d "@build/distributions/rsocket-cli-${TAG_VERSION}.tgz" "https://uploads.github.com/repos/rsocket/rsocket-cli/releases/${RELEASE_ID}/assets?name=rsocket-cli-${TAG_VERSION}.tgz" | jq ".browser_download_url"
