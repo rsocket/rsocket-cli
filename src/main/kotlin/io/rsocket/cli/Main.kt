@@ -216,8 +216,8 @@ class Main : HelpOption() {
   private fun createServerRequestHandler(setupPayload: ConnectionSetupPayload, socket: RSocket): Mono<RSocket> {
     LoggerFactory.getLogger(Main::class.java).debug("setup payload $setupPayload")
 
+    // TODO chain
     runAllOperations(socket).subscribe()
-
     return Mono.just(createResponder())
   }
 
@@ -232,6 +232,7 @@ class Main : HelpOption() {
       override fun requestStream(payload: Payload): Flux<Payload> = handleIncomingPayload(payload)
 
       override fun requestChannel(payloads: Publisher<Payload>): Flux<Payload> {
+        // TODO chain
         Flux.from(payloads).takeN(requestN)
           .onNext { outputHandler.showOutput(it.dataUtf8) }
           .onError { outputHandler.showError("channel error", it) }.subscribe()

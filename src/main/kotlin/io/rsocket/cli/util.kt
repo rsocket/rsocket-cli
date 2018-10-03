@@ -10,6 +10,8 @@ import com.google.common.io.Files
 import io.airlift.airline.ParseException
 import io.netty.util.internal.logging.InternalLoggerFactory
 import io.netty.util.internal.logging.JdkLoggerFactory
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.reactor.mono
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -186,7 +188,7 @@ fun <T> Flux<T>.takeN(request: Int): Flux<T> =
 
 fun <T> Flux<T>.onNext(block: suspend (T) -> Unit): Flux<T> {
   return this.concatMap {
-    mono {
+    GlobalScope.mono(Dispatchers.Default) {
       block.invoke(it)
     }.thenMany(Flux.just(it))
   }
@@ -194,7 +196,7 @@ fun <T> Flux<T>.onNext(block: suspend (T) -> Unit): Flux<T> {
 
 fun <T> Mono<T>.onNext(block: suspend (T) -> Unit): Mono<T> {
   return this.flatMap {
-    mono {
+    GlobalScope.mono(Dispatchers.Default) {
       block.invoke(it)
     }.then(Mono.just(it))
   }
@@ -202,7 +204,7 @@ fun <T> Mono<T>.onNext(block: suspend (T) -> Unit): Mono<T> {
 
 fun <T> Flux<T>.onError(block: suspend (Throwable) -> Unit): Flux<T> {
   return this.onErrorResume {
-    mono {
+    GlobalScope.mono(Dispatchers.Default) {
       block.invoke(it)
     }.thenMany(Flux.error(it))
   }
@@ -210,7 +212,7 @@ fun <T> Flux<T>.onError(block: suspend (Throwable) -> Unit): Flux<T> {
 
 fun <T> Mono<T>.onError(block: suspend (Throwable) -> Unit): Mono<T> {
   return this.onErrorResume {
-    mono {
+    GlobalScope.mono(Dispatchers.Default) {
       block.invoke(it)
     }.then(Mono.error(it))
   }

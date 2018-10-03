@@ -183,7 +183,7 @@ class BasicOperationTest {
     requestHandler = object : AbstractRSocket() {
       override fun requestStream(payload: Payload): Flux<Payload> {
         val s = payload.dataUtf8
-        return Flux.range(1, 3).map { _ -> DefaultPayload.create(s.reversed()) }
+        return Flux.range(1, 3).map { DefaultPayload.create(s.reversed()) }
       }
     }
 

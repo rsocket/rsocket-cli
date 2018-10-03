@@ -1,5 +1,7 @@
 buildscript {
-  ext.kotlin_version = '1.3-M2'
+  ext.kotlin_version = '1.3.0-rc-131'
+  ext.jackson_version = '2.9.7'
+  ext.junit_jupiter_version = '5.3.1'
   repositories {
     maven { url "https://dl.bintray.com/kotlin/kotlin-eap" }
     mavenCentral()
@@ -7,23 +9,21 @@ buildscript {
   }
   dependencies {
     classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-    classpath "com.github.shyiko:ktlint:0.27.0"
   }
 }
 
 plugins {
-  id "com.gradle.build-scan" version "1.15.2"
+  id "com.gradle.build-scan" version "1.16"
   id 'com.github.ben-manes.versions' version '0.20.0'
   id 'net.nemerosa.versioning' version '2.7.1'
-  id 'io.codearte.nexus-staging' version '0.11.0'
-//  id 'org.jmailen.kotlinter' version '1.16.0'
+  id 'io.codearte.nexus-staging' version '0.12.0'
+  id "org.jlleitschuh.gradle.ktlint" version "6.0.0"
 }
 
 buildScan { licenseAgreementUrl = 'https://gradle.com/terms-of-service'; licenseAgree = 'yes' }
 
 description = 'RSocket CLI.'
 
-ext.junitJupiterVersion = '5.2.0'
 
 apply plugin: 'java'
 apply plugin: 'kotlin'
@@ -91,43 +91,41 @@ repositories {
 
 dependencies {
   implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:${kotlin_version}"
-  implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:0.25.1-eap13"
-  implementation "org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:0.25.1-eap13"
-  implementation "org.jetbrains.kotlinx:kotlinx-coroutines-reactive:0.25.1-eap13"
-  implementation "org.jetbrains.kotlinx:kotlinx-coroutines-reactor:0.25.1-eap13"
+  implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:0.30.1-eap13"
+  implementation "org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:0.30.1-eap13"
+  implementation "org.jetbrains.kotlinx:kotlinx-coroutines-reactive:0.30.1-eap13"
+  implementation "org.jetbrains.kotlinx:kotlinx-coroutines-reactor:0.30.1-eap13"
 
-  implementation 'io.rsocket:rsocket-transport-netty:0.11.5'
-  implementation 'io.rsocket:rsocket-transport-local:0.11.5'
-  implementation 'io.rsocket:rsocket-core:0.11.5'
+  implementation 'io.rsocket:rsocket-transport-netty:0.11.8'
+  implementation 'io.rsocket:rsocket-transport-local:0.11.8'
+  implementation 'io.rsocket:rsocket-core:0.11.8'
 
   implementation 'io.airlift:airline:0.8'
-  implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.9.6'
-  implementation 'com.fasterxml.jackson.core:jackson-core:2.9.6'
-  implementation 'com.fasterxml.jackson.core:jackson-databind:2.9.6'
-  implementation 'com.fasterxml.jackson.module:jackson-module-afterburner:2.9.6'
-  implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.9.6'
+  implementation "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:$jackson_version"
+  implementation "com.fasterxml.jackson.core:jackson-core:$jackson_version"
+  implementation "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
+  implementation "com.fasterxml.jackson.module:jackson-module-afterburner:$jackson_version"
+  implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:$jackson_version"
 
   implementation 'org.eclipse.jetty.http2:http2-http-client-transport:9.4.11.v20180605'
   implementation 'org.mortbay.jetty.alpn:alpn-boot:8.1.12.v20180117'
   implementation 'com.spotify:completable-futures:0.3.2'
 
-  implementation 'com.baulsupp:oksocial-output:4.17.0'
+  implementation 'com.baulsupp:oksocial-output:4.19.0'
 
   implementation 'org.slf4j:slf4j-jdk14:1.8.0-beta2'
 
   // JUnit Jupiter API and TestEngine implementation
-  testCompile "org.junit.jupiter:junit-jupiter-api:${junitJupiterVersion}"
-  testRuntime "org.junit.jupiter:junit-jupiter-engine:${junitJupiterVersion}"
+  testCompile "org.junit.jupiter:junit-jupiter-api:$junit_jupiter_version"
+  testRuntime "org.junit.jupiter:junit-jupiter-engine:$junit_jupiter_version"
 
   // If you also want to support JUnit 3 and JUnit 4 tests
-  testRuntime "org.junit.vintage:junit-vintage-engine:5.2.0"
+  testRuntime "org.junit.vintage:junit-vintage-engine:$junit_jupiter_version"
 
-  testRuntime "org.junit.platform:junit-platform-launcher:1.2.0"
+  testRuntime "org.junit.platform:junit-platform-launcher:1.3.1"
 
   testCompile "org.jetbrains.kotlin:kotlin-test:${kotlin_version}"
   testCompile "org.jetbrains.kotlin:kotlin-test-junit:${kotlin_version}"
-
-  testRuntime 'org.slf4j:slf4j-jdk14:1.8.0-beta2'
 
   testCompile 'com.squareup.okhttp3:okhttp-testing-support:3.11.0'
   testCompile 'com.squareup.okhttp3:mockwebserver:3.11.0'
