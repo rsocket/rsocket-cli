@@ -35,6 +35,8 @@ import io.rsocket.transport.TransportHeaderAware
 import io.rsocket.uri.UriTransportRegistry
 import io.rsocket.util.DefaultPayload
 import io.rsocket.util.EmptyPayload
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactor.mono
@@ -149,7 +151,7 @@ class Main : HelpOption() {
         val run = run(client)
 
         if (timeout != null) {
-          withTimeout(timeout!!, TimeUnit.SECONDS) {
+          withTimeout(TimeUnit.SECONDS.toMillis(timeout!!)) {
             run.then().awaitFirstOrNull()
           }
         } else {
@@ -223,7 +225,7 @@ class Main : HelpOption() {
 
   private fun createResponder(): AbstractRSocket {
     return object : AbstractRSocket() {
-      override fun fireAndForget(payload: Payload): Mono<Void> = mono {
+      override fun fireAndForget(payload: Payload): Mono<Void> = GlobalScope.mono(Dispatchers.Default) {
         outputHandler.showOutput(payload.dataUtf8)
       }.then()
 
@@ -239,13 +241,13 @@ class Main : HelpOption() {
         return inputPublisherX()
       }
 
-      override fun metadataPush(payload: Payload): Mono<Void> = mono {
+      override fun metadataPush(payload: Payload): Mono<Void> = GlobalScope.mono(Dispatchers.Default) {
         outputHandler.showOutput(payload.metadataUtf8)
       }.then()
     }
   }
 
-  private fun handleIncomingPayload(payload: Payload): Flux<Payload> = mono {
+  private fun handleIncomingPayload(payload: Payload): Flux<Payload> = GlobalScope.mono(Dispatchers.Default) {
     outputHandler.showOutput(payload.dataUtf8)
   }.thenMany(inputPublisherX())
 
@@ -301,7 +303,7 @@ class Main : HelpOption() {
       .onErrorResume { Flux.empty() }
       .then().flux()
   } catch (ex: Exception) {
-    mono {
+    GlobalScope.mono(Dispatchers.Default) {
       outputHandler.showError("error before query", ex)
     }.then().flux()
   }
