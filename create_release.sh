@@ -13,6 +13,8 @@ BRANCH="release/$VERSION"
 git co -b "$BRANCH"
 git push origin "$BRANCH"
 
+./gradlew -q clean distTar
+
 RELEASE_BODY=$(cat <<EOF
 {
   "tag_name": "${TAG_VERSION}",
@@ -28,8 +30,6 @@ EOF
 RELEASE_ID=$(okurl -d "$RELEASE_BODY" https://api.github.com/repos/rsocket/rsocket-cli/releases | jq .id)
 
 echo Created "https://api.github.com/repos/rsocket/rsocket-cli/releases/${RELEASE_ID}"
-
-./gradlew -q clean distTar
 
 okurl -H "Content-Type: application/x-gzip" -d "@build/distributions/rsocket-cli-${TAG_VERSION}.tgz" "https://uploads.github.com/repos/rsocket/rsocket-cli/releases/${RELEASE_ID}/assets?name=rsocket-cli-${TAG_VERSION}.tgz" | jq ".browser_download_url"
 
