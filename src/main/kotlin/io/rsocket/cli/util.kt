@@ -4,10 +4,10 @@ import com.baulsupp.oksocial.output.UsageException
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory
+import com.github.rvesse.airline.parser.errors.ParseException
 import com.google.common.base.Charsets
 import com.google.common.collect.Lists
 import com.google.common.io.Files
-import io.airlift.airline.ParseException
 import io.netty.util.internal.logging.InternalLoggerFactory
 import io.netty.util.internal.logging.JdkLoggerFactory
 import kotlinx.coroutines.Dispatchers

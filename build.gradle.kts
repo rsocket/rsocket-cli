@@ -85,7 +85,6 @@ val jar = tasks["jar"] as org.gradle.jvm.tasks.Jar
 
 dependencies {
   implementation(Deps.activation)
-  implementation(Deps.airline1)
   implementation(Deps.airline2)
   implementation(Deps.byteunits)
   implementation(Deps.coroutinesCore)
