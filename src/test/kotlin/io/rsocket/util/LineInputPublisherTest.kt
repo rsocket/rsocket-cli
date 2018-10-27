@@ -1,15 +1,15 @@
 package io.rsocket.util
 
 import io.rsocket.Payload
-import io.rsocket.cli.i9n.TestOutputHandler
 import io.rsocket.cli.LineInputPublishers
+import io.rsocket.cli.i9n.TestOutputHandler
 import org.junit.Test
 import reactor.core.publisher.Flux
 import kotlin.test.assertEquals
 
 class LineInputPublisherTest {
-  val output = TestOutputHandler()
-  val lip = LineInputPublishers(output)
+  private val output = TestOutputHandler()
+  private val lip = LineInputPublishers(output)
 
   @Test
   fun multipleInputs() {
