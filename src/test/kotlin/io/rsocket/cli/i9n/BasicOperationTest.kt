@@ -45,7 +45,7 @@ class BasicOperationTest {
     }
   }
 
-  suspend fun connect() {
+  private suspend fun connect() {
     main.outputHandler = output
     main.inputPublisher = LineInputPublishers(output)
 

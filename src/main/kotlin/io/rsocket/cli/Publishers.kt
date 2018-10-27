@@ -15,15 +15,19 @@
  */
 package io.rsocket.cli
 
-import com.google.common.io.CharSource
 import reactor.core.publisher.Flux
-import java.io.IOException
+import reactor.core.publisher.Mono
+import reactor.core.scheduler.Schedulers
+import java.io.File
+import java.nio.file.Files
+import java.util.stream.Stream
 
 object Publishers {
-
-  fun splitInLines(inputStream: CharSource): Flux<String> = try {
-    Flux.fromStream(inputStream.openBufferedStream().lines())
-  } catch (e: IOException) {
-    Flux.error(e)
+  fun splitInLines(inputFile: File): Flux<String> {
+    return Flux.using({ Files.lines(inputFile.toPath()) }, { Flux.fromStream(it) }, Stream<String>::close).subscribeOn(Schedulers.elastic())
   }
-} // No instances.
+
+  fun read(inputFile: File): Mono<String> {
+    return Mono.defer { Mono.just(inputFile.readText()) }.subscribeOn(Schedulers.elastic())
+  }
+}

@@ -2,15 +2,15 @@ package io.rsocket.cli
 
 import com.baulsupp.oksocial.output.OutputHandler
 import com.baulsupp.oksocial.output.UsageException
-import com.google.common.io.Files
 import io.rsocket.Payload
 import io.rsocket.util.DefaultPayload
 import reactor.core.publisher.Flux
 import reactor.core.scheduler.Schedulers
+import java.io.File
 import java.nio.charset.StandardCharsets
 import java.util.Scanner
 
-class LineInputPublishers(val outputHandler: OutputHandler<*>) : InputPublisher {
+class LineInputPublishers(private val outputHandler: OutputHandler<*>) : InputPublisher {
   private fun filePublisher(filename: String): Flux<String> {
     return Flux.defer {
       val file = expectedFile(filename)
@@ -18,17 +18,7 @@ class LineInputPublishers(val outputHandler: OutputHandler<*>) : InputPublisher 
       if (!file.exists()) {
         Flux.error(UsageException("file not found: $filename"))
       } else {
-        val r = Files.newReader(file, StandardCharsets.UTF_8)
-
-        Flux.generate<String> { s ->
-          val line = r.readLine()
-
-          if (line != null) {
-            s.next(line)
-          } else {
-            s.complete()
-          }
-        }.doFinally { r.close() }.subscribeOn(Schedulers.elastic())
+        Publishers.splitInLines(File(filename))
       }
     }
   }

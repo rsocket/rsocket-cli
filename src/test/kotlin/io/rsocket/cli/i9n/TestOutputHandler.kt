@@ -2,11 +2,10 @@ package io.rsocket.cli.i9n
 
 import com.baulsupp.oksocial.output.OutputHandler
 import com.baulsupp.oksocial.output.UsageException
-import com.google.common.collect.Lists
 
 class TestOutputHandler : OutputHandler<Any> {
-  private val stdout: MutableList<String> = Lists.newArrayList()
-  private val stderr: MutableList<String> = Lists.newArrayList()
+  private val stdout = mutableListOf<String>()
+  private val stderr = mutableListOf<String>()
 
   override suspend fun showOutput(response: Any) {
     stdout.add(response.toString())

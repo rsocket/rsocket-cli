@@ -16,14 +16,13 @@ package io.rsocket.cli
 import com.baulsupp.oksocial.output.ConsoleHandler
 import com.baulsupp.oksocial.output.OutputHandler
 import com.baulsupp.oksocial.output.UsageException
-import com.google.common.io.Files
-import io.airlift.airline.Arguments
-import io.airlift.airline.Command
-import io.airlift.airline.Help
-import io.airlift.airline.HelpOption
-import io.airlift.airline.Option
-import io.airlift.airline.ParseException
-import io.airlift.airline.SingleCommand
+import com.github.rvesse.airline.HelpOption
+import com.github.rvesse.airline.SingleCommand
+import com.github.rvesse.airline.annotations.Arguments
+import com.github.rvesse.airline.annotations.Command
+import com.github.rvesse.airline.annotations.Option
+import com.github.rvesse.airline.annotations.restrictions.AllowedRawValues
+import com.github.rvesse.airline.parser.errors.ParseException
 import io.rsocket.AbstractRSocket
 import io.rsocket.Closeable
 import io.rsocket.ConnectionSetupPayload
@@ -46,11 +45,13 @@ import org.reactivestreams.Publisher
 import org.slf4j.LoggerFactory
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import reactor.core.publisher.Mono.defer
+import reactor.core.publisher.Mono.just
 import java.nio.charset.StandardCharsets
 import java.util.ArrayList
 import java.util.concurrent.TimeUnit
 import java.util.function.Supplier
-import kotlin.system.exitProcess
+import javax.inject.Inject
 
 /**
  * Simple command line tool to make a RSocket connection and send/receive elements.
@@ -58,7 +59,10 @@ import kotlin.system.exitProcess
  * Currently limited in features, only supports a text/line based approach.
  */
 @Command(name = NAME, description = "CLI for RSocket.")
-class Main : HelpOption() {
+class Main {
+
+  @Inject
+  var help: HelpOption<Main>? = null
 
   @Option(name = ["-H", "--header"], description = "Custom header to pass to server")
   var headers: List<String>? = null
@@ -90,10 +94,12 @@ class Main : HelpOption() {
   @Option(name = ["-m", "--metadata"], description = "Metadata input string input or @path/to/file")
   var metadata: String? = null
 
-  @Option(name = ["--metadataFormat"], description = "Metadata Format", allowedValues = ["json", "cbor", "mime-type"])
+  @Option(name = ["--metadataFormat"], description = "Metadata Format")
+  @AllowedRawValues(allowedValues = ["json", "cbor", "mime-type"])
   var metadataFormat = "json"
 
-  @Option(name = ["--dataFormat"], description = "Data Format", allowedValues = ["json", "cbor", "mime-type"])
+  @Option(name = ["--dataFormat"], description = "Data Format")
+  @AllowedRawValues(allowedValues = ["json", "cbor", "mime-type"])
   var dataFormat = "binary"
 
   @Option(name = ["--setup"], description = "String input or @path/to/file for setup metadata")
@@ -114,19 +120,23 @@ class Main : HelpOption() {
   @Option(name = ["--requestn", "-r"], description = "Request N credits")
   var requestN = Integer.MAX_VALUE
 
-  @Arguments(title = "target", description = "Endpoint URL", required = true)
-  var arguments: List<String> = ArrayList()
+  @Arguments(title = ["target"], description = "Endpoint URL")
+  var arguments: MutableList<String> = ArrayList()
 
-  lateinit var client: RSocket
+  private lateinit var client: RSocket
 
   lateinit var outputHandler: OutputHandler<Any>
 
   lateinit var inputPublisher: InputPublisher
 
-  lateinit var server: Closeable
+  private lateinit var server: Closeable
 
-  suspend fun run() {
+  suspend fun run(): Int {
     configureLogging(debug)
+
+    if (help?.showHelpIfRequested() == true) {
+      return 0
+    }
 
     if (!this::outputHandler.isInitialized) {
       outputHandler = ConsoleHandler.instance()
@@ -137,6 +147,10 @@ class Main : HelpOption() {
     }
 
     try {
+      if (arguments.size != 1) {
+        throw UsageException("rsocket-cli: requires 1 argument")
+      }
+
       val uri = arguments[0]
 
       if (serverMode) {
@@ -158,19 +172,21 @@ class Main : HelpOption() {
           run.then().awaitFirstOrNull()
         }
       }
+      return 0
     } catch (e: Exception) {
       outputHandler.showError("error", e)
+      return -1
     }
   }
 
-  suspend fun buildServer(uri: String): Closeable {
+  private suspend fun buildServer(uri: String): Closeable {
     val transport = RSocketFactory.receive()
       .acceptor(this::createServerRequestHandler)
       .transport(UriTransportRegistry.serverForUri(uri))
     return transport.start().awaitFirst()
   }
 
-  suspend fun buildClient(uri: String): RSocket {
+  private suspend fun buildClient(uri: String): RSocket {
     val clientRSocketFactory = RSocketFactory.connect()
 
     if (keepalive != null) {
@@ -198,7 +214,7 @@ class Main : HelpOption() {
     return clientRSocketFactory.transport(clientTransport).start().awaitFirst()
   }
 
-  private fun createClientRequestHandler(socket: RSocket): RSocket = createResponder()
+  private fun createClientRequestHandler(socket: RSocket): RSocket = createResponder(socket)
 
   private fun standardMimeType(dataFormat: String?): String = when (dataFormat) {
     null -> "application/json"
@@ -211,19 +227,17 @@ class Main : HelpOption() {
 
   private fun parseSetupPayload(): Payload = when {
     setup == null -> EmptyPayload.INSTANCE
-    setup!!.startsWith("@") -> DefaultPayload.create(Files.asCharSource(expectedFile(setup!!.substring(1)), StandardCharsets.UTF_8).read())
+    setup!!.startsWith("@") -> DefaultPayload.create(Publishers.read(expectedFile(setup!!.substring(1))).block()!!)
     else -> DefaultPayload.create(setup!!)
   }
 
   private fun createServerRequestHandler(setupPayload: ConnectionSetupPayload, socket: RSocket): Mono<RSocket> {
     LoggerFactory.getLogger(Main::class.java).debug("setup payload $setupPayload")
 
-    // TODO chain
-    runAllOperations(socket).subscribe()
-    return Mono.just(createResponder())
+    return runAllOperations(socket).then(defer<RSocket> { just(createResponder(socket)) })
   }
 
-  private fun createResponder(): AbstractRSocket {
+  private fun createResponder(socket: RSocket): AbstractRSocket {
     return object : AbstractRSocket() {
       override fun fireAndForget(payload: Payload): Mono<Void> = GlobalScope.mono(Dispatchers.Default) {
         outputHandler.showOutput(payload.dataUtf8)
@@ -234,11 +248,9 @@ class Main : HelpOption() {
       override fun requestStream(payload: Payload): Flux<Payload> = handleIncomingPayload(payload)
 
       override fun requestChannel(payloads: Publisher<Payload>): Flux<Payload> {
-        // TODO chain
-        Flux.from(payloads).takeN(requestN)
+        return Flux.from(payloads).takeN(requestN)
           .onNext { outputHandler.showOutput(it.dataUtf8) }
-          .onError { outputHandler.showError("channel error", it) }.subscribe()
-        return inputPublisherX()
+          .onError { outputHandler.showError("channel error", it) }.thenMany(inputPublisherX())
       }
 
       override fun metadataPush(payload: Payload): Mono<Void> = GlobalScope.mono(Dispatchers.Default) {
@@ -251,13 +263,13 @@ class Main : HelpOption() {
     outputHandler.showOutput(payload.dataUtf8)
   }.thenMany(inputPublisherX())
 
-  fun getInputFromSource(source: String?, nullHandler: Supplier<String>): String =
+  private fun getInputFromSource(source: String?, nullHandler: Supplier<String>): String =
     when (source) {
       null -> nullHandler.get()
       else -> stringValue(source)
     }
 
-  fun buildMetadata(): ByteArray? = when {
+  private fun buildMetadata(): ByteArray? = when {
     this.metadata != null -> {
       if (this.headers != null) {
         throw UsageException("Can't specify headers and metadata")
@@ -311,21 +323,22 @@ class Main : HelpOption() {
   companion object {
     const val NAME = "reactivesocket-cli"
 
-    private fun fromArgs(vararg args: String): Main {
-      val cmd = SingleCommand.singleCommand<Main>(Main::class.java)
-      return try {
-        cmd.parse(*args)
-      } catch (e: ParseException) {
-        System.err.println(e.message)
-        Help.help(cmd.commandMetadata)
-        exitProcess(-1)
-      }
-    }
-
     @JvmStatic
-    fun main(vararg args: String) {
-      runBlocking {
-        fromArgs(*args).run()
+    fun main(vararg args: String) = runBlocking {
+      try {
+        val result = SingleCommand.singleCommand(Main::class.java).parse(*args).run()
+        System.exit(result)
+      } catch (e: Throwable) {
+        when (e) {
+          is ParseException, is UsageException -> {
+            System.err.println("okurl: ${e.message}")
+            System.exit(-1)
+          }
+          else -> {
+            e.printStackTrace()
+            System.exit(-1)
+          }
+        }
       }
     }
   }
