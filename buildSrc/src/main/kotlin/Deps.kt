@@ -11,12 +11,14 @@ object Versions {
 
 object Deps {
   val activation = "javax.activation:activation:1.1.1"
-  val airline = "com.github.rvesse:airline:2.6.0"
+  val airline1 = "io.airlift:airline:0.8"
+  val airline2 = "com.github.rvesse:airline:2.6.0"
   val byteunits = "com.jakewharton.byteunits:byteunits:0.9.1"
   val coroutinesCore = "org.jetbrains.kotlinx:kotlinx-coroutines-core:${Versions.kotlinCoroutinesVersion}"
   val coroutinesJdk8 = "org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:${Versions.kotlinCoroutinesVersion}"
   val coroutinesReactive = "org.jetbrains.kotlinx:kotlinx-coroutines-reactive:${Versions.kotlinCoroutinesVersion}"
   val coroutinesReactor = "org.jetbrains.kotlinx:kotlinx-coroutines-reactor:${Versions.kotlinCoroutinesVersion}"
+  val guava = "com.google.guava:guava:27.0-jre"
   val jacksonAfterburner = "com.fasterxml.jackson.module:jackson-module-afterburner:${Versions.jacksonVersion}"
   val jacksonCbor = "com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:${Versions.jacksonVersion}"
   val jacksonCore = "com.fasterxml.jackson.core:jackson-core:${Versions.jacksonVersion}"

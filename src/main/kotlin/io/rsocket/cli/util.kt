@@ -4,6 +4,10 @@ import com.baulsupp.oksocial.output.UsageException
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory
+import com.google.common.base.Charsets
+import com.google.common.collect.Lists
+import com.google.common.io.Files
+import io.airlift.airline.ParseException
 import io.netty.util.internal.logging.InternalLoggerFactory
 import io.netty.util.internal.logging.JdkLoggerFactory
 import kotlinx.coroutines.Dispatchers
@@ -15,6 +19,7 @@ import java.io.File
 import java.io.IOException
 import java.io.PrintWriter
 import java.io.StringWriter
+import java.nio.charset.StandardCharsets
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
@@ -63,11 +68,11 @@ fun headerMap(headers: List<String>?): Map<String, String> {
 }
 
 private fun headerFileMap(input: String): Map<out String, String> =
-  headerMap(Publishers.splitInLines(inputFile(input)).collectList().block())
+  headerMap(Publishers.splitInLines(Files.asCharSource(inputFile(input), Charsets.UTF_8)).collectList().block())
 
 fun stringValue(source: String): String = when {
   source.startsWith("@") -> try {
-    Publishers.read(inputFile(source)).block()!!
+    Files.toString(inputFile(source), StandardCharsets.UTF_8)
   } catch (e: IOException) {
     throw UsageException(e.toString())
   }
@@ -76,7 +81,7 @@ fun stringValue(source: String): String = when {
 
 fun inputFile(path: String): File = expectedFile(path.substring(1))
 
-private val activeLoggers = mutableListOf<java.util.logging.Logger>()
+private val activeLoggers = Lists.newArrayList<java.util.logging.Logger>()
 
 fun configureLogging(debug: Boolean) {
   InternalLoggerFactory.setDefaultFactory(JdkLoggerFactory.INSTANCE)
@@ -165,7 +170,7 @@ fun parseShortDuration(keepalive: String): Duration {
   val match = DURATION_FORMAT.matcher(keepalive)
 
   if (!match.matches()) {
-    throw UsageException("Unknown duration format '$keepalive'")
+    throw ParseException("Unknown duration format '$keepalive'")
   }
 
   val amount = java.lang.Long.valueOf(match.group(1))!!

@@ -1,6 +1,6 @@
 package io.rsocket.cli.i9n
 
-import com.baulsupp.oksocial.output.UsageException
+import io.airlift.airline.ParseException
 import io.rsocket.cli.parseShortDuration
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -22,7 +22,7 @@ class TimeUtilTest {
     assertEquals(Duration.ofMinutes(0), parseShortDuration("0m"))
   }
 
-  @Test(expected = UsageException::class)
+  @Test(expected = ParseException::class)
   fun failOnBadFormat() {
     parseShortDuration("-10 minutes")
   }
