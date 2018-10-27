@@ -1,6 +1,6 @@
 package io.rsocket.cli.i9n
 
-import io.airlift.airline.ParseException
+import com.github.rvesse.airline.parser.errors.ParseException
 import io.rsocket.cli.parseShortDuration
 import org.junit.Assert.assertEquals
 import org.junit.Test
