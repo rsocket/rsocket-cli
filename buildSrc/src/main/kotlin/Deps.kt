@@ -4,14 +4,13 @@ object Versions {
   val kotlinCoroutinesVersion = "1.0.0-RC1"
   val okhttpVersion = "3.12.0-SNAPSHOT"
   val moshiVersion = "1.7.0"
-  val oksocialOutputVersion = "4.21.1"
-  val jettyVersion = "9.4.11.v20180605"
+  val oksocialOutputVersion = "4.22.0"
+  val jettyVersion = "9.4.12.RC2"
   val rsocketVersion = "0.11.9"
 }
 
 object Deps {
   val activation = "javax.activation:activation:1.1.1"
-  val airline1 = "io.airlift:airline:0.8"
   val airline2 = "com.github.rvesse:airline:2.6.0"
   val byteunits = "com.jakewharton.byteunits:byteunits:0.9.1"
   val coroutinesCore = "org.jetbrains.kotlinx:kotlinx-coroutines-core:${Versions.kotlinCoroutinesVersion}"

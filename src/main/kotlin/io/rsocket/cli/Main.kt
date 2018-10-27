@@ -16,14 +16,16 @@ package io.rsocket.cli
 import com.baulsupp.oksocial.output.ConsoleHandler
 import com.baulsupp.oksocial.output.OutputHandler
 import com.baulsupp.oksocial.output.UsageException
+import com.github.rvesse.airline.HelpOption
+import com.github.rvesse.airline.SingleCommand
+import com.github.rvesse.airline.annotations.Arguments
+import com.github.rvesse.airline.annotations.Command
+import com.github.rvesse.airline.annotations.Option
+import com.github.rvesse.airline.annotations.restrictions.AllowedRawValues
+import com.github.rvesse.airline.annotations.restrictions.Required
+import com.github.rvesse.airline.help.Help
+import com.github.rvesse.airline.parser.errors.ParseException
 import com.google.common.io.Files
-import io.airlift.airline.Arguments
-import io.airlift.airline.Command
-import io.airlift.airline.Help
-import io.airlift.airline.HelpOption
-import io.airlift.airline.Option
-import io.airlift.airline.ParseException
-import io.airlift.airline.SingleCommand
 import io.rsocket.AbstractRSocket
 import io.rsocket.Closeable
 import io.rsocket.ConnectionSetupPayload
@@ -50,6 +52,7 @@ import java.nio.charset.StandardCharsets
 import java.util.ArrayList
 import java.util.concurrent.TimeUnit
 import java.util.function.Supplier
+import javax.inject.Inject
 import kotlin.system.exitProcess
 
 /**
@@ -58,7 +61,9 @@ import kotlin.system.exitProcess
  * Currently limited in features, only supports a text/line based approach.
  */
 @Command(name = NAME, description = "CLI for RSocket.")
-class Main : HelpOption() {
+class Main {
+  @Inject
+  var help: HelpOption<Main>? = null
 
   @Option(name = ["-H", "--header"], description = "Custom header to pass to server")
   var headers: List<String>? = null
@@ -90,10 +95,12 @@ class Main : HelpOption() {
   @Option(name = ["-m", "--metadata"], description = "Metadata input string input or @path/to/file")
   var metadata: String? = null
 
-  @Option(name = ["--metadataFormat"], description = "Metadata Format", allowedValues = ["json", "cbor", "mime-type"])
+  @Option(name = ["--metadataFormat"], description = "Metadata Format")
+  @AllowedRawValues(allowedValues = ["json", "cbor", "mime-type"])
   var metadataFormat = "json"
 
-  @Option(name = ["--dataFormat"], description = "Data Format", allowedValues = ["json", "cbor", "mime-type"])
+  @Option(name = ["--dataFormat"], description = "Data Format")
+  @AllowedRawValues(allowedValues = ["json", "cbor", "mime-type"])
   var dataFormat = "binary"
 
   @Option(name = ["--setup"], description = "String input or @path/to/file for setup metadata")
@@ -114,7 +121,8 @@ class Main : HelpOption() {
   @Option(name = ["--requestn", "-r"], description = "Request N credits")
   var requestN = Integer.MAX_VALUE
 
-  @Arguments(title = "target", description = "Endpoint URL", required = true)
+  @Arguments(title = ["target"], description = "Endpoint URL")
+  @Required
   var arguments: List<String> = ArrayList()
 
   lateinit var client: RSocket
