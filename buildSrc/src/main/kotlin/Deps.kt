@@ -1,12 +1,12 @@
 object Versions {
-  val kotlinVersion = "1.3.0-rc-198"
+  val kotlinVersion = "1.3.0"
   val jacksonVersion = "2.9.7"
-  val kotlinCoroutinesVersion = "1.0.0-RC1"
+  val kotlinCoroutinesVersion = "1.0.0"
   val okhttpVersion = "3.12.0-SNAPSHOT"
   val moshiVersion = "1.7.0"
-  val oksocialOutputVersion = "4.22.0"
+  val oksocialOutputVersion = "4.24.0"
   val jettyVersion = "9.4.12.RC2"
-  val rsocketVersion = "0.11.9"
+  val rsocketVersion = "0.11.11"
 }
 
 object Deps {

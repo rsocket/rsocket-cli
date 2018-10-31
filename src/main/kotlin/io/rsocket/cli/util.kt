@@ -19,7 +19,6 @@ import java.io.File
 import java.io.IOException
 import java.io.PrintWriter
 import java.io.StringWriter
-import java.nio.charset.StandardCharsets
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
@@ -72,7 +71,7 @@ private fun headerFileMap(input: String): Map<out String, String> =
 
 fun stringValue(source: String): String = when {
   source.startsWith("@") -> try {
-    Files.toString(inputFile(source), StandardCharsets.UTF_8)
+    inputFile(source).readText()
   } catch (e: IOException) {
     throw UsageException(e.toString())
   }
