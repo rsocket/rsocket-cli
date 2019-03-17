@@ -1,1 +1,2 @@
 io.rsocket.cli.http2.Http2UriHandler
+io.rsocket.cli.ws.WebsocketUriHandler

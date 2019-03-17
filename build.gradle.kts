@@ -8,8 +8,8 @@ plugins {
   kotlin("jvm") version Versions.kotlinVersion
   `maven-publish`
   application
-  id("com.github.ben-manes.versions") version "0.20.0"
-  id("org.jlleitschuh.gradle.ktlint") version "6.2.1"
+  id("com.github.ben-manes.versions") version "0.21.0"
+  id("org.jlleitschuh.gradle.ktlint") version "7.2.1"
   id("com.jfrog.bintray") version "1.8.4"
   id("org.jetbrains.dokka") version "0.9.17"
   id("net.nemerosa.versioning") version "2.8.2"
