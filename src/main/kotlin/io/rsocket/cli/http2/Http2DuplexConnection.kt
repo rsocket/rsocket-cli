@@ -1,14 +1,15 @@
 package io.rsocket.cli.http2
 
 import io.netty.buffer.ByteBuf
+import io.netty.buffer.ByteBufAllocator
 import io.netty.buffer.Unpooled
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder
 import io.rsocket.DuplexConnection
-import io.rsocket.Frame
 import io.rsocket.exceptions.ConnectionCloseException
-import io.rsocket.frame.FrameHeaderFlyweight.FRAME_LENGTH_MASK
-import io.rsocket.frame.FrameHeaderFlyweight.FRAME_LENGTH_SIZE
+import io.rsocket.frame.ErrorFrameFlyweight
+import io.rsocket.frame.FrameLengthFlyweight.FRAME_LENGTH_MASK
+import io.rsocket.frame.FrameLengthFlyweight.FRAME_LENGTH_SIZE
 import org.eclipse.jetty.http.HttpFields
 import org.eclipse.jetty.http.HttpURI
 import org.eclipse.jetty.http.HttpVersion
@@ -31,7 +32,7 @@ import java.util.logging.Logger
 
 class Http2DuplexConnection : DuplexConnection {
   private val onClose = MonoProcessor.create<Void>()
-  private val receive = DirectProcessor.create<Frame>()
+  private val receive = DirectProcessor.create<ByteBuf>()
   private val codec = MyRSocketLengthCodec()
 
   private val existingData = Unpooled.compositeBuffer()
@@ -46,7 +47,7 @@ class Http2DuplexConnection : DuplexConnection {
           val sliceData = codec.decode(null, existingData)
 
           if (sliceData != null) {
-            receive.onNext(Frame.from(sliceData))
+            receive.onNext(sliceData)
           } else {
             break
           }
@@ -68,7 +69,7 @@ class Http2DuplexConnection : DuplexConnection {
         log.info("connected")
       } else {
         receive.onNext(
-          Frame.Error.from(
+          ErrorFrameFlyweight.encode(ByteBufAllocator.DEFAULT,
             0, ConnectionCloseException("non 200 response: " + response.status)))
         dispose()
       }
@@ -77,7 +78,7 @@ class Http2DuplexConnection : DuplexConnection {
 
   private var stream: Stream? = null
 
-  override fun send(frame: Publisher<Frame>): Mono<Void> {
+  override fun send(frame: Publisher<ByteBuf>): Mono<Void> {
     return Flux.from(frame)
       .doOnNext { f ->
         stream!!.data(
@@ -92,7 +93,7 @@ class Http2DuplexConnection : DuplexConnection {
       .then()
   }
 
-  override fun receive(): Flux<Frame> = receive
+  override fun receive(): Flux<ByteBuf> = receive
 
   override fun availability(): Double = if (stream!!.isClosed) 0.0 else 1.0
 
@@ -111,10 +112,11 @@ class Http2DuplexConnection : DuplexConnection {
 
   override fun onClose(): Mono<Void> = onClose
 
-  private fun dataFrame(f: Frame): DataFrame =
-    DataFrame(stream!!.id, f.content().nioBuffer(), false)
+  private fun dataFrame(f: ByteBuf): DataFrame =
+    DataFrame(stream!!.id, f.nioBuffer(), false)
 
-  class MyRSocketLengthCodec : LengthFieldBasedFrameDecoder(FRAME_LENGTH_MASK, 0, FRAME_LENGTH_SIZE, 0, 0) {
+  class MyRSocketLengthCodec : LengthFieldBasedFrameDecoder(FRAME_LENGTH_MASK, 0, FRAME_LENGTH_SIZE,
+    0, 0) {
     public override fun decode(ctx: ChannelHandlerContext?, `in`: ByteBuf): ByteBuf? {
       return super.decode(ctx, `in`) as ByteBuf?
     }

@@ -23,12 +23,13 @@ class Http2ClientTransport @JvmOverloads constructor(
   private var transportHeadersFn: () -> Map<String, String> = { mutableMapOf() }
 ) : ClientTransport, TransportHeaderAware {
 
-  override fun setTransportHeaders(transportHeaders: Supplier<Map<String, String>>?) {
-    this.transportHeadersFn = { transportHeaders?.get() ?: mapOf() }
+  override fun setTransportHeaders(transportHeaders: Supplier<MutableMap<String, String>>) {
+    this.transportHeadersFn = transportHeaders::get
   }
 
-  override fun connect(): Mono<DuplexConnection> =
-    createSession().flatMap { s -> Http2DuplexConnection.create(s, uri, transportHeadersFn()) }
+  override fun connect(mtu: Int): Mono<DuplexConnection> {
+    return createSession().flatMap { s -> Http2DuplexConnection.create(s, uri, transportHeadersFn()) }
+  }
 
   private fun createSession(): Mono<Session> = Mono.create { c ->
     val client = HTTP2Client()
