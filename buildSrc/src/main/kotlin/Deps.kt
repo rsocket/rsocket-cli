@@ -6,7 +6,7 @@ object Versions {
   val moshiVersion = "1.7.0"
   val oksocialOutputVersion = "4.26.0"
   val jettyVersion = "9.4.15.v20190215"
-  val rsocketVersion = "0.12.1"
+  val rsocketVersion = "0.12.1-RC3-SNAPSHOT"
 }
 
 object Deps {
