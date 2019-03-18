@@ -178,9 +178,16 @@ class Main {
   }
 
   suspend fun buildServer(uri: String): Closeable {
-    val transport = RSocketFactory.receive()
+    val factory = RSocketFactory.receive()
+
+    if (resume) {
+      factory.resume()
+    }
+
+    val transport = factory
       .acceptor(this::createServerRequestHandler)
       .transport(UriTransportRegistry.serverForUri(uri))
+
     return transport.start().awaitFirst()
   }
 
