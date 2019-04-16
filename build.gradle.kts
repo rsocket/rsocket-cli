@@ -1,18 +1,18 @@
 import com.jfrog.bintray.gradle.BintrayExtension
 import org.gradle.api.publish.maven.MavenPom
-import org.jetbrains.dokka.gradle.DokkaPlugin
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jetbrains.dokka.gradle.DokkaTask
 
 plugins {
-  kotlin("jvm") version Versions.kotlinVersion
+  kotlin("jvm") version "1.3.30"
   `maven-publish`
   application
   id("com.github.ben-manes.versions") version "0.21.0"
-  id("org.jlleitschuh.gradle.ktlint") version "7.2.1"
   id("com.jfrog.bintray") version "1.8.4"
-  id("org.jetbrains.dokka") version "0.9.17"
+  id("org.jetbrains.dokka") version "0.9.18"
   id("net.nemerosa.versioning") version "2.8.2"
+  id("com.palantir.consistent-versions") version "1.5.0"
+  id("com.diffplug.gradle.spotless") version "3.22.0"
 }
 
 repositories {
@@ -31,7 +31,7 @@ group = "com.baulsupp"
 val artifactID = "rsocket-cli"
 description = "RSocket CLI"
 val projectVersion = versioning.info.display
-//println("Version $projectVersion")
+// println("Version $projectVersion")
 version = projectVersion
 
 base {
@@ -84,39 +84,39 @@ val javadocJar by tasks.creating(Jar::class) {
 val jar = tasks["jar"] as org.gradle.jvm.tasks.Jar
 
 dependencies {
-  implementation(Deps.activation)
-  implementation(Deps.airline2)
-  implementation(Deps.byteunits)
-  implementation(Deps.coroutinesCore)
-  implementation(Deps.coroutinesJdk8)
-  implementation(Deps.coroutinesReactive)
-  implementation(Deps.coroutinesReactor)
-  implementation(Deps.guava)
-  implementation(Deps.jacksonCbor)
-  implementation(Deps.jacksonDatabind)
-  implementation(Deps.jacksonJdk8)
-  implementation(Deps.jacksonJsr310)
-  implementation(Deps.jacksonKotlin)
-  implementation(Deps.jacksonParams)
-  implementation(Deps.jacksonYaml)
-  implementation(Deps.jettyJttp2)
-  implementation(Deps.kotlinReflect)
-  implementation(Deps.kotlinStandardLibrary)
-  implementation(Deps.okio)
-  implementation(Deps.oksocialOutput)
-  implementation(Deps.rsocketCore)
-  implementation(Deps.rsocketLocal)
-  implementation(Deps.rsocketNetty)
-  implementation(Deps.slf4jApi)
-  implementation(Deps.slf4jJdk14)
-  implementation(Deps.ztExec)
+  implementation("javax.activation:activation")
+  implementation("com.github.rvesse:airline")
+  implementation("com.jakewharton.byteunits:byteunits")
+  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
+  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8")
+  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactive")
+  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
+  implementation("com.google.guava:guava")
+  implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor")
+  implementation("com.fasterxml.jackson.core:jackson-databind")
+  implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8")
+  implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
+  implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+  implementation("com.fasterxml.jackson.module:jackson-module-parameter-names")
+  implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml")
+  implementation("org.eclipse.jetty.http2:http2-http-client-transport")
+  implementation("org.jetbrains.kotlin:kotlin-reflect")
+  implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
+  implementation("com.squareup.okio:okio")
+  implementation("com.baulsupp:oksocial-output")
+  implementation("io.rsocket:rsocket-core")
+  implementation("io.rsocket:rsocket-transport-local")
+  implementation("io.rsocket:rsocket-transport-netty")
+  implementation("org.slf4j:slf4j-api")
+  implementation("org.slf4j:slf4j-jdk14")
+  implementation("org.zeroturnaround:zt-exec")
 
-  testImplementation(Deps.junitJupiterApi)
-  testImplementation(Deps.kotlinTest)
-  testImplementation(Deps.kotlinTestJunit)
+  testImplementation("org.junit.jupiter:junit-jupiter-api")
+  testImplementation("org.jetbrains.kotlin:kotlin-test")
+  testImplementation("org.jetbrains.kotlin:kotlin-test-junit")
 
-  testRuntime(Deps.junitJupiterEngine)
-  testRuntime(Deps.slf4jJdk14)
+  testRuntime("org.junit.jupiter:junit-jupiter-engine:")
+  testRuntime("org.slf4j:slf4j-jdk14")
 }
 
 fun MavenPom.addDependencies() = withXml {
@@ -192,4 +192,12 @@ bintray {
       name = project.version.toString()
     })
   })
+}
+
+spotless {
+  kotlinGradle {
+    ktlint("0.31.0").userData(mutableMapOf("indent_size" to "2", "continuation_indent_size" to "2"))
+    trimTrailingWhitespace()
+    endWithNewline()
+  }
 }
