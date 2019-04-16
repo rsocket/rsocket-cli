@@ -37,7 +37,7 @@ class Http2ClientTransport @JvmOverloads constructor(
     client.scheduler = daemonClientScheduler()
     var sslContextFactory: SslContextFactory? = null
     if (HttpScheme.HTTPS.`is`(uri.scheme)) {
-      sslContextFactory = SslContextFactory()
+      sslContextFactory = SslContextFactory.Client()
       client.addBean(sslContextFactory)
     }
 
