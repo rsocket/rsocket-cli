@@ -31,7 +31,7 @@ group = "com.baulsupp"
 val artifactID = "rsocket-cli"
 description = "RSocket CLI"
 val projectVersion = versioning.info.display
-//println("Version $projectVersion")
+// println("Version $projectVersion")
 version = projectVersion
 
 base {
