@@ -335,6 +335,7 @@ class Main {
       runBlocking {
         fromArgs(*args).run()
       }
+      System.exit(0)
     }
   }
 }

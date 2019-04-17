@@ -11,6 +11,8 @@ plugins {
   id("com.jfrog.bintray") version "1.8.4"
   id("org.jetbrains.dokka") version "0.9.18"
   id("net.nemerosa.versioning") version "2.8.2"
+  id("com.palantir.graal") version "0.3.0-6-g0b828af"
+  id("com.hpe.kraal") version "0.0.15"
   id("com.palantir.consistent-versions") version "1.5.0"
   id("com.diffplug.gradle.spotless") version "3.22.0"
 }
@@ -52,6 +54,8 @@ tasks {
     kotlinOptions.jvmTarget = "1.8"
     kotlinOptions.apiVersion = "1.3"
     kotlinOptions.languageVersion = "1.3"
+    kotlinOptions.allWarningsAsErrors = false
+    kotlinOptions.freeCompilerArgs = listOf("-Xjsr305=strict", "-Xjvm-default=enable")
   }
 }
 
@@ -192,6 +196,14 @@ bintray {
       name = project.version.toString()
     })
   })
+}
+
+graal {
+  graalVersion("1.0.0-rc15")
+  mainClass("io.rsocket.cli.Main")
+  outputName("rsocket-cli")
+  option("--configurations-path")
+  option("graal.config")
 }
 
 spotless {
