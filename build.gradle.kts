@@ -202,11 +202,8 @@ graal {
   graalVersion("1.0.0-rc15")
   mainClass("io.rsocket.cli.Main")
   outputName("rsocket-cli")
-  option("--enable-http")
-  option("--enable-https")
-  option("-H:+ReportUnsupportedElementsAtRuntime")
-  option("-H:+ReportExceptionStackTraces")
-  option("-H:ReflectionConfigurationFiles=reflect.config")
+  option("--configurations-path")
+  option("graal.config")
 }
 
 spotless {
