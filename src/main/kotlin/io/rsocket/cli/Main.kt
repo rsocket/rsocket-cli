@@ -50,6 +50,7 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.nio.charset.StandardCharsets
 import java.util.ArrayList
+import java.util.Date
 import java.util.concurrent.TimeUnit
 import java.util.function.Supplier
 import javax.inject.Inject
@@ -134,6 +135,8 @@ class Main {
   lateinit var server: Closeable
 
   suspend fun run() {
+    println("run " + System.currentTimeMillis())
+
     configureLogging(debug)
 
     if (!this::outputHandler.isInitialized) {
@@ -179,6 +182,7 @@ class Main {
   }
 
   suspend fun buildClient(uri: String): RSocket {
+    println("buildClient " + System.currentTimeMillis())
     val clientRSocketFactory = RSocketFactory.connect()
 
     if (keepalive != null) {
@@ -195,7 +199,9 @@ class Main {
       clientRSocketFactory.setupPayload(parseSetupPayload())
     }
 
+    println("load transport " + System.currentTimeMillis())
     val clientTransport = UriTransportRegistry.clientForUri(uri)
+    println("loaded " + System.currentTimeMillis())
 
     if (transportHeader != null && clientTransport is TransportHeaderAware) {
       clientTransport.setTransportHeaders { headerMap(transportHeader) }
@@ -203,7 +209,9 @@ class Main {
 
     clientRSocketFactory.acceptor(this::createClientRequestHandler)
 
-    return clientRSocketFactory.transport(clientTransport).start().awaitFirst()
+    return clientRSocketFactory.transport(clientTransport).start().onNext {
+      println("clientBuilt " + System.currentTimeMillis())
+    }.awaitFirst()
   }
 
   private fun createClientRequestHandler(socket: RSocket): RSocket = createResponder()
@@ -286,6 +294,7 @@ class Main {
   }
 
   suspend fun run(client: RSocket): Flux<Void> = try {
+    println("run client " + System.currentTimeMillis())
     runAllOperations(client)
   } catch (e: Exception) {
     outputHandler.showError("error", e)
@@ -296,6 +305,7 @@ class Main {
     Flux.range(0, operations).flatMap { runSingleOperation(client) }
 
   private fun runSingleOperation(client: RSocket): Flux<Void> = try {
+    println("runSingleOperation " + System.currentTimeMillis())
     when {
       fireAndForget -> client.fireAndForget(singleInputPayload()).thenMany(Flux.empty())
       metadataPush -> client.metadataPush(singleInputPayload()).thenMany(Flux.empty())
@@ -306,7 +316,9 @@ class Main {
     }
       .takeN(requestN)
       .map { it.dataUtf8 }
-      .onNext { outputHandler.showOutput(it) }
+      .onNext {
+        println("stream onn next " + System.currentTimeMillis())
+        outputHandler.showOutput(it) }
       .onError { outputHandler.showError("error from server", it) }
       .onErrorResume { Flux.empty() }
       .then().flux()
@@ -332,9 +344,11 @@ class Main {
 
     @JvmStatic
     fun main(vararg args: String) {
+      println("start " + System.currentTimeMillis())
       runBlocking {
         fromArgs(*args).run()
       }
+      println("stop " + System.currentTimeMillis())
       System.exit(0)
     }
   }
