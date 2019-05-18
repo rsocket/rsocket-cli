@@ -49,6 +49,7 @@ import org.reactivestreams.Publisher
 import org.slf4j.LoggerFactory
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.time.Duration
 import java.time.Duration.*
@@ -151,7 +152,7 @@ class Main {
     }
 
     try {
-      val uri = arguments[0]
+      val uri = sanitizeUri(arguments[0])
 
       if (serverMode) {
         server = buildServer(uri)
@@ -248,6 +249,16 @@ class Main {
     // TODO chain
     runAllOperations(socket).subscribe()
     return Mono.just(createResponder())
+  }
+  
+  private fun sanitizeUri(uri: String): String {
+    var validationUri = URI(uri)
+    if (validationUri.scheme == "ws" || validationUri.scheme == "wss") {
+      if (validationUri.path.isEmpty()) {
+        return "$uri/"
+      }
+    }
+    return uri
   }
 
   fun createResponder(): AbstractRSocket {
