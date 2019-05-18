@@ -4,17 +4,17 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jetbrains.dokka.gradle.DokkaTask
 
 plugins {
-  kotlin("jvm") version "1.3.30"
+  kotlin("jvm") version "1.3.31"
   `maven-publish`
   application
   id("com.github.ben-manes.versions") version "0.21.0"
   id("com.jfrog.bintray") version "1.8.4"
   id("org.jetbrains.dokka") version "0.9.18"
   id("net.nemerosa.versioning") version "2.8.2"
-  id("com.palantir.graal") version "0.3.0-6-g0b828af"
+  id("com.palantir.graal") version "0.3.0-28-g6c0e597"
   id("com.hpe.kraal") version "0.0.15"
   id("com.palantir.consistent-versions") version "1.5.0"
-  id("com.diffplug.gradle.spotless") version "3.22.0"
+  id("com.diffplug.gradle.spotless") version "3.23.0"
 }
 
 repositories {
