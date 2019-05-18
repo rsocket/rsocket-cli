@@ -225,7 +225,7 @@ class Main {
     return clientRSocketFactory.transport(clientTransport).start().awaitFirst()
   }
 
-  private fun createClientRequestHandler(socket: RSocket): RSocket = createResponder(socket)
+  private fun createClientRequestHandler(socket: RSocket): RSocket = createResponder()
 
   private fun standardMimeType(dataFormat: String?): String = when (dataFormat) {
     null -> "application/json"
@@ -247,10 +247,10 @@ class Main {
 
     // TODO chain
     runAllOperations(socket).subscribe()
-    return Mono.just(createResponder(socket))
+    return Mono.just(createResponder())
   }
 
-  fun createResponder(socket: RSocket): AbstractRSocket {
+  fun createResponder(): AbstractRSocket {
     return object : AbstractRSocket() {
       override fun fireAndForget(payload: Payload): Mono<Void> = GlobalScope.mono(Dispatchers.Default) {
         outputHandler.showOutput(payload.dataUtf8)
@@ -354,6 +354,7 @@ class Main {
       runBlocking {
         fromArgs(*args).run()
       }
+      System.exit(0)
     }
   }
 }
