@@ -33,6 +33,7 @@ import io.rsocket.Payload
 import io.rsocket.RSocket
 import io.rsocket.RSocketFactory
 import io.rsocket.cli.Main.Companion.NAME
+import io.rsocket.resume.PeriodicResumeStrategy
 import io.rsocket.transport.TransportHeaderAware
 import io.rsocket.uri.UriTransportRegistry
 import io.rsocket.util.DefaultPayload
@@ -49,6 +50,8 @@ import org.slf4j.LoggerFactory
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.nio.charset.StandardCharsets
+import java.time.Duration
+import java.time.Duration.*
 import java.util.ArrayList
 import java.util.concurrent.TimeUnit
 import java.util.function.Supplier
@@ -121,6 +124,9 @@ class Main {
   @Option(name = ["--requestn", "-r"], description = "Request N credits")
   var requestN = Integer.MAX_VALUE
 
+  @Option(name = ["--resume"], description = "resume enabled")
+  var resume: Boolean = false
+
   @Arguments(title = ["target"], description = "Endpoint URL")
   @Required
   var arguments: List<String> = ArrayList()
@@ -172,14 +178,27 @@ class Main {
   }
 
   suspend fun buildServer(uri: String): Closeable {
-    val transport = RSocketFactory.receive()
+    val factory = RSocketFactory.receive()
+
+    if (resume) {
+      factory.resume()
+    }
+
+    val transport = factory
       .acceptor(this::createServerRequestHandler)
       .transport(UriTransportRegistry.serverForUri(uri))
+
     return transport.start().awaitFirst()
   }
 
   suspend fun buildClient(uri: String): RSocket {
     val clientRSocketFactory = RSocketFactory.connect()
+
+    if (resume) {
+      clientRSocketFactory.resume()
+        .resumeSessionDuration(ofSeconds(30))
+        .resumeStrategy { PeriodicResumeStrategy(ofSeconds(3)) }
+    }
 
     if (keepalive != null) {
       clientRSocketFactory.keepAliveTickPeriod(parseShortDuration(keepalive!!))

@@ -23,6 +23,7 @@ repositories {
   maven(url = "https://jitpack.io")
   maven(url = "http://repo.maven.apache.org/maven2")
   maven(url = "https://dl.bintray.com/kotlin/kotlin-eap/")
+  maven(url = "https://oss.jfrog.org/oss-snapshot-local")
 //  maven(url = "https://repo.spring.io/milestone")
 //  maven(url = "https://oss.jfrog.org/libs-snapshot")
 //  maven(url = "https://dl.bintray.com/reactivesocket/RSocket")
