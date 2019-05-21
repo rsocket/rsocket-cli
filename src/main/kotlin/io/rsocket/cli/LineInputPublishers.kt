@@ -8,6 +8,8 @@ import io.rsocket.util.DefaultPayload
 import reactor.core.publisher.Flux
 import reactor.core.scheduler.Schedulers
 import java.nio.charset.StandardCharsets
+import java.time.Duration
+import java.time.LocalTime
 import java.util.Scanner
 
 class LineInputPublishers(val outputHandler: OutputHandler<*>) : InputPublisher {
@@ -40,6 +42,7 @@ class LineInputPublishers(val outputHandler: OutputHandler<*>) : InputPublisher 
   override fun inputPublisher(input: List<String>, metadata: ByteArray?): Flux<Payload> {
     return Flux.fromIterable(input).concatMap {
       when {
+        it == "cli:time" -> timer()
         it == "-" -> systemInLines()
         it.startsWith("@") -> filePublisher(it.substring(1))
         else -> Flux.just(it)
@@ -51,6 +54,8 @@ class LineInputPublishers(val outputHandler: OutputHandler<*>) : InputPublisher 
       )
     }
   }
+
+  private fun timer() = Flux.interval(Duration.ofSeconds(1)).map { LocalTime.now().toString() }
 
   private fun systemInLines(): Flux<String> {
     val keyboard = Scanner(System.`in`)
