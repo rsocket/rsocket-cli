@@ -4,7 +4,6 @@ import com.baulsupp.oksocial.output.UsageException
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory
-import com.github.rvesse.airline.parser.errors.ParseException
 import com.google.common.base.Charsets
 import com.google.common.collect.Lists
 import com.google.common.io.Files
@@ -169,7 +168,7 @@ fun parseShortDuration(keepalive: String): Duration {
   val match = DURATION_FORMAT.matcher(keepalive)
 
   if (!match.matches()) {
-    throw ParseException("Unknown duration format '$keepalive'")
+    throw UsageException("Unknown duration format '$keepalive'")
   }
 
   val amount = java.lang.Long.valueOf(match.group(1))
