@@ -117,8 +117,12 @@ class Main : Runnable {
   @Option(names = ["--resume"], description = ["resume enabled"])
   var resume: Boolean = false
 
-  @Parameters(arity = "1", paramLabel = "target", description = ["Endpoint URL"])
-  var target: String = ""
+  @Option(names = ["--completionScript"], description = ["Generate completion script"])
+  var completionScript: Boolean = false
+
+  @Parameters(arity = "0..1", paramLabel = "target", description = ["Endpoint URL"],
+    completionCandidates = UrlCandidates::class)
+  var target: String? = null
 
   lateinit var client: RSocket
 
@@ -145,7 +149,7 @@ class Main : Runnable {
       inputPublisher = LineInputPublishers(outputHandler)
     }
 
-    val uri = sanitizeUri(target)
+    val uri = sanitizeUri(target ?: throw UsageException("no target specified"))
 
     return if (serverMode) {
       server = buildServer(uri)
@@ -356,7 +360,7 @@ class Main : Runnable {
       exec(Main(), args.toList())
     }
 
-    private fun exec(runnable: Runnable, args: List<String>) {
+    private fun exec(runnable: Main, args: List<String>) {
       val cmd = CommandLine(runnable)
       try {
         val parseResult = cmd.parseArgs(*args.toTypedArray())
@@ -369,14 +373,22 @@ class Main : Runnable {
           exitProcess(parseResult.commandSpec().exitCodeOnVersionHelp())
         }
 
-        runnable.run()
+        if (runnable.completionScript) {
+          print(picocli.AutoComplete.bash("rsocket-cli", cmd))
+        } else {
+          runnable.run()
+        }
 
         exitProcess(0)
       } catch (pe: CommandLine.ParameterException) {
         cmd.err.println(pe.message)
         if (!CommandLine.UnmatchedArgumentException.printSuggestions(pe, cmd.err)) {
-          pe.commandLine.usage(cmd.err)
+          cmd.usage(cmd.err)
         }
+        exitProcess(cmd.commandSpec.exitCodeOnInvalidInput())
+      } catch (ue: UsageException) {
+        cmd.err.println(ue.message)
+        cmd.usage(cmd.err)
         exitProcess(cmd.commandSpec.exitCodeOnInvalidInput())
       } catch (ex: Exception) {
         ex.printStackTrace(cmd.err)
