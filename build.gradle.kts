@@ -2,6 +2,7 @@ import com.jfrog.bintray.gradle.BintrayExtension
 import org.gradle.api.publish.maven.MavenPom
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jetbrains.dokka.gradle.DokkaTask
+import org.gradle.internal.os.OperatingSystem
 
 plugins {
   kotlin("jvm") version "1.3.31"
@@ -11,9 +12,9 @@ plugins {
   id("com.jfrog.bintray") version "1.8.4"
   id("org.jetbrains.dokka") version "0.9.18"
   id("net.nemerosa.versioning") version "2.8.2"
-  id("com.palantir.graal") version "0.3.0-28-g6c0e597"
+  id("com.palantir.graal") version "0.3.0-29-gf737c91"
   id("com.hpe.kraal") version "0.0.15"
-  id("com.palantir.consistent-versions") version "1.5.0"
+  id("com.palantir.consistent-versions") version "1.8.0"
   id("com.diffplug.gradle.spotless") version "3.23.0"
 }
 
@@ -24,7 +25,7 @@ repositories {
   maven(url = "http://repo.maven.apache.org/maven2")
   maven(url = "https://dl.bintray.com/kotlin/kotlin-eap/")
   maven(url = "https://oss.jfrog.org/oss-snapshot-local")
-//  maven(url = "https://repo.spring.io/milestone")
+  maven(url = "https://repo.spring.io/milestone")
 //  maven(url = "https://oss.jfrog.org/libs-snapshot")
 //  maven(url = "https://dl.bintray.com/reactivesocket/RSocket")
 //  maven(url = "https://oss.sonatype.org/content/repositories/releases")
@@ -115,6 +116,7 @@ dependencies {
   implementation("org.slf4j:slf4j-api")
   implementation("org.slf4j:slf4j-jdk14")
   implementation("org.zeroturnaround:zt-exec")
+  implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")
 
   testImplementation("org.junit.jupiter:junit-jupiter-api")
   testImplementation("org.jetbrains.kotlin:kotlin-test")
@@ -199,12 +201,36 @@ bintray {
   })
 }
 
+val os = if (OperatingSystem.current().isMacOsX()) {
+  "darwin"
+} else {
+  "linux"
+}
+
 graal {
-  graalVersion("1.0.0-rc15")
+  graalVersion("19.0.2")
+
+  // https://github.com/palantir/gradle-graal/issues/105
+  downloadBaseUrl("https://github.com/oracle/graal/releases/download/vm-19.0.2/graalvm-ce-$os-amd64-19.0.2.tar.gz?a=")
+
   mainClass("io.rsocket.cli.Main")
   outputName("rsocket-cli")
-  option("--configurations-path")
-  option("graal.config")
+  option("--allow-incomplete-classpath")
+  option("--enable-all-security-services")
+  option("--report-unsupported-elements-at-runtime")
+  option("--auto-fallback")
+  option("--enable-http")
+  option("--enable-https")
+  option("-H:+AddAllCharsets")
+  option("-H:ReflectionConfigurationFiles=reflect.config")
+  option("-H:+ReportExceptionStackTraces")
+//  option("--initialize-at-build-time=reactor,ch.qos.logback,com.fasterxml.jackson,fresh.graal,io.micronaut,io.netty,io.reactivex,org.reactivestreams,org.slf4j,org.yaml.snakeyaml,javax")
+
+//  -H:InitialCollectionPolicy=com.oracle.svm.core.genscavenge.CollectionPolicy$BySpaceAndTime \
+//  -J-Djava.util.concurrent.ForkJoinPool.common.parallelism=1 \
+//  -Dio.netty.noUnsafe=true \
+//  -Dio.netty.noJdkZlibDecoder=true \
+//  --delay-class-initialization-to-runtime=io.netty.handler.ssl.JdkNpnApplicationProtocolNegotiator,io.netty.handler.ssl.ReferenceCountedOpenSslEngine,io.netty.util.internal.ObjectCleaner,io.netty.handler.ssl.ReferenceCountedOpenSslContext,io.netty.channel.DefaultChannelConfig,io.netty.handler.codec.http.HttpObjectEncoder,io.netty.handler.codec.http.websocketx.WebSocket00FrameEncoder \
 }
 
 spotless {

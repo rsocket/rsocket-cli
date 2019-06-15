@@ -172,7 +172,7 @@ fun parseShortDuration(keepalive: String): Duration {
     throw ParseException("Unknown duration format '$keepalive'")
   }
 
-  val amount = java.lang.Long.valueOf(match.group(1))!!
+  val amount = java.lang.Long.valueOf(match.group(1))
   val unit = match.group(2)
 
   return when (unit) {

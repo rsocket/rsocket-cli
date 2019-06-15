@@ -34,8 +34,8 @@ import io.rsocket.RSocket
 import io.rsocket.RSocketFactory
 import io.rsocket.cli.Main.Companion.NAME
 import io.rsocket.resume.PeriodicResumeStrategy
+import io.rsocket.transport.ClientTransport
 import io.rsocket.transport.TransportHeaderAware
-import io.rsocket.uri.UriTransportRegistry
 import io.rsocket.util.DefaultPayload
 import io.rsocket.util.EmptyPayload
 import kotlinx.coroutines.Dispatchers
@@ -51,8 +51,7 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.net.URI
 import java.nio.charset.StandardCharsets
-import java.time.Duration
-import java.time.Duration.*
+import java.time.Duration.ofSeconds
 import java.util.ArrayList
 import java.util.concurrent.TimeUnit
 import java.util.function.Supplier
@@ -215,7 +214,7 @@ class Main {
       clientRSocketFactory.setupPayload(parseSetupPayload())
     }
 
-    val clientTransport = UriTransportRegistry.clientForUri(uri)
+    val clientTransport = clientTransport(uri)
 
     if (transportHeader != null && clientTransport is TransportHeaderAware) {
       clientTransport.setTransportHeaders { headerMap(transportHeader) }
@@ -224,6 +223,10 @@ class Main {
     clientRSocketFactory.acceptor(this::createClientRequestHandler)
 
     return clientRSocketFactory.transport(clientTransport).start().awaitFirst()
+  }
+
+  private fun clientTransport(uri: String): ClientTransport? {
+    return UriTransportRegistry.clientForUri(uri)
   }
 
   private fun createClientRequestHandler(socket: RSocket): RSocket = createResponder()
@@ -350,7 +353,7 @@ class Main {
     const val NAME = "reactivesocket-cli"
 
     private fun fromArgs(vararg args: String): Main {
-      val cmd = SingleCommand.singleCommand<Main>(Main::class.java)
+      val cmd = SingleCommand.singleCommand(Main::class.java)
       return try {
         cmd.parse(*args)
       } catch (e: ParseException) {
@@ -365,7 +368,7 @@ class Main {
       runBlocking {
         fromArgs(*args).run()
       }
-      System.exit(0)
+      exitProcess(0)
     }
   }
 }
