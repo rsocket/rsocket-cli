@@ -91,7 +91,7 @@ val jar = tasks["jar"] as org.gradle.jvm.tasks.Jar
 
 dependencies {
   implementation("javax.activation:activation")
-  implementation("com.github.rvesse:airline")
+  implementation("info.picocli:picocli")
   implementation("com.jakewharton.byteunits:byteunits")
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8")

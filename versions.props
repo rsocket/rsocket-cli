@@ -17,3 +17,4 @@ org.jfree:jfreesvg=3.3
 org.junit.jupiter:*=5.4.0
 org.slf4j:*=1.8.0-beta4
 org.zeroturnaround:zt-exec=1.10
+info.picocli:*=4.0.0-beta-1b

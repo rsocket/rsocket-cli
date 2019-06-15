@@ -16,15 +16,6 @@ package io.rsocket.cli
 import com.baulsupp.oksocial.output.ConsoleHandler
 import com.baulsupp.oksocial.output.OutputHandler
 import com.baulsupp.oksocial.output.UsageException
-import com.github.rvesse.airline.HelpOption
-import com.github.rvesse.airline.SingleCommand
-import com.github.rvesse.airline.annotations.Arguments
-import com.github.rvesse.airline.annotations.Command
-import com.github.rvesse.airline.annotations.Option
-import com.github.rvesse.airline.annotations.restrictions.AllowedRawValues
-import com.github.rvesse.airline.annotations.restrictions.Required
-import com.github.rvesse.airline.help.Help
-import com.github.rvesse.airline.parser.errors.ParseException
 import com.google.common.io.Files
 import io.rsocket.AbstractRSocket
 import io.rsocket.Closeable
@@ -32,7 +23,6 @@ import io.rsocket.ConnectionSetupPayload
 import io.rsocket.Payload
 import io.rsocket.RSocket
 import io.rsocket.RSocketFactory
-import io.rsocket.cli.Main.Companion.NAME
 import io.rsocket.resume.PeriodicResumeStrategy
 import io.rsocket.transport.ClientTransport
 import io.rsocket.transport.TransportHeaderAware
@@ -47,15 +37,17 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.reactivestreams.Publisher
 import org.slf4j.LoggerFactory
+import picocli.CommandLine
+import picocli.CommandLine.Command
+import picocli.CommandLine.Option
+import picocli.CommandLine.Parameters
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.time.Duration.ofSeconds
-import java.util.ArrayList
 import java.util.concurrent.TimeUnit
 import java.util.function.Supplier
-import javax.inject.Inject
 import kotlin.system.exitProcess
 
 /**
@@ -63,73 +55,70 @@ import kotlin.system.exitProcess
  *
  * Currently limited in features, only supports a text/line based approach.
  */
-@Command(name = NAME, description = "CLI for RSocket.")
-class Main {
-  @Inject
-  var help: HelpOption<Main>? = null
-
-  @Option(name = ["-H", "--header"], description = "Custom header to pass to server")
+@Command(description = ["RSocket CLI command"],
+  name = "rsocket-cli", mixinStandardHelpOptions = true, version = ["dev"])
+class Main : Runnable {
+  @Option(names = ["-H", "--header"], description = ["Custom header to pass to server"])
   var headers: List<String>? = null
 
-  @Option(name = ["-T", "--transport-header"], description = "Custom header to pass to the transport")
+  @Option(names = ["-T", "--transport-header"],
+    description = ["Custom header to pass to the transport"])
   var transportHeader: List<String>? = null
 
-  @Option(name = ["--stream"], description = "Request Stream")
+  @Option(names = ["--stream"], description = ["Request Stream"])
   var stream: Boolean = false
 
-  @Option(name = ["--request"], description = "Request Response")
+  @Option(names = ["--request"], description = ["Request Response"])
   var requestResponse: Boolean = false
 
-  @Option(name = ["--fnf"], description = "Fire and Forget")
+  @Option(names = ["--fnf"], description = ["Fire and Forget"])
   var fireAndForget: Boolean = false
 
-  @Option(name = ["--channel"], description = "Channel")
+  @Option(names = ["--channel"], description = ["Channel"])
   var channel: Boolean = false
 
-  @Option(name = ["--metadataPush"], description = "Metadata Push")
+  @Option(names = ["--metadataPush"], description = ["Metadata Push"])
   var metadataPush: Boolean = false
 
-  @Option(name = ["--server"], description = "Start server instead of client")
+  @Option(names = ["--server"], description = ["Start server instead of client"])
   var serverMode: Boolean = false
 
-  @Option(name = ["-i", "--input"], description = "String input, '-' (STDIN) or @path/to/file")
+  @Option(names = ["-i", "--input"], description = ["String input, '-' (STDIN) or @path/to/file"])
   var input: List<String>? = null
 
-  @Option(name = ["-m", "--metadata"], description = "Metadata input string input or @path/to/file")
+  @Option(names = ["-m", "--metadata"],
+    description = ["Metadata input string input or @path/to/file"])
   var metadata: String? = null
 
-  @Option(name = ["--metadataFormat"], description = "Metadata Format")
-  @AllowedRawValues(allowedValues = ["json", "cbor", "mime-type"])
+  @Option(names = ["--metadataFormat"], description = ["Metadata Format"])
   var metadataFormat = "json"
 
-  @Option(name = ["--dataFormat"], description = "Data Format")
-  @AllowedRawValues(allowedValues = ["json", "cbor", "mime-type"])
+  @Option(names = ["--dataFormat"], description = ["Data Format"])
   var dataFormat = "binary"
 
-  @Option(name = ["--setup"], description = "String input or @path/to/file for setup metadata")
+  @Option(names = ["--setup"], description = ["String input or @path/to/file for setup metadata"])
   var setup: String? = null
 
-  @Option(name = ["--debug"], description = "Debug Output")
+  @Option(names = ["--debug"], description = ["Debug Output"])
   var debug: Boolean = false
 
-  @Option(name = ["--ops"], description = "Operation Count")
+  @Option(names = ["--ops"], description = ["Operation Count"])
   var operations = 1
 
-  @Option(name = ["--timeout"], description = "Timeout in seconds")
+  @Option(names = ["--timeout"], description = ["Timeout in seconds"])
   var timeout: Long? = null
 
-  @Option(name = ["--keepalive"], description = "Keepalive period")
+  @Option(names = ["--keepalive"], description = ["Keepalive period"])
   var keepalive: String? = null
 
-  @Option(name = ["--requestn", "-r"], description = "Request N credits")
+  @Option(names = ["--requestn", "-r"], description = ["Request N credits"])
   var requestN = Integer.MAX_VALUE
 
-  @Option(name = ["--resume"], description = "resume enabled")
+  @Option(names = ["--resume"], description = ["resume enabled"])
   var resume: Boolean = false
 
-  @Arguments(title = ["target"], description = "Endpoint URL")
-  @Required
-  var arguments: List<String> = ArrayList()
+  @Parameters(arity = "1", paramLabel = "target", description = ["Endpoint URL"])
+  var target: String = ""
 
   lateinit var client: RSocket
 
@@ -139,7 +128,13 @@ class Main {
 
   lateinit var server: Closeable
 
-  suspend fun run() {
+  override fun run() {
+    runBlocking {
+      exec()
+    }
+  }
+
+  private suspend fun exec(): Void? {
     configureLogging(debug)
 
     if (!this::outputHandler.isInitialized) {
@@ -150,30 +145,26 @@ class Main {
       inputPublisher = LineInputPublishers(outputHandler)
     }
 
-    try {
-      val uri = sanitizeUri(arguments[0])
+    val uri = sanitizeUri(target)
 
-      if (serverMode) {
-        server = buildServer(uri)
+    return if (serverMode) {
+      server = buildServer(uri)
 
-        server.onClose().awaitFirstOrNull()
-      } else {
-        if (!this::client.isInitialized) {
-          client = buildClient(uri)
-        }
+      server.onClose().awaitFirstOrNull()
+    } else {
+      if (!this::client.isInitialized) {
+        client = buildClient(uri)
+      }
 
-        val run = run(client)
+      val run = run(client)
 
-        if (timeout != null) {
-          withTimeout(TimeUnit.SECONDS.toMillis(timeout!!)) {
-            run.then().awaitFirstOrNull()
-          }
-        } else {
+      if (timeout != null) {
+        withTimeout(TimeUnit.SECONDS.toMillis(timeout!!)) {
           run.then().awaitFirstOrNull()
         }
+      } else {
+        run.then().awaitFirstOrNull()
       }
-    } catch (e: Exception) {
-      outputHandler.showError("error", e)
     }
   }
 
@@ -242,18 +233,22 @@ class Main {
 
   private fun parseSetupPayload(): Payload = when {
     setup == null -> EmptyPayload.INSTANCE
-    setup!!.startsWith("@") -> DefaultPayload.create(Files.asCharSource(expectedFile(setup!!.substring(1)), StandardCharsets.UTF_8).read())
+    setup!!.startsWith("@") -> DefaultPayload.create(
+      Files.asCharSource(expectedFile(setup!!.substring(1)), StandardCharsets.UTF_8).read())
     else -> DefaultPayload.create(setup!!)
   }
 
-  private fun createServerRequestHandler(setupPayload: ConnectionSetupPayload, socket: RSocket): Mono<RSocket> {
+  private fun createServerRequestHandler(
+    setupPayload: ConnectionSetupPayload,
+    socket: RSocket
+  ): Mono<RSocket> {
     LoggerFactory.getLogger(Main::class.java).debug("setup payload $setupPayload")
 
     // TODO chain
     runAllOperations(socket).subscribe()
     return Mono.just(createResponder())
   }
-  
+
   private fun sanitizeUri(uri: String): String {
     var validationUri = URI(uri)
     if (validationUri.scheme == "ws" || validationUri.scheme == "wss") {
@@ -266,11 +261,13 @@ class Main {
 
   fun createResponder(): AbstractRSocket {
     return object : AbstractRSocket() {
-      override fun fireAndForget(payload: Payload): Mono<Void> = GlobalScope.mono(Dispatchers.Default) {
+      override fun fireAndForget(payload: Payload): Mono<Void> = GlobalScope.mono(
+        Dispatchers.Default) {
         outputHandler.showOutput(payload.dataUtf8)
       }.then()
 
-      override fun requestResponse(payload: Payload): Mono<Payload> = handleIncomingPayload(payload).single()
+      override fun requestResponse(payload: Payload): Mono<Payload> = handleIncomingPayload(
+        payload).single()
 
       override fun requestStream(payload: Payload): Flux<Payload> = handleIncomingPayload(payload)
 
@@ -282,13 +279,15 @@ class Main {
         return inputPublisherX()
       }
 
-      override fun metadataPush(payload: Payload): Mono<Void> = GlobalScope.mono(Dispatchers.Default) {
+      override fun metadataPush(payload: Payload): Mono<Void> = GlobalScope.mono(
+        Dispatchers.Default) {
         outputHandler.showOutput(payload.metadataUtf8)
       }.then()
     }
   }
 
-  private fun handleIncomingPayload(payload: Payload): Flux<Payload> = GlobalScope.mono(Dispatchers.Default) {
+  private fun handleIncomingPayload(payload: Payload): Flux<Payload> = GlobalScope.mono(
+    Dispatchers.Default) {
     outputHandler.showOutput(payload.dataUtf8)
   }.thenMany(inputPublisherX())
 
@@ -352,23 +351,37 @@ class Main {
   companion object {
     const val NAME = "reactivesocket-cli"
 
-    private fun fromArgs(vararg args: String): Main {
-      val cmd = SingleCommand.singleCommand(Main::class.java)
-      return try {
-        cmd.parse(*args)
-      } catch (e: ParseException) {
-        System.err.println(e.message)
-        Help.help(cmd.commandMetadata)
-        exitProcess(-1)
-      }
-    }
-
     @JvmStatic
     fun main(vararg args: String) {
-      runBlocking {
-        fromArgs(*args).run()
+      exec(Main(), args.toList())
+    }
+
+    private fun exec(runnable: Runnable, args: List<String>) {
+      val cmd = CommandLine(runnable)
+      try {
+        val parseResult = cmd.parseArgs(*args.toTypedArray())
+
+        if (cmd.isUsageHelpRequested) {
+          cmd.usage(cmd.out)
+          exitProcess(parseResult.commandSpec().exitCodeOnUsageHelp())
+        } else if (cmd.isVersionHelpRequested) {
+          cmd.printVersionHelp(cmd.out)
+          exitProcess(parseResult.commandSpec().exitCodeOnVersionHelp())
+        }
+
+        runnable.run()
+
+        exitProcess(0)
+      } catch (pe: CommandLine.ParameterException) {
+        cmd.err.println(pe.message)
+        if (!CommandLine.UnmatchedArgumentException.printSuggestions(pe, cmd.err)) {
+          pe.commandLine.usage(cmd.err)
+        }
+        exitProcess(cmd.commandSpec.exitCodeOnInvalidInput())
+      } catch (ex: Exception) {
+        ex.printStackTrace(cmd.err)
+        exitProcess(cmd.commandSpec.exitCodeOnExecutionException())
       }
-      exitProcess(0)
     }
   }
 }
