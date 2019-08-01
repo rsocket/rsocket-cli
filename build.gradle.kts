@@ -5,17 +5,17 @@ import org.jetbrains.dokka.gradle.DokkaTask
 import org.gradle.internal.os.OperatingSystem
 
 plugins {
-  kotlin("jvm") version "1.3.31"
+  kotlin("jvm") version "1.3.41"
   `maven-publish`
   application
   id("com.github.ben-manes.versions") version "0.21.0"
   id("com.jfrog.bintray") version "1.8.4"
   id("org.jetbrains.dokka") version "0.9.18"
   id("net.nemerosa.versioning") version "2.8.2"
-  id("com.palantir.graal") version "0.3.0-29-gf737c91"
+  id("com.palantir.graal") version "0.3.0-37-g77aa98f"
   id("com.hpe.kraal") version "0.0.15"
-  id("com.palantir.consistent-versions") version "1.8.0"
-  id("com.diffplug.gradle.spotless") version "3.23.0"
+  id("com.palantir.consistent-versions") version "1.9.2"
+  id("com.diffplug.gradle.spotless") version "3.24.0"
 }
 
 repositories {
@@ -26,6 +26,7 @@ repositories {
   maven(url = "https://dl.bintray.com/kotlin/kotlin-eap/")
   maven(url = "https://oss.jfrog.org/oss-snapshot-local")
   maven(url = "https://repo.spring.io/milestone")
+  maven(url = "https://repo.spring.io/release/")
 //  maven(url = "https://oss.jfrog.org/libs-snapshot")
 //  maven(url = "https://dl.bintray.com/reactivesocket/RSocket")
 //  maven(url = "https://oss.sonatype.org/content/repositories/releases")
