@@ -5,17 +5,17 @@ import org.jetbrains.dokka.gradle.DokkaTask
 import org.gradle.internal.os.OperatingSystem
 
 plugins {
-  kotlin("jvm") version "1.3.31"
+  kotlin("jvm") version "1.3.50"
   `maven-publish`
   application
   id("com.github.ben-manes.versions") version "0.21.0"
   id("com.jfrog.bintray") version "1.8.4"
   id("org.jetbrains.dokka") version "0.9.18"
   id("net.nemerosa.versioning") version "2.8.2"
-  id("com.palantir.graal") version "0.3.0-29-gf737c91"
+  id("com.palantir.graal") version "0.6.0"
   id("com.hpe.kraal") version "0.0.15"
-  id("com.palantir.consistent-versions") version "1.8.0"
-  id("com.diffplug.gradle.spotless") version "3.23.0"
+  id("com.palantir.consistent-versions") version "1.9.2"
+  id("com.diffplug.gradle.spotless") version "3.24.0"
 }
 
 repositories {
@@ -26,6 +26,7 @@ repositories {
   maven(url = "https://dl.bintray.com/kotlin/kotlin-eap/")
   maven(url = "https://oss.jfrog.org/oss-snapshot-local")
   maven(url = "https://repo.spring.io/milestone")
+  maven(url = "https://repo.spring.io/release/")
 //  maven(url = "https://oss.jfrog.org/libs-snapshot")
 //  maven(url = "https://dl.bintray.com/reactivesocket/RSocket")
 //  maven(url = "https://oss.sonatype.org/content/repositories/releases")
@@ -90,33 +91,34 @@ val javadocJar by tasks.creating(Jar::class) {
 val jar = tasks["jar"] as org.gradle.jvm.tasks.Jar
 
 dependencies {
-  implementation("javax.activation:activation")
-  implementation("info.picocli:picocli")
-  implementation("com.jakewharton.byteunits:byteunits")
-  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
-  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8")
-  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactive")
-  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
-  implementation("com.google.guava:guava")
-  implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor")
+  implementation("com.baulsupp:oksocial-output")
   implementation("com.fasterxml.jackson.core:jackson-databind")
+  implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor")
+  implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml")
   implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8")
   implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
   implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
   implementation("com.fasterxml.jackson.module:jackson-module-parameter-names")
-  implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml")
-  implementation("org.eclipse.jetty.http2:http2-http-client-transport")
-  implementation("org.jetbrains.kotlin:kotlin-reflect")
-  implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
+  implementation("com.google.guava:guava")
+  implementation("com.jakewharton.byteunits:byteunits")
   implementation("com.squareup.okio:okio")
-  implementation("com.baulsupp:oksocial-output")
+  implementation("info.picocli:picocli")
+  implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")
   implementation("io.rsocket:rsocket-core")
   implementation("io.rsocket:rsocket-transport-local")
   implementation("io.rsocket:rsocket-transport-netty")
+  implementation("javax.activation:activation")
+  implementation("org.eclipse.jetty.http2:http2-http-client-transport")
+  implementation("org.jetbrains.kotlin:kotlin-reflect")
+  implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
+  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
+  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8")
+  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactive")
+  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
   implementation("org.slf4j:slf4j-api")
   implementation("org.slf4j:slf4j-jdk14")
+  implementation("org.springframework.boot:spring-boot-starter-rsocket")
   implementation("org.zeroturnaround:zt-exec")
-  implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")
 
   testImplementation("org.junit.jupiter:junit-jupiter-api")
   testImplementation("org.jetbrains.kotlin:kotlin-test")
@@ -208,11 +210,6 @@ val os = if (OperatingSystem.current().isMacOsX()) {
 }
 
 graal {
-  graalVersion("19.0.2")
-
-  // https://github.com/palantir/gradle-graal/issues/105
-  downloadBaseUrl("https://github.com/oracle/graal/releases/download/vm-19.0.2/graalvm-ce-$os-amd64-19.0.2.tar.gz?a=")
-
   mainClass("io.rsocket.cli.Main")
   outputName("rsocket-cli")
   option("--allow-incomplete-classpath")
