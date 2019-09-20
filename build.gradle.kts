@@ -210,10 +210,10 @@ val os = if (OperatingSystem.current().isMacOsX()) {
 }
 
 graal {
-  graalVersion("19.0.2")
+  graalVersion("19.1.1")
 
   // https://github.com/palantir/gradle-graal/issues/105
-  downloadBaseUrl("https://github.com/oracle/graal/releases/download/vm-19.0.2/graalvm-ce-$os-amd64-19.0.2.tar.gz?a=")
+  downloadBaseUrl("https://github.com/oracle/graal/releases/download/vm-19.1.1/graalvm-ce-$os-amd64-19.1.1.tar.gz?a=")
 
   mainClass("io.rsocket.cli.Main")
   outputName("rsocket-cli")
