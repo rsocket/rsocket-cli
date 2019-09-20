@@ -5,14 +5,14 @@ import org.jetbrains.dokka.gradle.DokkaTask
 import org.gradle.internal.os.OperatingSystem
 
 plugins {
-  kotlin("jvm") version "1.3.41"
+  kotlin("jvm") version "1.3.50"
   `maven-publish`
   application
   id("com.github.ben-manes.versions") version "0.21.0"
   id("com.jfrog.bintray") version "1.8.4"
   id("org.jetbrains.dokka") version "0.9.18"
   id("net.nemerosa.versioning") version "2.8.2"
-  id("com.palantir.graal") version "0.3.0-37-g77aa98f"
+  id("com.palantir.graal") version "0.6.0"
   id("com.hpe.kraal") version "0.0.15"
   id("com.palantir.consistent-versions") version "1.9.2"
   id("com.diffplug.gradle.spotless") version "3.24.0"
@@ -210,11 +210,6 @@ val os = if (OperatingSystem.current().isMacOsX()) {
 }
 
 graal {
-  graalVersion("19.1.1")
-
-  // https://github.com/palantir/gradle-graal/issues/105
-  downloadBaseUrl("https://github.com/oracle/graal/releases/download/vm-19.1.1/graalvm-ce-$os-amd64-19.1.1.tar.gz?a=")
-
   mainClass("io.rsocket.cli.Main")
   outputName("rsocket-cli")
   option("--allow-incomplete-classpath")
