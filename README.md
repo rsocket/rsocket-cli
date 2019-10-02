@@ -14,26 +14,45 @@ Supports tcp and ws URIs
 <a href='https://travis-ci.org/rsocket/rsocket-cli/builds'><img src='https://travis-ci.org/rsocket/rsocket-cli.svg?branch=master'></a> 
 
 
-## Build and Run (one step)
+## Build and Run
 
+To build the RSocket CLI:
 ```
-$ ./rsocket-cli tcp://localhost:8765
+./gradlew ---console plain installDist
 ```
 
-## Installing via Homebrew
+To run:
+```
+./build/install/rsocket-cli/bin/rsocket-cli --help
+```
+
+The build and run:
+```
+$ ./rsocket-cli --help
+```
+
+
+## Install via Homebrew
 
 Use tab completion for help with specifying the operation type.
 
 ```
 $ brew install yschimke/tap/rsocket-cli
+```
+
+## Examples
+
+
+A request-response interaction:
+```
 $ rsocket-cli -i "I am a Server" --server --debug tcp://localhost:8765       # window 1
 $ rsocket-cli --request -i "I am a Client" --debug tcp://localhost:8765      # window 2
 ```
 
-Stream the dictionary (With frames debugged)
+A request stream of dictionary words, with frames debugged:
 
 ```
-$ rsocket-cli --debug -i @/usr/share/dict/words --server tcp://localhost:8765     # window 1
+$ rsocket-cli --debug -i=@/usr/share/dict/words --server tcp://localhost:8765     # window 1
 $ rsocket-cli --stream -i "Word Up" tcp://localhost:8765                          # window 2
 ```
 
