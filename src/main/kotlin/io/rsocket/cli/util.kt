@@ -186,7 +186,7 @@ fun <T> Flux<T>.takeN(request: Int): Flux<T> =
 
 fun <T> Flux<T>.onNext(block: suspend (T) -> Unit): Flux<T> {
   return this.concatMap {
-    GlobalScope.mono(Dispatchers.Default) {
+    mono(Dispatchers.Default) {
       block.invoke(it)
     }.thenMany(Flux.just(it))
   }
@@ -194,7 +194,7 @@ fun <T> Flux<T>.onNext(block: suspend (T) -> Unit): Flux<T> {
 
 fun <T> Mono<T>.onNext(block: suspend (T) -> Unit): Mono<T> {
   return this.flatMap {
-    GlobalScope.mono(Dispatchers.Default) {
+    mono(Dispatchers.Default) {
       block.invoke(it)
     }.then(Mono.just(it))
   }
@@ -202,7 +202,7 @@ fun <T> Mono<T>.onNext(block: suspend (T) -> Unit): Mono<T> {
 
 fun <T> Flux<T>.onError(block: suspend (Throwable) -> Unit): Flux<T> {
   return this.onErrorResume {
-    GlobalScope.mono(Dispatchers.Default) {
+    mono(Dispatchers.Default) {
       block.invoke(it)
     }.thenMany(Flux.error(it))
   }
@@ -210,7 +210,7 @@ fun <T> Flux<T>.onError(block: suspend (Throwable) -> Unit): Flux<T> {
 
 fun <T> Mono<T>.onError(block: suspend (Throwable) -> Unit): Mono<T> {
   return this.onErrorResume {
-    GlobalScope.mono(Dispatchers.Default) {
+    mono(Dispatchers.Default) {
       block.invoke(it)
     }.then(Mono.error(it))
   }
