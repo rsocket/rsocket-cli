@@ -29,7 +29,6 @@ import io.rsocket.transport.TransportHeaderAware
 import io.rsocket.util.DefaultPayload
 import io.rsocket.util.EmptyPayload
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactor.mono
@@ -224,7 +223,7 @@ class Main : Runnable {
     return UriTransportRegistry.clientForUri(uri)
   }
 
-  private fun createClientRequestHandler(socket: RSocket): RSocket = createResponder()
+  private fun createClientRequestHandler(socket: RSocket): RSocket = createResponder(socket)
 
   private fun standardMimeType(dataFormat: String?): String = when (dataFormat) {
     null -> "application/json"
@@ -250,7 +249,7 @@ class Main : Runnable {
 
     // TODO chain
     runAllOperations(socket).subscribe()
-    return Mono.just(createResponder())
+    return Mono.just(createResponder(socket))
   }
 
   private fun sanitizeUri(uri: String): String {
@@ -263,10 +262,9 @@ class Main : Runnable {
     return uri
   }
 
-  fun createResponder(): AbstractRSocket {
+  fun createResponder(socket: RSocket): AbstractRSocket {
     return object : AbstractRSocket() {
-      override fun fireAndForget(payload: Payload): Mono<Void> = GlobalScope.mono(
-        Dispatchers.Default) {
+      override fun fireAndForget(payload: Payload): Mono<Void> = mono(Dispatchers.Default) {
         outputHandler.showOutput(payload.dataUtf8)
       }.then()
 
@@ -283,14 +281,13 @@ class Main : Runnable {
         return inputPublisherX()
       }
 
-      override fun metadataPush(payload: Payload): Mono<Void> = GlobalScope.mono(
-        Dispatchers.Default) {
+      override fun metadataPush(payload: Payload): Mono<Void> = mono(Dispatchers.Default) {
         outputHandler.showOutput(payload.metadataUtf8)
       }.then()
     }
   }
 
-  private fun handleIncomingPayload(payload: Payload): Flux<Payload> = GlobalScope.mono(
+  private fun handleIncomingPayload(payload: Payload): Flux<Payload> = mono(
     Dispatchers.Default) {
     outputHandler.showOutput(payload.dataUtf8)
   }.thenMany(inputPublisherX())
@@ -347,7 +344,7 @@ class Main : Runnable {
       .onErrorResume { Flux.empty() }
       .then().flux()
   } catch (ex: Exception) {
-    GlobalScope.mono(Dispatchers.Default) {
+    mono(Dispatchers.Default) {
       outputHandler.showError("error before query", ex)
     }.then().flux()
   }
