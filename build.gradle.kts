@@ -1,15 +1,10 @@
-import com.jfrog.bintray.gradle.BintrayExtension
-import org.gradle.api.publish.maven.MavenPom
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import org.jetbrains.dokka.gradle.DokkaTask
 
 plugins {
   kotlin("jvm") version "1.3.72"
   `maven-publish`
   application
   id("com.github.ben-manes.versions") version "0.28.0"
-  id("com.jfrog.bintray") version "1.8.5"
-  id("org.jetbrains.dokka") version "0.10.1"
   id("net.nemerosa.versioning") version "2.13.1"
   id("com.diffplug.gradle.spotless") version "3.30.0"
 }
@@ -19,21 +14,13 @@ repositories {
   mavenCentral()
   maven(url = "https://jitpack.io")
   maven(url = "https://repo.maven.apache.org/maven2")
-  maven(url = "https://dl.bintray.com/kotlin/kotlin-eap/")
-  maven(url = "https://oss.jfrog.org/oss-snapshot-local")
   maven(url = "https://repo.spring.io/milestone")
-  maven(url = "https://repo.spring.io/release/")
-//  maven(url = "https://oss.jfrog.org/libs-snapshot")
-//  maven(url = "https://dl.bintray.com/reactivesocket/RSocket")
-//  maven(url = "https://oss.sonatype.org/content/repositories/releases")
+  maven(url = "https://repo.spring.io/release")
 }
 
-group = "com.baulsupp"
-val artifactID = "rsocket-cli"
+group = "com.github.yschimke"
 description = "RSocket CLI"
-val projectVersion = versioning.info.display
-// println("Version $projectVersion")
-version = projectVersion
+version = versioning.info.display
 
 base {
   archivesBaseName = "rsocket-cli"
@@ -61,16 +48,6 @@ tasks {
 tasks {
   withType(Tar::class) {
     compression = Compression.GZIP
-  }
-}
-
-tasks {
-  "dokka"(DokkaTask::class) {
-    outputFormat = "javadoc"
-    outputDirectory = "$buildDir/javadoc"
-  }
-  withType<GenerateMavenPom> {
-    destination = file("$buildDir/libs/${jar.get().baseName}.pom")
   }
 }
 
@@ -127,85 +104,23 @@ dependencies {
   testRuntime("org.slf4j:slf4j-jdk14:1.8.0-beta4")
 }
 
-fun MavenPom.addDependencies() = withXml {
-  asNode().appendNode("dependencies").let { depNode ->
-    configurations.implementation.get().allDependencies.forEach {
-      depNode.appendNode("dependency").apply {
-        appendNode("groupId", it.group)
-        appendNode("artifactId", it.name)
-        appendNode("version", it.version)
-      }
-    }
-  }
-}
-
-publishing {
-  publications {
-    create("mavenJava", MavenPublication::class) {
-      artifactId = artifactID
-      groupId = project.group.toString()
-      version = project.version.toString()
-      description = project.description
-      artifact(jar)
-      artifact(sourcesJar) {
-        classifier = "sources"
-      }
-      artifact(javadocJar) {
-        classifier = "javadoc"
-      }
-      pom.addDependencies()
-      pom {
-        packaging = "jar"
-        developers {
-          developer {
-            email.set("yuri@schimke.ee")
-            id.set("yschimke")
-            name.set("Yuri Schimke")
-          }
-        }
-        licenses {
-          license {
-            name.set("Apache License")
-            url.set("http://opensource.org/licenses/apache-2.0")
-            distribution.set("repo")
-          }
-        }
-        scm {
-          connection.set("scm:git:https://github.com/yschimke/okurl.git")
-          developerConnection.set("scm:git:git@github.com:yschimke/okurl.git")
-          url.set("https://github.com/yschimke/okurl.git")
-        }
-      }
-    }
-  }
-}
-
-fun findProperty(s: String) = project.findProperty(s) as String?
-bintray {
-  user = findProperty("baulsuppBintrayUser")
-  key = findProperty("baulsuppBintrayKey")
-  publish = true
-  setPublications("mavenJava")
-  pkg(delegateClosureOf<BintrayExtension.PackageConfig> {
-    repo = "baulsupp.com"
-    name = "rsocket-cli"
-    userOrg = user
-    websiteUrl = "https://github.com/rsocket/rsocket-cli"
-    githubRepo = "rsocket/rsocket-cli"
-    vcsUrl = "https://github.com/rsocket/rsocket-cli.git"
-    desc = project.description
-    setLabels("kotlin")
-    setLicenses("Apache-2.0")
-    version(delegateClosureOf<BintrayExtension.VersionConfig> {
-      name = project.version.toString()
-    })
-  })
-}
-
 spotless {
   kotlinGradle {
     ktlint("0.31.0").userData(mutableMapOf("indent_size" to "2", "continuation_indent_size" to "2"))
     trimTrailingWhitespace()
     endWithNewline()
+  }
+}
+
+publishing {
+  repositories {
+    maven(url = "build/repository")
+  }
+  publications {
+    register("mavenJava", MavenPublication::class) {
+      from(components["java"])
+      artifact(sourcesJar)
+      artifact(tasks.distTar.get())
+    }
   }
 }
