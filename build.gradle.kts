@@ -2,19 +2,16 @@ import com.jfrog.bintray.gradle.BintrayExtension
 import org.gradle.api.publish.maven.MavenPom
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jetbrains.dokka.gradle.DokkaTask
-import org.gradle.internal.os.OperatingSystem
 
 plugins {
-  kotlin("jvm") version "1.3.71"
+  kotlin("jvm") version "1.3.72"
   `maven-publish`
   application
-  id("com.github.ben-manes.versions") version "0.21.0"
-  id("com.jfrog.bintray") version "1.8.4"
-  id("org.jetbrains.dokka") version "0.9.18"
-  id("net.nemerosa.versioning") version "2.8.2"
-  id("com.palantir.graal") version "0.6.0"
-  id("com.hpe.kraal") version "0.0.15"
-  id("com.diffplug.gradle.spotless") version "3.24.0"
+  id("com.github.ben-manes.versions") version "0.28.0"
+  id("com.jfrog.bintray") version "1.8.5"
+  id("org.jetbrains.dokka") version "0.10.1"
+  id("net.nemerosa.versioning") version "2.13.1"
+  id("com.diffplug.gradle.spotless") version "3.30.0"
 }
 
 repositories {
@@ -90,29 +87,29 @@ val javadocJar by tasks.creating(Jar::class) {
 val jar = tasks["jar"] as org.gradle.jvm.tasks.Jar
 
 dependencies {
-  implementation("com.baulsupp:oksocial-output:4.32.0")
+  implementation("com.baulsupp:oksocial-output:4.34.0")
   implementation("org.jfree:jfreesvg:3.4")
   implementation("com.kitfox.svg:svg-salamander:1.0")
   implementation("commons-io:commons-io:2.6")
-  implementation("com.fasterxml.jackson.core:jackson-databind:2.10.0")
-  implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.10.0")
-  implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.10.0")
-  implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.10.0")
-  implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.10.0")
-  implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.10.0")
-  implementation("com.fasterxml.jackson.module:jackson-module-parameter-names:2.10.0")
-  implementation("com.google.guava:guava:28.1-jre")
+  implementation("com.fasterxml.jackson.core:jackson-databind:2.11.0")
+  implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.11.0")
+  implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.11.0")
+  implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.11.0")
+  implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.11.0")
+  implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.11.0")
+  implementation("com.fasterxml.jackson.module:jackson-module-parameter-names:2.11.0")
+  implementation("com.google.guava:guava:29.0-jre")
   implementation("com.jakewharton.byteunits:byteunits:0.9.1")
-  implementation("com.squareup.okio:okio:2.2.2")
-  implementation("info.picocli:picocli:4.0.1")
-  implementation("io.projectreactor.kotlin:reactor-kotlin-extensions:1.0.0.RELEASE")
+  implementation("com.squareup.okio:okio:2.6.0")
+  implementation("info.picocli:picocli:4.3.2")
+  implementation("io.projectreactor.kotlin:reactor-kotlin-extensions:1.0.2.RELEASE")
   implementation("io.rsocket:rsocket-core:1.0.0")
   implementation("io.rsocket:rsocket-transport-local:1.0.0")
   implementation("io.rsocket:rsocket-transport-netty:1.0.0")
   implementation("javax.activation:activation:1.1.1")
   implementation("org.eclipse.jetty.http2:http2-http-client-transport:9.4.19.v20190610")
-  implementation("org.jetbrains.kotlin:kotlin-reflect:1.3.71")
-  implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.3.71")
+  implementation("org.jetbrains.kotlin:kotlin-reflect:1.3.72")
+  implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.3.72")
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.6")
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.3.6")
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactive:1.3.6")
@@ -123,8 +120,8 @@ dependencies {
   implementation("org.zeroturnaround:zt-exec:1.11")
 
   testImplementation("org.junit.jupiter:junit-jupiter-api:5.5.2")
-  testImplementation("org.jetbrains.kotlin:kotlin-test:1.3.70")
-  testImplementation("org.jetbrains.kotlin:kotlin-test-junit:1.3.70")
+  testImplementation("org.jetbrains.kotlin:kotlin-test:1.3.72")
+  testImplementation("org.jetbrains.kotlin:kotlin-test-junit:1.3.72")
 
   testRuntime("org.junit.jupiter:junit-jupiter-engine:5.5.2")
   testRuntime("org.slf4j:slf4j-jdk14:1.8.0-beta4")
@@ -203,33 +200,6 @@ bintray {
       name = project.version.toString()
     })
   })
-}
-
-val os = if (OperatingSystem.current().isMacOsX()) {
-  "darwin"
-} else {
-  "linux"
-}
-
-graal {
-  mainClass("io.rsocket.cli.Main")
-  outputName("rsocket-cli")
-  option("--allow-incomplete-classpath")
-  option("--enable-all-security-services")
-  option("--report-unsupported-elements-at-runtime")
-  option("--auto-fallback")
-  option("--enable-http")
-  option("--enable-https")
-  option("-H:+AddAllCharsets")
-  option("-H:ReflectionConfigurationFiles=reflect.config")
-  option("-H:+ReportExceptionStackTraces")
-  option("--initialize-at-build-time=reactor,ch.qos.logback,com.fasterxml.jackson,fresh.graal,io.micronaut,io.netty,io.reactivex,org.reactivestreams,org.slf4j,org.yaml.snakeyaml,javax")
-
-//  -H:InitialCollectionPolicy=com.oracle.svm.core.genscavenge.CollectionPolicy$BySpaceAndTime \
-//  -J-Djava.util.concurrent.ForkJoinPool.common.parallelism=1 \
-//  -Dio.netty.noUnsafe=true \
-//  -Dio.netty.noJdkZlibDecoder=true \
-  option("--delay-class-initialization-to-runtime=io.netty.handler.ssl.JdkNpnApplicationProtocolNegotiator,io.netty.handler.ssl.ReferenceCountedOpenSslEngine,io.netty.util.internal.ObjectCleaner,io.netty.handler.ssl.ReferenceCountedOpenSslContext,io.netty.channel.DefaultChannelConfig,io.netty.handler.codec.http.HttpObjectEncoder,io.netty.handler.codec.http.websocketx.WebSocket00FrameEncoder,javax.net.ssl.SSLContext")
 }
 
 spotless {
