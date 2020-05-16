@@ -5,7 +5,7 @@ import org.jetbrains.dokka.gradle.DokkaTask
 import org.gradle.internal.os.OperatingSystem
 
 plugins {
-  kotlin("jvm") version "1.3.50"
+  kotlin("jvm") version "1.3.71"
   `maven-publish`
   application
   id("com.github.ben-manes.versions") version "0.21.0"
@@ -14,7 +14,6 @@ plugins {
   id("net.nemerosa.versioning") version "2.8.2"
   id("com.palantir.graal") version "0.6.0"
   id("com.hpe.kraal") version "0.0.15"
-  id("com.palantir.consistent-versions") version "1.9.2"
   id("com.diffplug.gradle.spotless") version "3.24.0"
 }
 
@@ -22,7 +21,7 @@ repositories {
   jcenter()
   mavenCentral()
   maven(url = "https://jitpack.io")
-  maven(url = "http://repo.maven.apache.org/maven2")
+  maven(url = "https://repo.maven.apache.org/maven2")
   maven(url = "https://dl.bintray.com/kotlin/kotlin-eap/")
   maven(url = "https://oss.jfrog.org/oss-snapshot-local")
   maven(url = "https://repo.spring.io/milestone")
@@ -91,41 +90,44 @@ val javadocJar by tasks.creating(Jar::class) {
 val jar = tasks["jar"] as org.gradle.jvm.tasks.Jar
 
 dependencies {
-  implementation("com.baulsupp:oksocial-output")
-  implementation("com.fasterxml.jackson.core:jackson-databind")
-  implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor")
-  implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml")
-  implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8")
-  implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
-  implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
-  implementation("com.fasterxml.jackson.module:jackson-module-parameter-names")
-  implementation("com.google.guava:guava")
-  implementation("com.jakewharton.byteunits:byteunits")
-  implementation("com.squareup.okio:okio")
-  implementation("info.picocli:picocli")
-  implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")
-  implementation("io.rsocket:rsocket-core")
-  implementation("io.rsocket:rsocket-transport-local")
-  implementation("io.rsocket:rsocket-transport-netty")
-  implementation("javax.activation:activation")
-  implementation("org.eclipse.jetty.http2:http2-http-client-transport")
-  implementation("org.jetbrains.kotlin:kotlin-reflect")
-  implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
-  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
-  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8")
-  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactive")
-  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
-  implementation("org.slf4j:slf4j-api")
-  implementation("org.slf4j:slf4j-jdk14")
-  implementation("org.springframework.boot:spring-boot-starter-rsocket")
-  implementation("org.zeroturnaround:zt-exec")
+  implementation("com.baulsupp:oksocial-output:4.32.0")
+  implementation("org.jfree:jfreesvg:3.4")
+  implementation("com.kitfox.svg:svg-salamander:1.0")
+  implementation("commons-io:commons-io:2.6")
+  implementation("com.fasterxml.jackson.core:jackson-databind:2.10.0")
+  implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.10.0")
+  implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.10.0")
+  implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.10.0")
+  implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.10.0")
+  implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.10.0")
+  implementation("com.fasterxml.jackson.module:jackson-module-parameter-names:2.10.0")
+  implementation("com.google.guava:guava:28.1-jre")
+  implementation("com.jakewharton.byteunits:byteunits:0.9.1")
+  implementation("com.squareup.okio:okio:2.2.2")
+  implementation("info.picocli:picocli:4.0.1")
+  implementation("io.projectreactor.kotlin:reactor-kotlin-extensions:1.0.0.RELEASE")
+  implementation("io.rsocket:rsocket-core:1.0.0")
+  implementation("io.rsocket:rsocket-transport-local:1.0.0")
+  implementation("io.rsocket:rsocket-transport-netty:1.0.0")
+  implementation("javax.activation:activation:1.1.1")
+  implementation("org.eclipse.jetty.http2:http2-http-client-transport:9.4.19.v20190610")
+  implementation("org.jetbrains.kotlin:kotlin-reflect:1.3.71")
+  implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.3.71")
+  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.6")
+  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.3.6")
+  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactive:1.3.6")
+  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:1.3.6")
+  implementation("org.slf4j:slf4j-api:1.8.0-beta4")
+  implementation("org.slf4j:slf4j-jdk14:1.8.0-beta4")
+  implementation("org.springframework.boot:spring-boot-starter-rsocket:2.3.0.RELEASE")
+  implementation("org.zeroturnaround:zt-exec:1.11")
 
-  testImplementation("org.junit.jupiter:junit-jupiter-api")
-  testImplementation("org.jetbrains.kotlin:kotlin-test")
-  testImplementation("org.jetbrains.kotlin:kotlin-test-junit")
+  testImplementation("org.junit.jupiter:junit-jupiter-api:5.5.2")
+  testImplementation("org.jetbrains.kotlin:kotlin-test:1.3.70")
+  testImplementation("org.jetbrains.kotlin:kotlin-test-junit:1.3.70")
 
-  testRuntime("org.junit.jupiter:junit-jupiter-engine:")
-  testRuntime("org.slf4j:slf4j-jdk14")
+  testRuntime("org.junit.jupiter:junit-jupiter-engine:5.5.2")
+  testRuntime("org.slf4j:slf4j-jdk14:1.8.0-beta4")
 }
 
 fun MavenPom.addDependencies() = withXml {

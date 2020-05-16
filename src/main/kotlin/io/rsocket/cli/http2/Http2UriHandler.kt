@@ -1,9 +1,8 @@
 package io.rsocket.cli.http2
 
-import io.rsocket.Closeable
+import io.rsocket.cli.uri.UriHandler
 import io.rsocket.transport.ClientTransport
 import io.rsocket.transport.ServerTransport
-import io.rsocket.uri.UriHandler
 import org.eclipse.jetty.http.HttpScheme
 import java.net.URI
 import java.util.Optional
@@ -17,5 +16,5 @@ class Http2UriHandler : UriHandler {
       else -> empty()
     }
 
-  override fun buildServer(uri: URI): Optional<ServerTransport<Closeable>> = empty()
+  override fun buildServer(uri: URI): Optional<ServerTransport<*>> = empty()
 }

@@ -17,19 +17,18 @@ import com.baulsupp.oksocial.output.ConsoleHandler
 import com.baulsupp.oksocial.output.OutputHandler
 import com.baulsupp.oksocial.output.UsageException
 import com.google.common.io.Files
-import io.rsocket.AbstractRSocket
 import io.rsocket.Closeable
 import io.rsocket.ConnectionSetupPayload
 import io.rsocket.Payload
 import io.rsocket.RSocket
-import io.rsocket.RSocketFactory
-import io.rsocket.resume.PeriodicResumeStrategy
-import io.rsocket.transport.ClientTransport
+import io.rsocket.cli.uri.UriTransportRegistry
+import io.rsocket.core.RSocketConnector
+import io.rsocket.core.RSocketServer
+import io.rsocket.core.Resume
 import io.rsocket.transport.TransportHeaderAware
 import io.rsocket.util.DefaultPayload
 import io.rsocket.util.EmptyPayload
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactor.mono
 import kotlinx.coroutines.runBlocking
@@ -42,6 +41,7 @@ import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import reactor.util.retry.Retry
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.time.Duration.ofSeconds
@@ -172,58 +172,43 @@ class Main : Runnable {
   }
 
   suspend fun buildServer(uri: String): Closeable {
-    val factory = RSocketFactory.receive()
-
-    if (resume) {
-      factory.resume()
-    }
-
-    val transport = factory
-      .acceptor(this::createServerRequestHandler)
-      .transport(UriTransportRegistry.serverForUri(uri))
-
-    return transport.start().awaitFirst()
+    return RSocketServer.create(this::createServerRequestHandler)
+      .apply {
+        if (resume) {
+          resume(Resume())
+        }
+      }
+      .bind(UriTransportRegistry.serverForUri(uri))
+      .block()!!
   }
 
   suspend fun buildClient(uri: String): RSocket {
-    val clientRSocketFactory = RSocketFactory.connect()
-
-    if (resume) {
-      clientRSocketFactory.resume()
-        .resumeSessionDuration(ofSeconds(30))
-        .resumeStrategy { PeriodicResumeStrategy(ofSeconds(3)) }
-    }
-
-    if (keepalive != null) {
-      clientRSocketFactory.keepAliveTickPeriod(parseShortDuration(keepalive!!))
-    }
-    clientRSocketFactory.errorConsumer { t ->
-      runBlocking {
-        outputHandler.showError("client error", t)
+    val clientTransport = UriTransportRegistry.clientForUri(uri).apply {
+      if (transportHeader != null && this is TransportHeaderAware) {
+        setTransportHeaders { headerMap(transportHeader) }
       }
     }
-    clientRSocketFactory.metadataMimeType(standardMimeType(metadataFormat))
-    clientRSocketFactory.dataMimeType(standardMimeType(dataFormat))
-    if (setup != null) {
-      clientRSocketFactory.setupPayload(parseSetupPayload())
-    }
 
-    val clientTransport = clientTransport(uri)
+    return RSocketConnector.create()
+      .apply {
+        if (resume) {
+          resume(Resume().sessionDuration(ofSeconds(30)).retry(Retry.fixedDelay(3, ofSeconds(3))))
+        }
 
-    if (transportHeader != null && clientTransport is TransportHeaderAware) {
-      clientTransport.setTransportHeaders { headerMap(transportHeader) }
-    }
-
-    clientRSocketFactory.acceptor(this::createClientRequestHandler)
-
-    return clientRSocketFactory.transport(clientTransport).start().awaitFirst()
+        if (keepalive != null) {
+          val duration = parseShortDuration(keepalive!!)
+          keepAlive(duration, duration.multipliedBy(3))
+        }
+      }
+      .metadataMimeType(standardMimeType(metadataFormat))
+      .dataMimeType(standardMimeType(dataFormat))
+      .setupPayload(parseSetupPayload())
+      .acceptor(this::createClientRequestHandler)
+      .connect(clientTransport)
+      .block()!!
   }
 
-  private fun clientTransport(uri: String): ClientTransport? {
-    return UriTransportRegistry.clientForUri(uri)
-  }
-
-  private fun createClientRequestHandler(socket: RSocket): RSocket = createResponder(socket)
+  private fun createClientRequestHandler(setupPayload: ConnectionSetupPayload, socket: RSocket): Mono<RSocket> = Mono.just(createResponder(socket))
 
   private fun standardMimeType(dataFormat: String?): String = when (dataFormat) {
     null -> "application/json"
@@ -262,8 +247,8 @@ class Main : Runnable {
     return uri
   }
 
-  fun createResponder(socket: RSocket): AbstractRSocket {
-    return object : AbstractRSocket() {
+  fun createResponder(socket: RSocket): RSocket {
+    return object : RSocket {
       override fun fireAndForget(payload: Payload): Mono<Void> = mono(Dispatchers.Default) {
         outputHandler.showOutput(payload.dataUtf8)
       }.then()
