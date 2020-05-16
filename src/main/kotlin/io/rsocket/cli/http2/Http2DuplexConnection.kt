@@ -7,9 +7,9 @@ import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder
 import io.rsocket.DuplexConnection
 import io.rsocket.exceptions.ConnectionCloseException
-import io.rsocket.frame.ErrorFrameFlyweight
-import io.rsocket.frame.FrameLengthFlyweight.FRAME_LENGTH_MASK
-import io.rsocket.frame.FrameLengthFlyweight.FRAME_LENGTH_SIZE
+import io.rsocket.frame.ErrorFrameCodec
+import io.rsocket.frame.FrameLengthCodec.FRAME_LENGTH_MASK
+import io.rsocket.frame.FrameLengthCodec.FRAME_LENGTH_SIZE
 import org.eclipse.jetty.http.HttpFields
 import org.eclipse.jetty.http.HttpURI
 import org.eclipse.jetty.http.HttpVersion
@@ -69,7 +69,7 @@ class Http2DuplexConnection : DuplexConnection {
         log.info("connected")
       } else {
         receive.onNext(
-          ErrorFrameFlyweight.encode(ByteBufAllocator.DEFAULT,
+          ErrorFrameCodec.encode(ByteBufAllocator.DEFAULT,
             0, ConnectionCloseException("non 200 response: " + response.status)))
         dispose()
       }
@@ -120,6 +120,10 @@ class Http2DuplexConnection : DuplexConnection {
     public override fun decode(ctx: ChannelHandlerContext?, `in`: ByteBuf): ByteBuf? {
       return super.decode(ctx, `in`) as ByteBuf?
     }
+  }
+
+  override fun alloc(): ByteBufAllocator {
+    return ByteBufAllocator.DEFAULT
   }
 
   companion object {

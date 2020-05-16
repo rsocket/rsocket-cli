@@ -14,20 +14,15 @@
  * limitations under the License.
  */
 
-package io.rsocket.cli
+package io.rsocket.cli.uri
 
 import io.rsocket.Closeable
 import io.rsocket.DuplexConnection
 import io.rsocket.cli.http2.Http2UriHandler
-
 import io.rsocket.transport.ClientTransport
 import io.rsocket.transport.ServerTransport
-import io.rsocket.transport.local.LocalUriHandler
-import io.rsocket.transport.netty.TcpUriHandler
-import io.rsocket.transport.netty.WebsocketUriHandler
-import io.rsocket.uri.UriHandler
-import java.net.URI
 import reactor.core.publisher.Mono
+import java.net.URI
 
 /**
  * Registry for looking up transports by URI.
@@ -66,5 +61,5 @@ object UriTransportRegistry {
   }
 
   private val handlers: List<UriHandler> =
-    listOf(WebsocketUriHandler(), TcpUriHandler(), Http2UriHandler(), LocalUriHandler())
+        listOf(WebsocketUriHandler(), TcpUriHandler(), Http2UriHandler(), LocalUriHandler())
 }
