@@ -18,7 +18,7 @@ Supports tcp and ws URIs
 
 To build the RSocket CLI:
 ```
-./gradlew ---console plain installDist
+./gradlew --console plain installDist
 ```
 
 To run:
