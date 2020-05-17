@@ -47,7 +47,7 @@ tasks {
 
 tasks {
   withType(Tar::class) {
-    compression = Compression.GZIP
+    compression = Compression.NONE
   }
 }
 
