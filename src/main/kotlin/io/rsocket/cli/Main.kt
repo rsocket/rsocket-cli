@@ -17,6 +17,9 @@ import com.baulsupp.oksocial.output.ConsoleHandler
 import com.baulsupp.oksocial.output.OutputHandler
 import com.baulsupp.oksocial.output.UsageException
 import com.google.common.io.Files
+import io.netty.buffer.ByteBufAllocator
+import io.netty.buffer.ByteBufUtil
+import io.netty.buffer.CompositeByteBuf
 import io.rsocket.Closeable
 import io.rsocket.ConnectionSetupPayload
 import io.rsocket.Payload
@@ -25,6 +28,7 @@ import io.rsocket.cli.uri.UriTransportRegistry
 import io.rsocket.core.RSocketConnector
 import io.rsocket.core.RSocketServer
 import io.rsocket.core.Resume
+import io.rsocket.metadata.*
 import io.rsocket.transport.TransportHeaderAware
 import io.rsocket.util.DefaultPayload
 import io.rsocket.util.EmptyPayload
@@ -97,6 +101,9 @@ class Main : Runnable {
 
   @Option(names = ["--setup"], description = ["String input or @path/to/file for setup metadata"])
   var setup: String? = null
+
+  @Option(names = ["--route"], description = ["RSocket Route"])
+  var route: String? = null
 
   @Option(names = ["--debug"], description = ["Debug Output"])
   var debug: Boolean = false
@@ -216,6 +223,7 @@ class Main : Runnable {
     "cbor" -> "application/cbor"
     "binary" -> "application/binary"
     "text" -> "text/plain"
+    "composite" -> "message/x.rsocket.composite-metadata.v0"
     else -> dataFormat
   }
 
@@ -284,6 +292,12 @@ class Main : Runnable {
     }
 
   fun buildMetadata(): ByteArray? = when {
+    this.route != null ->{
+        val compositeByteBuf =  CompositeByteBuf(ByteBufAllocator.DEFAULT,false,1);
+        val routingMetadata = TaggingMetadataCodec.createRoutingMetadata(ByteBufAllocator.DEFAULT, listOf(route))
+        CompositeMetadataCodec.encodeAndAddMetadata(compositeByteBuf, ByteBufAllocator.DEFAULT,WellKnownMimeType.MESSAGE_RSOCKET_ROUTING,routingMetadata.content)
+        ByteBufUtil.getBytes(compositeByteBuf)
+    }
     this.metadata != null -> {
       if (this.headers != null) {
         throw UsageException("Can't specify headers and metadata")
