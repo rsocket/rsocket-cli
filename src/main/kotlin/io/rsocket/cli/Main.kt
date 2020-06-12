@@ -25,7 +25,6 @@ import io.rsocket.cli.uri.UriTransportRegistry
 import io.rsocket.core.RSocketConnector
 import io.rsocket.core.RSocketServer
 import io.rsocket.core.Resume
-import io.rsocket.transport.TransportHeaderAware
 import io.rsocket.util.DefaultPayload
 import io.rsocket.util.EmptyPayload
 import kotlinx.coroutines.Dispatchers
@@ -60,8 +59,7 @@ class Main : Runnable {
   @Option(names = ["-H", "--header"], description = ["Custom header to pass to server"])
   var headers: List<String>? = null
 
-  @Option(names = ["-T", "--transport-header"],
-    description = ["Custom header to pass to the transport"])
+  @Option(names = ["-T", "--transport-header"], description = ["Custom header to pass to the transport"])
   var transportHeader: List<String>? = null
 
   @Option(names = ["--stream"], description = ["Request Stream"])
@@ -183,11 +181,7 @@ class Main : Runnable {
   }
 
   suspend fun buildClient(uri: String): RSocket {
-    val clientTransport = UriTransportRegistry.clientForUri(uri).apply {
-      if (transportHeader != null && this is TransportHeaderAware) {
-        setTransportHeaders { headerMap(transportHeader) }
-      }
-    }
+    val clientTransport = UriTransportRegistry.clientForUri(uri, headerMap(transportHeader))
 
     return RSocketConnector.create()
       .apply {
