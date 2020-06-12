@@ -114,9 +114,6 @@ class Main : Runnable {
   @Option(names = ["--resume"], description = ["resume enabled"])
   var resume: Boolean = false
 
-  @Option(names = ["--completionScript"], description = ["Generate completion script"])
-  var completionScript: Boolean = false
-
   @Parameters(arity = "0..1", paramLabel = "target", description = ["Endpoint URL"],
     completionCandidates = UrlCandidates::class)
   var target: String? = null

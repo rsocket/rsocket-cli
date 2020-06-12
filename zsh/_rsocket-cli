@@ -1,0 +1,50 @@
+#compdef rsocket-cli
+#autoload
+
+_rsocket_cli_caching_policy() {
+    # rebuild if cache is more than a day old
+    local -a oldp
+    oldp=( "$1"(mm+5) )
+    (( $#oldp ))
+}
+
+_rsocket_cli_urls() {
+  local host urlpath
+
+  compadd tcp://localhost:9898 ws://localhost:9898/rsocket wss://rsocket-demo.herokuapp.com/ws
+}
+
+_rsocket_cli() {
+  local curcontext="$curcontext" state state_descr line expl
+  typeset -A opt_args
+
+  zstyle -s ":completion:$curcontext:" cache-policy _rsocket_cli_caching_policy
+  #zstyle -s ":completion:$curcontext:" use-cache true
+
+  _arguments -C -S \
+    {-T,--transport-header}='[Custom header to pass to the transport]' \
+    {-H,--header}='[Custom header to pass to server]' \
+    --request'[Request]' \
+    --stream'[Stram]' \
+    --channel'[Channel]' \
+    --fnf'[Fire And Forget]' \
+    --metadataPush'[Metadata Push]' \
+    --server'[Server]' \
+    {-i,--input}='[Input string input or @path/to/file]' \
+    {-m,--metadata}='[Metadata input string input or @path/to/file]' \
+    --metadataFormat='[MetaData Format]' \
+    --dataFormat='[Data Format]' \
+    --setup='[String input or @path/to/file for setup metadata]' \
+    --debug'[Debug]' \
+    --ops='[Operation Count]' \
+    --timeout='[Timeout seconds]' \
+    --keepalive='[Keepalive seconds]' \
+    {-r,--requestn}='[Request N]' \
+    --resume'[Resume]' \
+    {-h,--help}'[Show this help message and exit.]' \
+    {-V,--version}'[Print version information and exit.]' \
+    '*:URLs:_rsocket_cli_urls' \
+    && ret=0
+}
+
+_rsocket_cli "$@"
