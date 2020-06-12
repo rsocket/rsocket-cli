@@ -15,10 +15,8 @@
  */
 package io.rsocket.cli.uri
 
-import io.rsocket.Closeable
 import io.rsocket.transport.ClientTransport
 import io.rsocket.transport.ServerTransport
-import io.rsocket.transport.netty.UriUtils
 import io.rsocket.transport.netty.client.WebsocketClientTransport
 import io.rsocket.transport.netty.server.WebsocketServerTransport
 import java.net.URI
@@ -30,13 +28,18 @@ import java.util.Optional
  * An implementation of [UriHandler] that creates [WebsocketClientTransport]s and [ ]s.
  */
 class WebsocketUriHandler : UriHandler {
-  override fun buildClient(uri: URI): Optional<ClientTransport> {
+  override fun buildClient(
+    uri: URI,
+    headerMap: Map<String, String>
+  ): Optional<ClientTransport> {
     Objects.requireNonNull(uri, "uri must not be null")
-    return if (SCHEME.stream()
-        .noneMatch { scheme: String -> scheme == uri.scheme }
-    ) {
+    return if (SCHEME.stream().noneMatch { scheme: String -> scheme == uri.scheme }) {
       Optional.empty()
-    } else Optional.of(WebsocketClientTransport.create(uri))
+    } else {
+      Optional.of(WebsocketClientTransport.create(uri).apply {
+        setTransportHeaders { headerMap }
+      })
+    }
   }
 
   override fun buildServer(uri: URI): Optional<ServerTransport<*>> {
