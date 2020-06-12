@@ -32,13 +32,16 @@ object UriTransportRegistry {
     ClientTransport { Mono.error<DuplexConnection>(UnsupportedOperationException()) }
 
   private val FAILED_SERVER_LOOKUP =
-    ServerTransport { _, _ -> Mono.error<Closeable>(UnsupportedOperationException()) }
+    ServerTransport { Mono.error<Closeable>(UnsupportedOperationException()) }
 
-  fun clientForUri(uriString: String): ClientTransport {
+  fun clientForUri(
+    uriString: String,
+    headerMap: Map<String, String> = emptyMap()
+  ): ClientTransport {
     val uri = URI.create(uriString)
 
     for (h in handlers) {
-      val r = h.buildClient(uri)
+      val r = h.buildClient(uri, headerMap)
       if (r.isPresent) {
         return r.get()
       }

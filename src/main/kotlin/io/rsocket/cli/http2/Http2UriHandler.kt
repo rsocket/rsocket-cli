@@ -10,7 +10,10 @@ import java.util.Optional.empty
 import java.util.Optional.of
 
 class Http2UriHandler : UriHandler {
-  override fun buildClient(uri: URI): Optional<ClientTransport> =
+  override fun buildClient(
+    uri: URI,
+    headerMap: Map<String, String>
+  ): Optional<ClientTransport> =
     when {
       HttpScheme.HTTPS.`is`(uri.scheme) || HttpScheme.HTTP.`is`(uri.scheme) -> of(Http2ClientTransport(uri))
       else -> empty()
