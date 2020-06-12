@@ -114,9 +114,6 @@ class Main : Runnable {
   @Option(names = ["--resume"], description = ["resume enabled"])
   var resume: Boolean = false
 
-  @Option(names = ["--completionScript"], description = ["Generate completion script"])
-  var completionScript: Boolean = false
-
   @Parameters(arity = "0..1", paramLabel = "target", description = ["Endpoint URL"],
     completionCandidates = UrlCandidates::class)
   var target: String? = null
@@ -349,11 +346,7 @@ class Main : Runnable {
           exitProcess(parseResult.commandSpec().exitCodeOnVersionHelp())
         }
 
-        if (runnable.completionScript) {
-          print(picocli.AutoComplete.bash("rsocket-cli", cmd))
-        } else {
-          runnable.run()
-        }
+        runnable.run()
 
         exitProcess(0)
       } catch (pe: CommandLine.ParameterException) {

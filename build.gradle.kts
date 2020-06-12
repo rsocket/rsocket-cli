@@ -112,6 +112,25 @@ spotless {
   }
 }
 
+distributions {
+  getByName("main") {
+    contents {
+      from("${rootProject.projectDir}") {
+        include("README.md", "LICENSE")
+      }
+      from("${rootProject.projectDir}/zsh") {
+        into("zsh")
+      }
+      into("lib") {
+        from(jar)
+      }
+      into("lib") {
+        from(configurations.runtimeClasspath)
+      }
+    }
+  }
+}
+
 publishing {
   repositories {
     maven(url = "build/repository")
