@@ -346,11 +346,7 @@ class Main : Runnable {
           exitProcess(parseResult.commandSpec().exitCodeOnVersionHelp())
         }
 
-        if (runnable.completionScript) {
-          print(picocli.AutoComplete.bash("rsocket-cli", cmd))
-        } else {
-          runnable.run()
-        }
+        runnable.run()
 
         exitProcess(0)
       } catch (pe: CommandLine.ParameterException) {
