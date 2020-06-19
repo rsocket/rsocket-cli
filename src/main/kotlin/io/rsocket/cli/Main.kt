@@ -28,8 +28,9 @@ import io.rsocket.cli.uri.UriTransportRegistry
 import io.rsocket.core.RSocketConnector
 import io.rsocket.core.RSocketServer
 import io.rsocket.core.Resume
-import io.rsocket.metadata.*
-import io.rsocket.transport.TransportHeaderAware
+import io.rsocket.metadata.CompositeMetadataCodec
+import io.rsocket.metadata.TaggingMetadataCodec
+import io.rsocket.metadata.WellKnownMimeType
 import io.rsocket.util.DefaultPayload
 import io.rsocket.util.EmptyPayload
 import kotlinx.coroutines.Dispatchers
@@ -64,8 +65,7 @@ class Main : Runnable {
   @Option(names = ["-H", "--header"], description = ["Custom header to pass to server"])
   var headers: List<String>? = null
 
-  @Option(names = ["-T", "--transport-header"],
-    description = ["Custom header to pass to the transport"])
+  @Option(names = ["-T", "--transport-header"], description = ["Custom header to pass to the transport"])
   var transportHeader: List<String>? = null
 
   @Option(names = ["--stream"], description = ["Request Stream"])
@@ -122,9 +122,6 @@ class Main : Runnable {
 
   @Option(names = ["--resume"], description = ["resume enabled"])
   var resume: Boolean = false
-
-  @Option(names = ["--completionScript"], description = ["Generate completion script"])
-  var completionScript: Boolean = false
 
   @Parameters(arity = "0..1", paramLabel = "target", description = ["Endpoint URL"],
     completionCandidates = UrlCandidates::class)
@@ -190,11 +187,7 @@ class Main : Runnable {
   }
 
   suspend fun buildClient(uri: String): RSocket {
-    val clientTransport = UriTransportRegistry.clientForUri(uri).apply {
-      if (transportHeader != null && this is TransportHeaderAware) {
-        setTransportHeaders { headerMap(transportHeader) }
-      }
-    }
+    val clientTransport = UriTransportRegistry.clientForUri(uri, headerMap(transportHeader))
 
     return RSocketConnector.create()
       .apply {
@@ -295,7 +288,8 @@ class Main : Runnable {
     this.route != null ->{
         val compositeByteBuf =  CompositeByteBuf(ByteBufAllocator.DEFAULT,false,1);
         val routingMetadata = TaggingMetadataCodec.createRoutingMetadata(ByteBufAllocator.DEFAULT, listOf(route))
-        CompositeMetadataCodec.encodeAndAddMetadata(compositeByteBuf, ByteBufAllocator.DEFAULT,WellKnownMimeType.MESSAGE_RSOCKET_ROUTING,routingMetadata.content)
+        CompositeMetadataCodec.encodeAndAddMetadata(compositeByteBuf, ByteBufAllocator.DEFAULT,
+          WellKnownMimeType.MESSAGE_RSOCKET_ROUTING,routingMetadata.content)
         ByteBufUtil.getBytes(compositeByteBuf)
     }
     this.metadata != null -> {
@@ -369,11 +363,7 @@ class Main : Runnable {
           exitProcess(parseResult.commandSpec().exitCodeOnVersionHelp())
         }
 
-        if (runnable.completionScript) {
-          print(picocli.AutoComplete.bash("rsocket-cli", cmd))
-        } else {
-          runnable.run()
-        }
+        runnable.run()
 
         exitProcess(0)
       } catch (pe: CommandLine.ParameterException) {

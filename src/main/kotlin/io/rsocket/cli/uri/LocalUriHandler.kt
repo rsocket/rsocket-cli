@@ -15,7 +15,6 @@
  */
 package io.rsocket.cli.uri
 
-import io.rsocket.Closeable
 import io.rsocket.transport.ClientTransport
 import io.rsocket.transport.ServerTransport
 import io.rsocket.transport.local.LocalClientTransport
@@ -28,7 +27,10 @@ import java.util.Optional
  * An implementation of [UriHandler] that creates [LocalClientTransport]s and [ ]s.
  */
 class LocalUriHandler : UriHandler {
-  override fun buildClient(uri: URI): Optional<ClientTransport> {
+  override fun buildClient(
+    uri: URI,
+    headerMap: Map<String, String>
+  ): Optional<ClientTransport> {
     Objects.requireNonNull(uri, "uri must not be null")
     return if (SCHEME != uri.scheme) {
       Optional.empty()

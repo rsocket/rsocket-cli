@@ -32,7 +32,10 @@ interface UriHandler {
    * otherwise [Optional.EMPTY]
    * @throws NullPointerException if `uri` is `null`
    */
-  fun buildClient(uri: URI): Optional<ClientTransport>
+  fun buildClient(
+    uri: URI,
+    headerMap: Map<String, String>
+  ): Optional<ClientTransport>
 
   /**
    * Returns an implementation of [ServerTransport] unambiguously mapped to a [URI],
