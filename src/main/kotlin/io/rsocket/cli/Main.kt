@@ -141,7 +141,7 @@ class Main : Runnable {
     }
   }
 
-  private suspend fun exec(): Void? {
+  private suspend fun exec() {
     configureLogging(debug)
 
     if (!this::outputHandler.isInitialized) {
@@ -152,9 +152,14 @@ class Main : Runnable {
       inputPublisher = LineInputPublishers(outputHandler)
     }
 
+    if (route != null) {
+      metadataFormat = "composite"
+      dataFormat = "json"
+    }
+
     val uri = sanitizeUri(target ?: throw UsageException("no target specified"))
 
-    return if (serverMode) {
+    if (serverMode) {
       server = buildServer(uri)
 
       server.onClose().awaitFirstOrNull()
