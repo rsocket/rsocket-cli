@@ -304,11 +304,11 @@ class Main : Runnable {
   }
 
   private fun inputPublisherX(): Flux<Payload> {
-    return inputPublisher.inputPublisher(input ?: listOf("-"), buildMetadata())
+    return inputPublisher.inputPublisher(input ?: listOf(), buildMetadata())
   }
 
   private fun singleInputPayload(): Payload {
-    return inputPublisher.singleInputPayload(input ?: listOf("-"), buildMetadata())
+    return inputPublisher.singleInputPayload(input ?: listOf(""), buildMetadata())
   }
 
   suspend fun run(client: RSocket): Flux<Void> = try {
