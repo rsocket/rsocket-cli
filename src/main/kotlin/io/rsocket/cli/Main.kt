@@ -94,10 +94,10 @@ class Main : Runnable {
   var metadata: String? = null
 
   @Option(names = ["--metadataFormat"], description = ["Metadata Format"])
-  var metadataFormat = "json"
+  var metadataFormat: String? = null
 
   @Option(names = ["--dataFormat"], description = ["Data Format"])
-  var dataFormat = "binary"
+  var dataFormat: String? = null
 
   @Option(names = ["--setup"], description = ["String input or @path/to/file for setup metadata"])
   var setup: String? = null
@@ -153,8 +153,21 @@ class Main : Runnable {
     }
 
     if (route != null) {
-      metadataFormat = "composite"
-      dataFormat = "json"
+      if (metadataFormat == null) {
+        metadataFormat = "composite"
+      }
+
+      if (dataFormat == null) {
+        dataFormat = "json"
+      }
+    } else {
+      if (metadataFormat == null) {
+        metadataFormat = "json"
+      }
+
+      if (dataFormat == null) {
+        dataFormat = "binary"
+      }
     }
 
     val uri = sanitizeUri(target ?: throw UsageException("no target specified"))
