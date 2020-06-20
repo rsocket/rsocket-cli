@@ -11,7 +11,7 @@ _rsocket_cli_caching_policy() {
 _rsocket_cli_urls() {
   local host urlpath
 
-  compadd tcp://localhost:9898 ws://localhost:9898/rsocket wss://rsocket-demo.herokuapp.com/ws
+  compadd tcp://localhost:9898 ws://localhost:9898/rsocket wss://rsocket-demo.herokuapp.com/rsocket
 }
 
 _rsocket_cli() {

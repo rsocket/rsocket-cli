@@ -152,6 +152,10 @@ class Main : Runnable {
       inputPublisher = LineInputPublishers(outputHandler)
     }
 
+    if (listOf(metadataPush, stream, fireAndForget, channel, requestResponse, serverMode).all { !it }) {
+      stream = true
+    }
+
     if (route != null) {
       if (metadataFormat == null) {
         metadataFormat = "composite"
