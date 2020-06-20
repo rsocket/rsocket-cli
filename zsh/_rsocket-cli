@@ -29,6 +29,7 @@ _rsocket_cli() {
     --channel'[Channel]' \
     --fnf'[Fire And Forget]' \
     --metadataPush'[Metadata Push]' \
+    --route='[Spring Route]' \
     --server'[Server]' \
     {-i,--input}='[Input string input or @path/to/file]' \
     {-m,--metadata}='[Metadata input string input or @path/to/file]' \
