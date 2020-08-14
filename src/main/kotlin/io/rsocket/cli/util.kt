@@ -10,7 +10,6 @@ import com.google.common.io.Files
 import io.netty.util.internal.logging.InternalLoggerFactory
 import io.netty.util.internal.logging.JdkLoggerFactory
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.reactor.mono
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
