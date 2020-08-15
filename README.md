@@ -1,5 +1,9 @@
 # RSocket CLI
 
+## You should probably use rsc instead
+
+For general rsocket command line you probably want https://github.com/making/rsc
+
 ## Description
 
 Simple RSocket CLI focused on sending basic traffic to servers built using RSocket e.g. help debug a mobile <=> server integration issue. 
