@@ -1,16 +1,13 @@
 package io.rsocket.cli
 
 import com.baulsupp.oksocial.output.UsageException
-import com.fasterxml.jackson.core.JsonProcessingException
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.dataformat.cbor.CBORFactory
-import com.google.common.base.Charsets
-import com.google.common.collect.Lists
-import com.google.common.io.Files
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.Types
 import io.netty.util.internal.logging.InternalLoggerFactory
 import io.netty.util.internal.logging.JdkLoggerFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.reactor.mono
+import kotlinx.coroutines.withContext
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.io.File
@@ -22,7 +19,6 @@ import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatterBuilder
 import java.time.temporal.ChronoField
-import java.util.LinkedHashMap
 import java.util.logging.ConsoleHandler
 import java.util.logging.Formatter
 import java.util.logging.Level
@@ -45,8 +41,8 @@ private fun normalize(path: String): String = when {
   else -> path
 }
 
-fun headerMap(headers: List<String>?): Map<String, String> {
-  val headerMap = LinkedHashMap<String, String>()
+suspend fun headerMap(headers: List<String>?): Map<String, String> {
+  val headerMap = mutableMapOf<String, String>()
 
   if (headers != null) {
     for (header in headers) {
@@ -54,7 +50,6 @@ fun headerMap(headers: List<String>?): Map<String, String> {
         headerMap.putAll(headerFileMap(header))
       } else {
         val parts = header.split(":".toRegex(), 2).toTypedArray()
-        // TODO: consider better strategy than simple trim
         val name = parts[0].trim { it <= ' ' }
         val value = stringValue(parts[1].trim { it <= ' ' })
         headerMap[name] = value
@@ -64,8 +59,11 @@ fun headerMap(headers: List<String>?): Map<String, String> {
   return headerMap
 }
 
-private fun headerFileMap(input: String): Map<out String, String> =
-  headerMap(Publishers.splitInLines(Files.asCharSource(inputFile(input), Charsets.UTF_8)).collectList().block())
+private suspend fun headerFileMap(input: String): Map<out String, String> {
+  return withContext(Dispatchers.IO) {
+    headerMap(inputFile(input).readLines())
+  }
+}
 
 fun stringValue(source: String): String = when {
   source.startsWith("@") -> try {
@@ -78,7 +76,7 @@ fun stringValue(source: String): String = when {
 
 fun inputFile(path: String): File = expectedFile(path.substring(1))
 
-private val activeLoggers = Lists.newArrayList<java.util.logging.Logger>()
+private val activeLoggers = mutableListOf<java.util.logging.Logger>()
 
 fun configureLogging(debug: Boolean) {
   InternalLoggerFactory.setDefaultFactory(JdkLoggerFactory.INSTANCE)
@@ -114,21 +112,17 @@ private fun getLogger(name: String): java.util.logging.Logger {
 fun encodeMetadataMap(headerMap: Map<String, String>, mimeType: String): ByteArray {
   return when (mimeType) {
     "application/json" -> jsonEncodeStringMap(headerMap)
-    "application/cbor" -> cborEncodeStringMap(headerMap)
     else -> throw UsageException("headers not supported with mimetype '$mimeType'")
   }
 }
 
-private fun jsonEncodeStringMap(headerMap: Map<String, String>): ByteArray = try {
-  ObjectMapper().writeValueAsBytes(headerMap)
-} catch (e: JsonProcessingException) {
-  throw RuntimeException(e)
+val moshi by lazy {
+  Moshi.Builder().build()!!
 }
 
-private fun cborEncodeStringMap(headerMap: Map<String, String>): ByteArray = try {
-  ObjectMapper(CBORFactory()).writeValueAsBytes(headerMap)
-} catch (e: JsonProcessingException) {
-  throw RuntimeException(e)
+fun jsonEncodeStringMap(headerMap: Map<String, String>): ByteArray {
+  val type = Types.newParameterizedType(Map::class.java, String::class.java, String::class.java)
+  return moshi.adapter<Map<String, String>>(type).toJson(headerMap).toByteArray()
 }
 
 object OneLineLogFormat : Formatter() {
@@ -191,26 +185,10 @@ fun <T> Flux<T>.onNext(block: suspend (T) -> Unit): Flux<T> {
   }
 }
 
-fun <T> Mono<T>.onNext(block: suspend (T) -> Unit): Mono<T> {
-  return this.flatMap {
-    mono(Dispatchers.Default) {
-      block.invoke(it)
-    }.then(Mono.just(it))
-  }
-}
-
 fun <T> Flux<T>.onError(block: suspend (Throwable) -> Unit): Flux<T> {
   return this.onErrorResume {
     mono(Dispatchers.Default) {
       block.invoke(it)
     }.thenMany(Flux.error(it))
-  }
-}
-
-fun <T> Mono<T>.onError(block: suspend (Throwable) -> Unit): Mono<T> {
-  return this.onErrorResume {
-    mono(Dispatchers.Default) {
-      block.invoke(it)
-    }.then(Mono.error(it))
   }
 }

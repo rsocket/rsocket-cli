@@ -2,6 +2,7 @@ package io.rsocket.util
 
 import io.rsocket.cli.headerMap
 import io.rsocket.cli.stringValue
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.net.URISyntaxException
@@ -21,7 +22,7 @@ class HeaderUtilTest {
 
   @Test
   @Throws(URISyntaxException::class)
-  fun headerMap() {
+  fun headerMap() = runBlocking {
     val map = headerMap(listOf("A: a", "B:b", "C: @" + path("value.txt")))
 
     assertEquals(3, map.size.toLong())
@@ -32,7 +33,7 @@ class HeaderUtilTest {
 
   @Test
   @Throws(URISyntaxException::class)
-  fun headerFileMap() {
+  fun headerFileMap() = runBlocking {
     val map = headerMap(listOf("@" + path("headers.txt")))
 
     assertEquals(2, map.size.toLong())

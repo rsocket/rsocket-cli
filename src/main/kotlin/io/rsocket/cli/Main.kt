@@ -16,36 +16,37 @@ package io.rsocket.cli
 import com.baulsupp.oksocial.output.ConsoleHandler
 import com.baulsupp.oksocial.output.OutputHandler
 import com.baulsupp.oksocial.output.UsageException
-import com.google.common.io.Files
 import io.netty.buffer.ByteBufAllocator
 import io.netty.buffer.ByteBufUtil
 import io.netty.buffer.CompositeByteBuf
 import io.rsocket.Closeable
-import io.rsocket.ConnectionSetupPayload
 import io.rsocket.Payload
 import io.rsocket.RSocket
-import io.rsocket.cli.uri.UriTransportRegistry
+import io.rsocket.cli.ws.WsClientTransport
 import io.rsocket.core.RSocketConnector
-import io.rsocket.core.RSocketServer
 import io.rsocket.core.Resume
 import io.rsocket.metadata.CompositeMetadataCodec
 import io.rsocket.metadata.TaggingMetadataCodec
 import io.rsocket.metadata.WellKnownMimeType
+import io.rsocket.transport.ClientTransport
 import io.rsocket.util.DefaultPayload
 import io.rsocket.util.EmptyPayload
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirstOrNull
+import kotlinx.coroutines.reactive.awaitSingle
+import kotlinx.coroutines.reactor.asFlux
 import kotlinx.coroutines.reactor.mono
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
-import org.reactivestreams.Publisher
-import org.slf4j.LoggerFactory
 import picocli.CommandLine
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
 import reactor.core.publisher.Flux
-import reactor.core.publisher.Mono
+import reactor.core.publisher.Flux.empty
 import reactor.util.retry.Retry
 import java.net.URI
 import java.nio.charset.StandardCharsets
@@ -83,11 +84,8 @@ class Main : Runnable {
   @Option(names = ["--metadataPush"], description = ["Metadata Push"])
   var metadataPush: Boolean = false
 
-  @Option(names = ["--server"], description = ["Start server instead of client"])
-  var serverMode: Boolean = false
-
-  @Option(names = ["-i", "--input"], description = ["String input, '-' (STDIN) or @path/to/file"])
-  var input: List<String>? = null
+  @Option(names = ["-i", "--input"], description = ["String input or @path/to/file"])
+  var input: String? = null
 
   @Option(names = ["-m", "--metadata"],
     description = ["Metadata input string input or @path/to/file"])
@@ -107,9 +105,6 @@ class Main : Runnable {
 
   @Option(names = ["--debug"], description = ["Debug Output"])
   var debug: Boolean = false
-
-  @Option(names = ["--ops"], description = ["Operation Count"])
-  var operations = 1
 
   @Option(names = ["--timeout"], description = ["Timeout in seconds"])
   var timeout: Long? = null
@@ -131,8 +126,6 @@ class Main : Runnable {
 
   lateinit var outputHandler: OutputHandler<Any>
 
-  lateinit var inputPublisher: InputPublisher
-
   lateinit var server: Closeable
 
   override fun run() {
@@ -148,11 +141,7 @@ class Main : Runnable {
       outputHandler = ConsoleHandler.instance()
     }
 
-    if (!this::inputPublisher.isInitialized) {
-      inputPublisher = LineInputPublishers(outputHandler)
-    }
-
-    if (listOf(metadataPush, stream, fireAndForget, channel, requestResponse, serverMode).all { !it }) {
+    if (listOf(metadataPush, stream, fireAndForget, channel, requestResponse).all { !it }) {
       stream = true
     }
 
@@ -176,40 +165,21 @@ class Main : Runnable {
 
     val uri = sanitizeUri(target ?: throw UsageException("no target specified"))
 
-    if (serverMode) {
-      server = buildServer(uri)
+    if (!this::client.isInitialized) {
+      client = buildClient(uri)
+    }
 
-      server.onClose().awaitFirstOrNull()
+    if (timeout != null) {
+      withTimeout(TimeUnit.SECONDS.toMillis(timeout!!)) {
+        run(client)
+      }
     } else {
-      if (!this::client.isInitialized) {
-        client = buildClient(uri)
-      }
-
-      val run = run(client)
-
-      if (timeout != null) {
-        withTimeout(TimeUnit.SECONDS.toMillis(timeout!!)) {
-          run.then().awaitFirstOrNull()
-        }
-      } else {
-        run.then().awaitFirstOrNull()
-      }
+      run(client)
     }
   }
 
-  suspend fun buildServer(uri: String): Closeable {
-    return RSocketServer.create(this::createServerRequestHandler)
-      .apply {
-        if (resume) {
-          resume(Resume())
-        }
-      }
-      .bind(UriTransportRegistry.serverForUri(uri))
-      .block()!!
-  }
-
   suspend fun buildClient(uri: String): RSocket {
-    val clientTransport = UriTransportRegistry.clientForUri(uri, headerMap(transportHeader))
+    val clientTransport = clientForUri(uri, headerMap(transportHeader))
 
     return RSocketConnector.create()
       .apply {
@@ -225,12 +195,12 @@ class Main : Runnable {
       .metadataMimeType(standardMimeType(metadataFormat))
       .dataMimeType(standardMimeType(dataFormat))
       .setupPayload(parseSetupPayload())
-      .acceptor(this::createClientRequestHandler)
       .connect(clientTransport)
-      .block()!!
+      .awaitSingle()
   }
 
-  private fun createClientRequestHandler(setupPayload: ConnectionSetupPayload, socket: RSocket): Mono<RSocket> = Mono.just(createResponder(socket))
+  private fun clientForUri(uri: String, headerMap: Map<String, String>): ClientTransport =
+    WsClientTransport(uri) { headerMap }
 
   private fun standardMimeType(dataFormat: String?): String = when (dataFormat) {
     null -> "application/json"
@@ -242,22 +212,13 @@ class Main : Runnable {
     else -> dataFormat
   }
 
-  private fun parseSetupPayload(): Payload = when {
-    setup == null -> EmptyPayload.INSTANCE
-    setup!!.startsWith("@") -> DefaultPayload.create(
-      Files.asCharSource(expectedFile(setup!!.substring(1)), StandardCharsets.UTF_8).read())
-    else -> DefaultPayload.create(setup!!)
-  }
-
-  private fun createServerRequestHandler(
-    setupPayload: ConnectionSetupPayload,
-    socket: RSocket
-  ): Mono<RSocket> {
-    LoggerFactory.getLogger(Main::class.java).debug("setup payload $setupPayload")
-
-    // TODO chain
-    runAllOperations(socket).subscribe()
-    return Mono.just(createResponder(socket))
+  private suspend fun parseSetupPayload(): Payload = withContext(Dispatchers.IO) {
+    when {
+      setup == null -> EmptyPayload.INSTANCE
+      setup!!.startsWith("@") ->
+        DefaultPayload.create(expectedFile(setup!!.substring(1)).readBytes())
+      else -> DefaultPayload.create(setup!!)
+    }
   }
 
   private fun sanitizeUri(uri: String): String {
@@ -270,49 +231,19 @@ class Main : Runnable {
     return uri
   }
 
-  fun createResponder(socket: RSocket): RSocket {
-    return object : RSocket {
-      override fun fireAndForget(payload: Payload): Mono<Void> = mono(Dispatchers.Default) {
-        outputHandler.showOutput(payload.dataUtf8)
-      }.then()
-
-      override fun requestResponse(payload: Payload): Mono<Payload> = handleIncomingPayload(
-        payload).single()
-
-      override fun requestStream(payload: Payload): Flux<Payload> = handleIncomingPayload(payload)
-
-      override fun requestChannel(payloads: Publisher<Payload>): Flux<Payload> {
-        // TODO chain
-        Flux.from(payloads).takeN(requestN)
-          .onNext { outputHandler.showOutput(it.dataUtf8) }
-          .onError { outputHandler.showError("channel error", it) }.subscribe()
-        return inputPublisherX()
-      }
-
-      override fun metadataPush(payload: Payload): Mono<Void> = mono(Dispatchers.Default) {
-        outputHandler.showOutput(payload.metadataUtf8)
-      }.then()
-    }
-  }
-
-  private fun handleIncomingPayload(payload: Payload): Flux<Payload> = mono(
-    Dispatchers.Default) {
-    outputHandler.showOutput(payload.dataUtf8)
-  }.thenMany(inputPublisherX())
-
   fun getInputFromSource(source: String?, nullHandler: Supplier<String>): String =
     when (source) {
       null -> nullHandler.get()
       else -> stringValue(source)
     }
 
-  fun buildMetadata(): ByteArray? = when {
-    this.route != null ->{
-        val compositeByteBuf =  CompositeByteBuf(ByteBufAllocator.DEFAULT,false,1);
-        val routingMetadata = TaggingMetadataCodec.createRoutingMetadata(ByteBufAllocator.DEFAULT, listOf(route))
-        CompositeMetadataCodec.encodeAndAddMetadata(compositeByteBuf, ByteBufAllocator.DEFAULT,
-          WellKnownMimeType.MESSAGE_RSOCKET_ROUTING,routingMetadata.content)
-        ByteBufUtil.getBytes(compositeByteBuf)
+  suspend fun buildMetadata(): ByteArray? = when {
+    this.route != null -> {
+      val compositeByteBuf = CompositeByteBuf(ByteBufAllocator.DEFAULT, false, 1);
+      val routingMetadata = TaggingMetadataCodec.createRoutingMetadata(ByteBufAllocator.DEFAULT, listOf(route))
+      CompositeMetadataCodec.encodeAndAddMetadata(compositeByteBuf, ByteBufAllocator.DEFAULT,
+        WellKnownMimeType.MESSAGE_RSOCKET_ROUTING, routingMetadata.content)
+      ByteBufUtil.getBytes(compositeByteBuf)
     }
     this.metadata != null -> {
       if (this.headers != null) {
@@ -325,43 +256,29 @@ class Main : Runnable {
     else -> ByteArray(0)
   }
 
-  private fun inputPublisherX(): Flux<Payload> {
-    return inputPublisher.inputPublisher(input ?: listOf(), buildMetadata())
+  private suspend fun singleInputPayload(): Payload {
+    // TODO readd support for files
+    val inputBytes = input?.toByteArray() ?: byteArrayOf()
+    return DefaultPayload.create(inputBytes, buildMetadata())
   }
 
-  private fun singleInputPayload(): Payload {
-    return inputPublisher.singleInputPayload(input ?: listOf(""), buildMetadata())
-  }
+  suspend fun run(client: RSocket) {
+    val inputPayload = singleInputPayload()
 
-  suspend fun run(client: RSocket): Flux<Void> = try {
-    runAllOperations(client)
-  } catch (e: Exception) {
-    outputHandler.showError("error", e)
-    Flux.empty()
-  }
-
-  private fun runAllOperations(client: RSocket): Flux<Void> =
-    Flux.range(0, operations).flatMap { runSingleOperation(client) }
-
-  private fun runSingleOperation(client: RSocket): Flux<Void> = try {
-    when {
-      fireAndForget -> client.fireAndForget(singleInputPayload()).thenMany(Flux.empty())
-      metadataPush -> client.metadataPush(singleInputPayload()).thenMany(Flux.empty())
-      requestResponse -> client.requestResponse(singleInputPayload()).flux()
-      stream -> client.requestStream(singleInputPayload())
-      channel -> client.requestChannel(inputPublisherX())
+    val flux = when {
+      fireAndForget -> client.fireAndForget(inputPayload).thenMany(empty())
+      metadataPush -> client.metadataPush(inputPayload).thenMany(empty())
+      requestResponse -> client.requestResponse(inputPayload).flux()
+      stream -> client.requestStream(inputPayload)
+      channel -> client.requestChannel(Flux.just(inputPayload))
       else -> Flux.never()
     }
-      .takeN(requestN)
+
+    flux
+      .asFlow()
+      .take(requestN)
       .map { it.dataUtf8 }
-      .onNext { outputHandler.showOutput(it) }
-      .onError { outputHandler.showError("error from server", it) }
-      .onErrorResume { Flux.empty() }
-      .then().flux()
-  } catch (ex: Exception) {
-    mono(Dispatchers.Default) {
-      outputHandler.showError("error before query", ex)
-    }.then().flux()
+      .collect { outputHandler.showOutput(it) }
   }
 
   companion object {
@@ -369,7 +286,8 @@ class Main : Runnable {
 
     @JvmStatic
     fun main(vararg args: String) {
-      exec(Main(), args.toList())
+      val main = Main()
+      exec(main, args.toList())
     }
 
     private fun exec(runnable: Main, args: List<String>) {
