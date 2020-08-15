@@ -2,12 +2,9 @@
 
 ## Description
 
-Simple RSocket CLI currently for two main purposes
+Simple RSocket CLI focused on sending basic traffic to servers built using RSocket e.g. help debug a mobile <=> server integration issue. 
 
-1. Early testing of new protocol server implementations e.g. websocket
-2. Sending some basic traffic to servers built using RSocket e.g. help debug a mobile <=> server integration issue. 
-
-Supports tcp and ws URIs
+Supports ws and wss URIs
 
 # Build Status
 
@@ -43,16 +40,14 @@ $ brew install yschimke/tap/rsocket-cli
 ## Examples
 
 
-A request-response interaction:
+A generic interaction:
 ```
-$ rsocket-cli -i "I am a Server" --server --debug tcp://localhost:8765       # window 1
-$ rsocket-cli --request -i "I am a Client" --debug tcp://localhost:8765      # window 2
+$ rsocket-cli --request --debug wss://rsocket-demo.herokuapp.com/rsocket      
 ```
 
-A request stream of dictionary words, with frames debugged:
+A spring routed request to query tweets:
 
 ```
-$ rsocket-cli --debug -i=@/usr/share/dict/words --server tcp://localhost:8765     # window 1
-$ rsocket-cli --stream -i "Word Up" tcp://localhost:8765                          # window 2
+$ rsocket-cli --route=searchTweets -i Sunday wss://rsocket-demo.herokuapp.com/rsocket
 ```
 
