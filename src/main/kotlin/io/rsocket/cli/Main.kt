@@ -33,7 +33,7 @@ import picocli.CommandLine
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
-import java.lang.Runnable
+import java.io.File
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
@@ -103,6 +103,9 @@ class Main : Runnable {
   @Option(names = ["--resume"], description = ["resume enabled"])
   var resume: Boolean = false
 
+  @Option(names = ["--complete"], description = ["Complete Argument"])
+  var complete: String? = null
+
   @Parameters(arity = "0..1", paramLabel = "target", description = ["Endpoint URL"],
     completionCandidates = UrlCandidates::class)
   var target: String? = null
@@ -146,12 +149,31 @@ class Main : Runnable {
       }
     }
 
+    if (complete != null) {
+      printCompletions()
+      return
+    }
+
     val uri = sanitizeUri(target ?: throw UsageException("no target specified"))
 
     if (!this::client.isInitialized) {
       client = buildClient(uri)
+      UrlCandidates.recordUrl(uri)
     }
 
+    runQuery()
+  }
+
+  private fun printCompletions() {
+    val completions = when (complete) {
+      "url" -> UrlCandidates().toList()
+      else -> listOf()
+    }
+
+    println(completions.joinToString("\n"))
+  }
+
+  private suspend fun Main.runQuery() {
     if (timeout != null) {
       withTimeout(TimeUnit.SECONDS.toMillis(timeout!!)) {
         run(client)
@@ -254,6 +276,9 @@ class Main : Runnable {
 
   companion object {
     const val NAME = "reactivesocket-cli"
+
+    var homeDir = System.getProperty("user.home")
+    var settingsDir = File(homeDir, ".rsocket-cli")
 
     @JvmStatic
     fun main(vararg args: String) {

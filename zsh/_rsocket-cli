@@ -1,25 +1,19 @@
 #compdef rsocket-cli
 #autoload
 
-_rsocket_cli_caching_policy() {
-    # rebuild if cache is more than a day old
-    local -a oldp
-    oldp=( "$1"(mm+5) )
-    (( $#oldp ))
-}
-
 _rsocket_cli_urls() {
   local host urlpath
 
-  compadd tcp://localhost:9898 ws://localhost:9898/rsocket wss://rsocket-demo.herokuapp.com/rsocket
+  if ! [[ "$words[CURRENT]" =~ '^-.*$' ]]
+  then
+    urls=($(rsocket-cli --complete url  ))
+    compadd $urls
+  fi
 }
 
 _rsocket_cli() {
   local curcontext="$curcontext" state state_descr line expl
   typeset -A opt_args
-
-  zstyle -s ":completion:$curcontext:" cache-policy _rsocket_cli_caching_policy
-  #zstyle -s ":completion:$curcontext:" use-cache true
 
   _arguments -C -S \
     {-T,--transport-header}='[Custom header to pass to the transport]' \
