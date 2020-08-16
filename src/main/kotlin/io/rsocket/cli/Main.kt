@@ -13,22 +13,31 @@
  */
 package io.rsocket.cli
 
-import com.baulsupp.oksocial.output.ConsoleHandler
-import com.baulsupp.oksocial.output.OutputHandler
-import com.baulsupp.oksocial.output.UsageException
+import com.baulsupp.oksocial.output.*
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngineFactory
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.features.websocket.WebSockets
+import io.ktor.utils.io.core.readByteBuffer
+import io.ktor.utils.io.core.readBytes
+import io.netty.buffer.ByteBufAllocator
+import io.netty.buffer.ByteBufUtil
+import io.netty.buffer.CompositeByteBuf
 import io.rsocket.kotlin.RSocket
 import io.rsocket.kotlin.core.RSocketClientSupport
 import io.rsocket.kotlin.core.rSocket
 import io.rsocket.kotlin.flow.onRequest
 import io.rsocket.kotlin.payload.Payload
+import io.rsocket.kotlin.payload.PayloadMimeType
+import io.rsocket.metadata.CompositeMetadataCodec
+import io.rsocket.metadata.TaggingMetadataCodec
+import io.rsocket.metadata.WellKnownMimeType
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.take
+import okio.ByteString
+import okio.ByteString.Companion.toByteString
 import picocli.CommandLine
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
@@ -112,7 +121,9 @@ class Main : Runnable {
 
   lateinit var client: RSocket
 
-  lateinit var outputHandler: OutputHandler<Any>
+  val outputHandler by lazy {
+    ConsoleHandler.instance(SimpleResponseExtractor)
+  }
 
   override fun run() {
     runBlocking {
@@ -123,30 +134,8 @@ class Main : Runnable {
   private suspend fun exec() {
     configureLogging(debug)
 
-    if (!this::outputHandler.isInitialized) {
-      outputHandler = ConsoleHandler.instance()
-    }
-
     if (listOf(metadataPush, stream, fireAndForget, channel, requestResponse).all { !it }) {
       stream = true
-    }
-
-    if (route != null) {
-      if (metadataFormat == null) {
-        metadataFormat = "composite"
-      }
-
-      if (dataFormat == null) {
-        dataFormat = "json"
-      }
-    } else {
-      if (metadataFormat == null) {
-        metadataFormat = "json"
-      }
-
-      if (dataFormat == null) {
-        dataFormat = "binary"
-      }
     }
 
     if (complete != null) {
@@ -156,8 +145,20 @@ class Main : Runnable {
 
     val uri = sanitizeUri(target ?: throw UsageException("no target specified"))
 
+    if (metadataFormat == null) {
+      if (route != null) {
+        metadataFormat = "message/x.rsocket.composite-metadata.v0"
+      } else {
+        metadataFormat = "application/json"
+      }
+    }
+
+    if (dataFormat == null) {
+      dataFormat = "application/json"
+    }
+
     if (!this::client.isInitialized) {
-      client = buildClient(uri)
+      client = buildClient(uri, dataFormat!!, metadataFormat!!)
       UrlCandidates.recordUrl(uri)
     }
 
@@ -173,7 +174,7 @@ class Main : Runnable {
     println(completions.joinToString("\n"))
   }
 
-  private suspend fun Main.runQuery() {
+  private suspend fun runQuery() {
     if (timeout != null) {
       withTimeout(TimeUnit.SECONDS.toMillis(timeout!!)) {
         run(client)
@@ -181,27 +182,6 @@ class Main : Runnable {
     } else {
       run(client)
     }
-  }
-
-  suspend fun buildClient(uri: String): RSocket {
-    val engine: HttpClientEngineFactory<*> = CIO
-
-    val client = HttpClient(engine) {
-      install(WebSockets)
-      install(RSocketClientSupport)
-    }
-
-    return client.rSocket(uri, uri.startsWith("wss"))
-  }
-
-  private fun standardMimeType(dataFormat: String?): String = when (dataFormat) {
-    null -> "application/json"
-    "json" -> "application/json"
-    "cbor" -> "application/cbor"
-    "binary" -> "application/binary"
-    "text" -> "text/plain"
-    "composite" -> "message/x.rsocket.composite-metadata.v0"
-    else -> dataFormat
   }
 
   private suspend fun parseSetupPayload(): Payload = withContext(Dispatchers.IO) {
@@ -231,12 +211,11 @@ class Main : Runnable {
 
   suspend fun buildMetadata(): ByteArray? = when {
     this.route != null -> {
-      TODO("implement spring routes")
-//      val compositeByteBuf = CompositeByteBuf(ByteBufAllocator.DEFAULT, false, 1);
-//      val routingMetadata = TaggingMetadataCodec.createRoutingMetadata(ByteBufAllocator.DEFAULT, listOf(route))
-//      CompositeMetadataCodec.encodeAndAddMetadata(compositeByteBuf, ByteBufAllocator.DEFAULT,
-//        WellKnownMimeType.MESSAGE_RSOCKET_ROUTING, routingMetadata.content)
-//      ByteBufUtil.getBytes(compositeByteBuf)
+      val compositeByteBuf = CompositeByteBuf(ByteBufAllocator.DEFAULT, false, 1);
+      val routingMetadata = TaggingMetadataCodec.createRoutingMetadata(ByteBufAllocator.DEFAULT, listOf(route))
+      CompositeMetadataCodec.encodeAndAddMetadata(compositeByteBuf, ByteBufAllocator.DEFAULT,
+        WellKnownMimeType.MESSAGE_RSOCKET_ROUTING, routingMetadata.content)
+      ByteBufUtil.getBytes(compositeByteBuf)
     }
     this.metadata != null -> {
       if (this.headers != null) {
@@ -245,14 +224,14 @@ class Main : Runnable {
 
       getInputFromSource(this.metadata, Supplier { ""; }).toByteArray(StandardCharsets.UTF_8)
     }
-    this.headers != null -> encodeMetadataMap(headerMap(headers), standardMimeType(metadataFormat))
+    this.headers != null -> jsonEncodeStringMap(headerMap(headers))
     else -> ByteArray(0)
   }
 
   private suspend fun singleInputPayload(): Payload {
-    // TODO readd support for files
     val inputBytes = input?.toByteArray() ?: byteArrayOf()
-    return Payload(inputBytes, buildMetadata())
+    val metadata = buildMetadata()
+    return Payload(inputBytes, metadata)
   }
 
   @OptIn(InternalCoroutinesApi::class)
@@ -263,15 +242,19 @@ class Main : Runnable {
       fireAndForget -> client.fireAndForget(inputPayload)
       metadataPush -> client.metadataPush(inputPayload.data)
       requestResponse -> client.requestResponse(inputPayload)
-        .also { outputHandler.showOutput(it.data.readText()) }
+        .also { showResponse(it) }
       stream -> client.requestStream(inputPayload).take(requestN)
-        .collect { outputHandler.showOutput(it.data.readText()) }
+        .collect { showResponse(it) }
       channel -> client.requestChannel(flowOf(inputPayload).onRequest {
         TODO("send next n requests")
       }).take(requestN)
-        .collect { outputHandler.showOutput(it.data.readText()) }
+        .collect { showResponse(it) }
       else -> error("No operation to run")
     }
+  }
+
+  private suspend fun showResponse(it: Payload) {
+    outputHandler.showOutput(SimpleResponse(dataFormat, it.data.readByteBuffer().toByteString()))
   }
 
   companion object {
@@ -310,7 +293,6 @@ class Main : Runnable {
         exitProcess(cmd.commandSpec.exitCodeOnInvalidInput())
       } catch (ue: UsageException) {
         cmd.err.println(ue.message)
-        cmd.usage(cmd.err)
         exitProcess(cmd.commandSpec.exitCodeOnInvalidInput())
       } catch (ex: Exception) {
         ex.printStackTrace(cmd.err)
@@ -318,4 +300,17 @@ class Main : Runnable {
       }
     }
   }
+}
+
+suspend fun buildClient(uri: String, dataFormat: String, metadataFormat: String): RSocket {
+  val engine: HttpClientEngineFactory<*> = CIO
+
+  val client = HttpClient(engine) {
+    install(WebSockets)
+    install(RSocketClientSupport) {
+      payloadMimeType = PayloadMimeType(dataFormat, metadataFormat)
+    }
+  }
+
+  return client.rSocket(uri, uri.startsWith("wss"))
 }

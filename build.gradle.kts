@@ -131,12 +131,14 @@ dependencies {
   implementation("io.ktor:ktor-client-cio:1.3.2")
   implementation("io.ktor:ktor-client-core-jvm:1.3.2")
 
-  implementation("com.github.yschimke:oksocial-output:5.5")
+  implementation("io.rsocket:rsocket-core:1.0.2")
+
+  implementation("com.github.yschimke:oksocial-output:5.6")
   implementation("com.squareup.okhttp3:okhttp:4.8.1")
   implementation("com.squareup.okio:okio:2.7.0")
   implementation("info.picocli:picocli:4.5.0")
   implementation("org.jetbrains.kotlin:kotlin-reflect:1.3.72")
-//  implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.3.72")
+  implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.3.72")
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.8")
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.3.8")
   implementation("com.squareup.moshi:moshi:1.9.3")

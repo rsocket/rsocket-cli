@@ -102,13 +102,6 @@ private fun getLogger(name: String): java.util.logging.Logger {
   return logger
 }
 
-fun encodeMetadataMap(headerMap: Map<String, String>, mimeType: String): ByteArray {
-  return when (mimeType) {
-    "application/json" -> jsonEncodeStringMap(headerMap)
-    else -> throw UsageException("headers not supported with mimetype '$mimeType'")
-  }
-}
-
 val moshi by lazy {
   Moshi.Builder().build()!!
 }
