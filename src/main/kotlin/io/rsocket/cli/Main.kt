@@ -16,41 +16,26 @@ package io.rsocket.cli
 import com.baulsupp.oksocial.output.ConsoleHandler
 import com.baulsupp.oksocial.output.OutputHandler
 import com.baulsupp.oksocial.output.UsageException
-import io.netty.buffer.ByteBufAllocator
-import io.netty.buffer.ByteBufUtil
-import io.netty.buffer.CompositeByteBuf
-import io.rsocket.Closeable
-import io.rsocket.Payload
-import io.rsocket.RSocket
-import io.rsocket.cli.ws.WsClientTransport
-import io.rsocket.core.RSocketConnector
-import io.rsocket.core.Resume
-import io.rsocket.metadata.CompositeMetadataCodec
-import io.rsocket.metadata.TaggingMetadataCodec
-import io.rsocket.metadata.WellKnownMimeType
-import io.rsocket.transport.ClientTransport
-import io.rsocket.util.DefaultPayload
-import io.rsocket.util.EmptyPayload
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.reactive.asFlow
-import kotlinx.coroutines.reactive.awaitFirstOrNull
-import kotlinx.coroutines.reactive.awaitSingle
-import kotlinx.coroutines.reactor.asFlux
-import kotlinx.coroutines.reactor.mono
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.HttpClientEngineFactory
+import io.ktor.client.engine.cio.CIO
+import io.ktor.client.features.websocket.WebSockets
+import io.rsocket.kotlin.RSocket
+import io.rsocket.kotlin.core.RSocketClientSupport
+import io.rsocket.kotlin.core.rSocket
+import io.rsocket.kotlin.flow.onRequest
+import io.rsocket.kotlin.payload.Payload
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.take
 import picocli.CommandLine
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
-import reactor.core.publisher.Flux
-import reactor.core.publisher.Flux.empty
-import reactor.util.retry.Retry
+import java.lang.Runnable
 import java.net.URI
 import java.nio.charset.StandardCharsets
-import java.time.Duration.ofSeconds
 import java.util.concurrent.TimeUnit
 import java.util.function.Supplier
 import kotlin.system.exitProcess
@@ -126,8 +111,6 @@ class Main : Runnable {
 
   lateinit var outputHandler: OutputHandler<Any>
 
-  lateinit var server: Closeable
-
   override fun run() {
     runBlocking {
       exec()
@@ -179,28 +162,15 @@ class Main : Runnable {
   }
 
   suspend fun buildClient(uri: String): RSocket {
-    val clientTransport = clientForUri(uri, headerMap(transportHeader))
+    val engine: HttpClientEngineFactory<*> = CIO
 
-    return RSocketConnector.create()
-      .apply {
-        if (resume) {
-          resume(Resume().sessionDuration(ofSeconds(30)).retry(Retry.fixedDelay(3, ofSeconds(3))))
-        }
+    val client = HttpClient(engine) {
+      install(WebSockets)
+      install(RSocketClientSupport)
+    }
 
-        if (keepalive != null) {
-          val duration = parseShortDuration(keepalive!!)
-          keepAlive(duration, duration.multipliedBy(3))
-        }
-      }
-      .metadataMimeType(standardMimeType(metadataFormat))
-      .dataMimeType(standardMimeType(dataFormat))
-      .setupPayload(parseSetupPayload())
-      .connect(clientTransport)
-      .awaitSingle()
+    return client.rSocket(uri, uri.startsWith("wss"))
   }
-
-  private fun clientForUri(uri: String, headerMap: Map<String, String>): ClientTransport =
-    WsClientTransport(uri) { headerMap }
 
   private fun standardMimeType(dataFormat: String?): String = when (dataFormat) {
     null -> "application/json"
@@ -214,10 +184,10 @@ class Main : Runnable {
 
   private suspend fun parseSetupPayload(): Payload = withContext(Dispatchers.IO) {
     when {
-      setup == null -> EmptyPayload.INSTANCE
+      setup == null -> Payload.Empty
       setup!!.startsWith("@") ->
-        DefaultPayload.create(expectedFile(setup!!.substring(1)).readBytes())
-      else -> DefaultPayload.create(setup!!)
+        Payload(expectedFile(setup!!.substring(1)).readBytes())
+      else -> Payload(setup!!)
     }
   }
 
@@ -239,11 +209,12 @@ class Main : Runnable {
 
   suspend fun buildMetadata(): ByteArray? = when {
     this.route != null -> {
-      val compositeByteBuf = CompositeByteBuf(ByteBufAllocator.DEFAULT, false, 1);
-      val routingMetadata = TaggingMetadataCodec.createRoutingMetadata(ByteBufAllocator.DEFAULT, listOf(route))
-      CompositeMetadataCodec.encodeAndAddMetadata(compositeByteBuf, ByteBufAllocator.DEFAULT,
-        WellKnownMimeType.MESSAGE_RSOCKET_ROUTING, routingMetadata.content)
-      ByteBufUtil.getBytes(compositeByteBuf)
+      TODO("implement spring routes")
+//      val compositeByteBuf = CompositeByteBuf(ByteBufAllocator.DEFAULT, false, 1);
+//      val routingMetadata = TaggingMetadataCodec.createRoutingMetadata(ByteBufAllocator.DEFAULT, listOf(route))
+//      CompositeMetadataCodec.encodeAndAddMetadata(compositeByteBuf, ByteBufAllocator.DEFAULT,
+//        WellKnownMimeType.MESSAGE_RSOCKET_ROUTING, routingMetadata.content)
+//      ByteBufUtil.getBytes(compositeByteBuf)
     }
     this.metadata != null -> {
       if (this.headers != null) {
@@ -259,26 +230,26 @@ class Main : Runnable {
   private suspend fun singleInputPayload(): Payload {
     // TODO readd support for files
     val inputBytes = input?.toByteArray() ?: byteArrayOf()
-    return DefaultPayload.create(inputBytes, buildMetadata())
+    return Payload(inputBytes, buildMetadata())
   }
 
+  @OptIn(InternalCoroutinesApi::class)
   suspend fun run(client: RSocket) {
     val inputPayload = singleInputPayload()
 
-    val flux = when {
-      fireAndForget -> client.fireAndForget(inputPayload).thenMany(empty())
-      metadataPush -> client.metadataPush(inputPayload).thenMany(empty())
-      requestResponse -> client.requestResponse(inputPayload).flux()
-      stream -> client.requestStream(inputPayload)
-      channel -> client.requestChannel(Flux.just(inputPayload))
-      else -> Flux.never()
+    when {
+      fireAndForget -> client.fireAndForget(inputPayload)
+      metadataPush -> client.metadataPush(inputPayload.data)
+      requestResponse -> client.requestResponse(inputPayload)
+        .also { outputHandler.showOutput(it.data.readText()) }
+      stream -> client.requestStream(inputPayload).take(requestN)
+        .collect { outputHandler.showOutput(it.data.readText()) }
+      channel -> client.requestChannel(flowOf(inputPayload).onRequest {
+        TODO("send next n requests")
+      }).take(requestN)
+        .collect { outputHandler.showOutput(it.data.readText()) }
+      else -> error("No operation to run")
     }
-
-    flux
-      .asFlow()
-      .take(requestN)
-      .map { it.dataUtf8 }
-      .collect { outputHandler.showOutput(it) }
   }
 
   companion object {

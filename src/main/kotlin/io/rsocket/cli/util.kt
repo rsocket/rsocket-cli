@@ -3,13 +3,8 @@ package io.rsocket.cli
 import com.baulsupp.oksocial.output.UsageException
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
-import io.netty.util.internal.logging.InternalLoggerFactory
-import io.netty.util.internal.logging.JdkLoggerFactory
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.reactor.mono
 import kotlinx.coroutines.withContext
-import reactor.core.publisher.Flux
-import reactor.core.publisher.Mono
 import java.io.File
 import java.io.IOException
 import java.io.PrintWriter
@@ -79,8 +74,6 @@ fun inputFile(path: String): File = expectedFile(path.substring(1))
 private val activeLoggers = mutableListOf<java.util.logging.Logger>()
 
 fun configureLogging(debug: Boolean) {
-  InternalLoggerFactory.setDefaultFactory(JdkLoggerFactory.INSTANCE)
-
   LogManager.getLogManager().reset()
 
   val activeLogger = getLogger("")
@@ -171,24 +164,5 @@ fun parseShortDuration(keepalive: String): Duration {
     "ms" -> Duration.ofMillis(amount)
     "s" -> Duration.ofSeconds(amount)
     else -> Duration.ofMinutes(amount)
-  }
-}
-
-fun <T> Flux<T>.takeN(request: Int): Flux<T> =
-  if (request < Int.MAX_VALUE) this.limitRate(request).take(request.toLong()) else this
-
-fun <T> Flux<T>.onNext(block: suspend (T) -> Unit): Flux<T> {
-  return this.concatMap {
-    mono(Dispatchers.Default) {
-      block.invoke(it)
-    }.thenMany(Flux.just(it))
-  }
-}
-
-fun <T> Flux<T>.onError(block: suspend (Throwable) -> Unit): Flux<T> {
-  return this.onErrorResume {
-    mono(Dispatchers.Default) {
-      block.invoke(it)
-    }.thenMany(Flux.error(it))
   }
 }

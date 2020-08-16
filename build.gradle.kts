@@ -17,6 +17,7 @@ repositories {
   maven(url = "https://repo.maven.apache.org/maven2")
   maven(url = "https://repo.spring.io/milestone")
   maven(url = "https://repo.spring.io/release")
+  maven(url = "https://dl.bintray.com/whyoleg/rsocket-kotlin")
 }
 
 group = "com.github.yschimke"
@@ -123,18 +124,21 @@ graal {
 }
 
 dependencies {
+  implementation("io.rsocket.kotlin:rsocket-core-jvm:0.1.0.beta.2")
+  implementation("io.rsocket.kotlin:rsocket-transport-websocket-client-jvm:0.1.0.beta.2")
+  implementation("io.ktor:ktor-network-tls:1.3.2")
+  implementation("io.ktor:ktor-http-cio:1.3.2")
+  implementation("io.ktor:ktor-client-cio:1.3.2")
+  implementation("io.ktor:ktor-client-core-jvm:1.3.2")
+
   implementation("com.github.yschimke:oksocial-output:5.5")
   implementation("com.squareup.okhttp3:okhttp:4.8.1")
   implementation("com.squareup.okio:okio:2.7.0")
   implementation("info.picocli:picocli:4.5.0")
-  implementation("io.projectreactor.kotlin:reactor-kotlin-extensions:1.0.2.RELEASE")
-  implementation("io.rsocket:rsocket-core:1.0.2")
-  implementation("io.rsocket:rsocket-transport-local:1.0.2")
   implementation("org.jetbrains.kotlin:kotlin-reflect:1.3.72")
 //  implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.3.72")
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.8")
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.3.8")
-  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:1.3.8")
   implementation("com.squareup.moshi:moshi:1.9.3")
   implementation("com.squareup.moshi:moshi-adapters:1.9.3")
   implementation("com.squareup.moshi:moshi-kotlin:1.9.3")
