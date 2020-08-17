@@ -127,8 +127,8 @@ dependencies {
   implementation("io.rsocket.kotlin:rsocket-core-jvm:0.1.0.beta.2")
   implementation("io.rsocket.kotlin:rsocket-transport-websocket-client-jvm:0.1.0.beta.2")
   implementation("io.ktor:ktor-network-tls:1.3.2")
-  implementation("io.ktor:ktor-http-cio:1.3.2")
-  implementation("io.ktor:ktor-client-cio:1.3.2")
+//  implementation("io.ktor:ktor-http-cio:1.3.2")
+  implementation("io.ktor:ktor-client-okhttp:1.3.2")
   implementation("io.ktor:ktor-client-core-jvm:1.3.2")
 
   implementation("io.rsocket:rsocket-core:1.0.2")

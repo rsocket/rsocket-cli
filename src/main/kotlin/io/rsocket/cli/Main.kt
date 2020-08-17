@@ -16,10 +16,9 @@ package io.rsocket.cli
 import com.baulsupp.oksocial.output.*
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngineFactory
-import io.ktor.client.engine.cio.CIO
+import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.features.websocket.WebSockets
 import io.ktor.utils.io.core.readByteBuffer
-import io.ktor.utils.io.core.readBytes
 import io.netty.buffer.ByteBufAllocator
 import io.netty.buffer.ByteBufUtil
 import io.netty.buffer.CompositeByteBuf
@@ -36,7 +35,6 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.take
-import okio.ByteString
 import okio.ByteString.Companion.toByteString
 import picocli.CommandLine
 import picocli.CommandLine.Command
@@ -303,7 +301,7 @@ class Main : Runnable {
 }
 
 suspend fun buildClient(uri: String, dataFormat: String, metadataFormat: String): RSocket {
-  val engine: HttpClientEngineFactory<*> = CIO
+  val engine: HttpClientEngineFactory<*> = OkHttp
 
   val client = HttpClient(engine) {
     install(WebSockets)
