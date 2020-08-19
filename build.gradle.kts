@@ -6,7 +6,7 @@ plugins {
   application
   id("net.nemerosa.versioning") version "2.13.1"
   id("com.diffplug.gradle.spotless") version "3.30.0"
-  id("com.palantir.graal") version "0.7.1"
+  id("com.palantir.graal") version "0.7.1-13-gd190241"
   kotlin("kapt") version "1.3.72"
 }
 
@@ -108,7 +108,7 @@ publishing {
 graal {
   mainClass("io.rsocket.cli.Main")
   outputName("rsocket-cli")
-  graalVersion("20.1.0")
+  graalVersion("20.2.0")
   javaVersion("11")
 
   option("--enable-https")
@@ -147,7 +147,7 @@ dependencies {
   implementation("org.slf4j:slf4j-jdk14:2.0.0-alpha1")
 
   kapt("info.picocli:picocli-codegen:4.5.0")
-  compileOnly("org.graalvm.nativeimage:svm:20.1.0")
+  compileOnly("org.graalvm.nativeimage:svm:20.2.0")
 
   testImplementation("org.junit.jupiter:junit-jupiter-api:5.5.2")
   testImplementation("org.jetbrains.kotlin:kotlin-test:1.3.72")
