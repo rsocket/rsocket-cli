@@ -4,9 +4,10 @@ plugins {
   kotlin("jvm") version "1.3.72"
   `maven-publish`
   application
-  id("com.github.ben-manes.versions") version "0.28.0"
   id("net.nemerosa.versioning") version "2.13.1"
   id("com.diffplug.gradle.spotless") version "3.30.0"
+  id("com.palantir.graal") version "0.7.1-13-gd190241"
+  kotlin("kapt") version "1.3.72"
 }
 
 repositories {
@@ -16,6 +17,7 @@ repositories {
   maven(url = "https://repo.maven.apache.org/maven2")
   maven(url = "https://repo.spring.io/milestone")
   maven(url = "https://repo.spring.io/release")
+  maven(url = "https://dl.bintray.com/whyoleg/rsocket-kotlin")
 }
 
 group = "com.github.yschimke"
@@ -63,47 +65,6 @@ val javadocJar by tasks.creating(Jar::class) {
 
 val jar = tasks["jar"] as org.gradle.jvm.tasks.Jar
 
-dependencies {
-  implementation("com.github.yschimke:oksocial-output:5.3")
-  implementation("org.jfree:jfreesvg:3.4")
-  implementation("com.kitfox.svg:svg-salamander:1.0")
-  implementation("commons-io:commons-io:2.6")
-  implementation("com.fasterxml.jackson.core:jackson-databind:2.11.0")
-  implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.11.0")
-  implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.11.0")
-  implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.11.0")
-  implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.11.0")
-  implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.11.0")
-  implementation("com.fasterxml.jackson.module:jackson-module-parameter-names:2.11.0")
-  implementation("com.google.guava:guava:29.0-jre")
-  implementation("com.jakewharton.byteunits:byteunits:0.9.1")
-  implementation("com.squareup.okio:okio:2.7.0")
-  implementation("info.picocli:picocli:4.5.0")
-  implementation("io.projectreactor.kotlin:reactor-kotlin-extensions:1.0.2.RELEASE")
-  implementation("io.rsocket:rsocket-core:1.0.2")
-  implementation("io.rsocket:rsocket-transport-local:1.0.2")
-  implementation("io.rsocket:rsocket-transport-netty:1.0.2")
-  implementation("javax.activation:activation:1.1.1")
-  implementation("org.eclipse.jetty.http2:http2-http-client-transport:9.4.19.v20190610")
-  implementation("org.jetbrains.kotlin:kotlin-reflect:1.3.72")
-  implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.3.72")
-  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.8")
-  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.3.8")
-  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactive:1.3.8")
-  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:1.3.8")
-  implementation("org.slf4j:slf4j-api:1.8.0-beta4")
-  implementation("org.slf4j:slf4j-jdk14:1.8.0-beta4")
-  implementation("org.springframework.boot:spring-boot-starter-rsocket:2.3.2.RELEASE")
-  implementation("org.zeroturnaround:zt-exec:1.11")
-
-  testImplementation("org.junit.jupiter:junit-jupiter-api:5.5.2")
-  testImplementation("org.jetbrains.kotlin:kotlin-test:1.3.72")
-  testImplementation("org.jetbrains.kotlin:kotlin-test-junit:1.3.72")
-
-  testRuntime("org.junit.jupiter:junit-jupiter-engine:5.5.2")
-  testRuntime("org.slf4j:slf4j-jdk14:1.8.0-beta4")
-}
-
 spotless {
   kotlinGradle {
     ktlint("0.31.0").userData(mutableMapOf("indent_size" to "2", "continuation_indent_size" to "2"))
@@ -142,4 +103,55 @@ publishing {
       artifact(tasks.distTar.get())
     }
   }
+}
+
+graal {
+  mainClass("io.rsocket.cli.Main")
+  outputName("rsocket-cli")
+  graalVersion("20.2.0")
+  javaVersion("11")
+
+  option("--enable-https")
+  option("--no-fallback")
+  option("--allow-incomplete-classpath")
+
+//  if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+//    // May be possible without, but autodetection is problematic on Windows 10
+//    // see https://github.com/palantir/gradle-graal
+//    // see https://www.graalvm.org/docs/reference-manual/native-image/#prerequisites
+//  windowsVsVarsPath("C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat")
+//  }
+}
+
+dependencies {
+  implementation("io.rsocket.kotlin:rsocket-core-jvm:0.1.0.beta.2")
+  implementation("io.rsocket.kotlin:rsocket-transport-websocket-client-jvm:0.1.0.beta.2")
+  implementation("io.ktor:ktor-network-tls:1.3.2")
+//  implementation("io.ktor:ktor-http-cio:1.3.2")
+  implementation("io.ktor:ktor-client-okhttp:1.3.2")
+  implementation("io.ktor:ktor-client-core-jvm:1.3.2")
+
+  implementation("io.rsocket:rsocket-core:1.0.2")
+
+  implementation("com.github.yschimke:oksocial-output:5.6")
+  implementation("com.squareup.okhttp3:okhttp:4.8.1")
+  implementation("com.squareup.okio:okio:2.7.0")
+  implementation("info.picocli:picocli:4.5.0")
+  implementation("org.jetbrains.kotlin:kotlin-reflect:1.3.72")
+  implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.3.72")
+  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.8")
+  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.3.8")
+  implementation("com.squareup.moshi:moshi:1.9.3")
+  implementation("com.squareup.moshi:moshi-adapters:1.9.3")
+  implementation("com.squareup.moshi:moshi-kotlin:1.9.3")
+  implementation("org.slf4j:slf4j-jdk14:2.0.0-alpha1")
+
+  kapt("info.picocli:picocli-codegen:4.5.0")
+  compileOnly("org.graalvm.nativeimage:svm:20.2.0")
+
+  testImplementation("org.junit.jupiter:junit-jupiter-api:5.5.2")
+  testImplementation("org.jetbrains.kotlin:kotlin-test:1.3.72")
+  testImplementation("org.jetbrains.kotlin:kotlin-test-junit:1.3.72")
+
+  testRuntime("org.junit.jupiter:junit-jupiter-engine:5.5.2")
 }
