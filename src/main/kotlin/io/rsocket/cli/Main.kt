@@ -18,6 +18,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngineFactory
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.features.websocket.WebSockets
+import io.ktor.util.KtorExperimentalAPI
 import io.ktor.utils.io.core.readByteBuffer
 import io.netty.buffer.ByteBufAllocator
 import io.netty.buffer.ByteBufUtil
@@ -52,6 +53,7 @@ import kotlin.system.exitProcess
  *
  * Currently limited in features, only supports a text/line based approach.
  */
+@KtorExperimentalAPI
 @Command(description = ["RSocket CLI command"],
   name = "rsocket-cli", mixinStandardHelpOptions = true, version = ["dev"])
 class Main : Runnable {
@@ -209,7 +211,7 @@ class Main : Runnable {
 
   suspend fun buildMetadata(): ByteArray? = when {
     this.route != null -> {
-      val compositeByteBuf = CompositeByteBuf(ByteBufAllocator.DEFAULT, false, 1);
+      val compositeByteBuf = CompositeByteBuf(ByteBufAllocator.DEFAULT, false, 1)
       val routingMetadata = TaggingMetadataCodec.createRoutingMetadata(ByteBufAllocator.DEFAULT, listOf(route))
       CompositeMetadataCodec.encodeAndAddMetadata(compositeByteBuf, ByteBufAllocator.DEFAULT,
         WellKnownMimeType.MESSAGE_RSOCKET_ROUTING, routingMetadata.content)
@@ -232,7 +234,6 @@ class Main : Runnable {
     return Payload(inputBytes, metadata)
   }
 
-  @OptIn(InternalCoroutinesApi::class)
   suspend fun run(client: RSocket) {
     val inputPayload = singleInputPayload()
 
@@ -300,6 +301,7 @@ class Main : Runnable {
   }
 }
 
+@KtorExperimentalAPI
 suspend fun buildClient(uri: String, dataFormat: String, metadataFormat: String): RSocket {
   val engine: HttpClientEngineFactory<*> = OkHttp
 
