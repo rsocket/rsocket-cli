@@ -2,22 +2,18 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
   kotlin("jvm") version "1.4.0"
+  kotlin("kapt") version "1.4.0"
   `maven-publish`
   application
   id("net.nemerosa.versioning") version "2.13.1"
-  id("com.diffplug.gradle.spotless") version "3.30.0"
-  id("com.palantir.graal") version "0.7.1-13-gd190241"
-  kotlin("kapt") version "1.4.0"
+  id("com.diffplug.spotless") version "5.1.0"
+  id("com.palantir.graal") version "0.7.1-15-g62b5090"
 }
 
 repositories {
   jcenter()
   mavenCentral()
   maven(url = "https://jitpack.io")
-  maven(url = "https://repo.maven.apache.org/maven2")
-  maven(url = "https://repo.spring.io/milestone")
-  maven(url = "https://repo.spring.io/release")
-  maven(url = "https://dl.bintray.com/whyoleg/rsocket-kotlin")
   maven(url = "https://oss.jfrog.org/oss-snapshot-local")
 }
 
@@ -41,8 +37,6 @@ java {
 tasks {
   withType(KotlinCompile::class) {
     kotlinOptions.jvmTarget = "1.8"
-    kotlinOptions.apiVersion = "1.3"
-    kotlinOptions.languageVersion = "1.3"
     kotlinOptions.allWarningsAsErrors = false
     kotlinOptions.freeCompilerArgs = listOf("-Xjsr305=strict", "-Xjvm-default=enable")
   }
@@ -65,14 +59,6 @@ val javadocJar by tasks.creating(Jar::class) {
 }
 
 val jar = tasks["jar"] as org.gradle.jvm.tasks.Jar
-
-spotless {
-  kotlinGradle {
-    ktlint("0.31.0").userData(mutableMapOf("indent_size" to "2", "continuation_indent_size" to "2"))
-    trimTrailingWhitespace()
-    endWithNewline()
-  }
-}
 
 distributions {
   getByName("main") {
@@ -147,7 +133,13 @@ dependencies {
   implementation("org.slf4j:slf4j-jdk14:2.0.0-alpha1")
 
   kapt("info.picocli:picocli-codegen:4.5.0")
-  compileOnly("org.graalvm.nativeimage:svm:20.2.0")
+  compileOnly("org.graalvm.nativeimage:svm:20.2.0") {
+    // https://youtrack.jetbrains.com/issue/KT-29513
+    exclude(group= "org.graalvm.nativeimage")
+    exclude(group= "org.graalvm.truffle")
+    exclude(group= "org.graalvm.sdk")
+    exclude(group= "org.graalvm.compiler")
+  }
 
   testImplementation("org.junit.jupiter:junit-jupiter-api:5.5.2")
   testImplementation("org.jetbrains.kotlin:kotlin-test:1.4.0")
