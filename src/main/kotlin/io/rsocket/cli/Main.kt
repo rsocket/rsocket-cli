@@ -192,7 +192,7 @@ class Main : Runnable {
   }
 
   private fun sanitizeUri(uri: String): String {
-    var validationUri = URI(uri)
+    val validationUri = URI(uri)
     if (validationUri.scheme == "ws" || validationUri.scheme == "wss") {
       if (validationUri.path.isEmpty()) {
         return "$uri/"
@@ -209,7 +209,7 @@ class Main : Runnable {
 
   suspend fun buildMetadata(): ByteArray? = when {
     this.route != null -> {
-      val compositeByteBuf = CompositeByteBuf(ByteBufAllocator.DEFAULT, false, 1);
+      val compositeByteBuf = CompositeByteBuf(ByteBufAllocator.DEFAULT, false, 1)
       val routingMetadata = TaggingMetadataCodec.createRoutingMetadata(ByteBufAllocator.DEFAULT, listOf(route))
       CompositeMetadataCodec.encodeAndAddMetadata(compositeByteBuf, ByteBufAllocator.DEFAULT,
         WellKnownMimeType.MESSAGE_RSOCKET_ROUTING, routingMetadata.content)
