@@ -136,8 +136,8 @@ dependencies {
   compileOnly("org.graalvm.nativeimage:svm:20.2.0")
 
   testImplementation("org.junit.jupiter:junit-jupiter-api:5.5.2")
-  testImplementation("org.jetbrains.kotlin:kotlin-test:1.3.72")
-  testImplementation("org.jetbrains.kotlin:kotlin-test-junit:1.3.72")
+  testImplementation("org.jetbrains.kotlin:kotlin-test:1.4.0")
+  testImplementation("org.jetbrains.kotlin:kotlin-test-junit:1.4.0")
 
   testRuntime("org.junit.jupiter:junit-jupiter-engine:5.5.2")
 }
