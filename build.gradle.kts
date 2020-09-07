@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.apache.tools.ant.taskdefs.condition.Os
 
 plugins {
   kotlin("jvm") version "1.4.0"
@@ -94,7 +95,7 @@ publishing {
 
 graal {
   mainClass("io.rsocket.cli.Main")
-  outputName("rsocket-cli")
+  outputName("rsocketcli")
   graalVersion("20.2.0")
   javaVersion("11")
 
@@ -102,12 +103,12 @@ graal {
   option("--no-fallback")
   option("--allow-incomplete-classpath")
 
-//  if (Os.isFamily(Os.FAMILY_WINDOWS)) {
-//    // May be possible without, but autodetection is problematic on Windows 10
-//    // see https://github.com/palantir/gradle-graal
-//    // see https://www.graalvm.org/docs/reference-manual/native-image/#prerequisites
-//  windowsVsVarsPath("C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat")
-//  }
+  if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+    // May be possible without, but autodetection is problematic on Windows 10
+    // see https://github.com/palantir/gradle-graal
+    // see https://www.graalvm.org/docs/reference-manual/native-image/#prerequisites
+    windowsVsVarsPath("C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat")
+  }
 }
 
 dependencies {
