@@ -121,7 +121,7 @@ dependencies {
 
   implementation("io.rsocket:rsocket-core:1.0.2")
 
-  implementation("com.github.yschimke:oksocial-output:5.6")
+  implementation("com.github.yschimke:oksocial-output:5.7")
   implementation("com.squareup.okhttp3:okhttp:4.8.1")
   implementation("com.squareup.okio:okio:2.7.0")
   implementation("info.picocli:picocli:4.5.0")
