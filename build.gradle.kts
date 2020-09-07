@@ -1,23 +1,20 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-  kotlin("jvm") version "1.3.72"
+  kotlin("jvm") version "1.4.0"
+  kotlin("kapt") version "1.4.0"
   `maven-publish`
   application
   id("net.nemerosa.versioning") version "2.13.1"
-  id("com.diffplug.gradle.spotless") version "3.30.0"
-  id("com.palantir.graal") version "0.7.1-13-gd190241"
-  kotlin("kapt") version "1.3.72"
+  id("com.diffplug.spotless") version "5.1.0"
+  id("com.palantir.graal") version "0.7.1-15-g62b5090"
 }
 
 repositories {
   jcenter()
   mavenCentral()
   maven(url = "https://jitpack.io")
-  maven(url = "https://repo.maven.apache.org/maven2")
-  maven(url = "https://repo.spring.io/milestone")
-  maven(url = "https://repo.spring.io/release")
-  maven(url = "https://dl.bintray.com/whyoleg/rsocket-kotlin")
+  maven(url = "https://oss.jfrog.org/oss-snapshot-local")
 }
 
 group = "com.github.yschimke"
@@ -40,8 +37,6 @@ java {
 tasks {
   withType(KotlinCompile::class) {
     kotlinOptions.jvmTarget = "1.8"
-    kotlinOptions.apiVersion = "1.3"
-    kotlinOptions.languageVersion = "1.3"
     kotlinOptions.allWarningsAsErrors = false
     kotlinOptions.freeCompilerArgs = listOf("-Xjsr305=strict", "-Xjvm-default=enable")
   }
@@ -64,14 +59,6 @@ val javadocJar by tasks.creating(Jar::class) {
 }
 
 val jar = tasks["jar"] as org.gradle.jvm.tasks.Jar
-
-spotless {
-  kotlinGradle {
-    ktlint("0.31.0").userData(mutableMapOf("indent_size" to "2", "continuation_indent_size" to "2"))
-    trimTrailingWhitespace()
-    endWithNewline()
-  }
-}
 
 distributions {
   getByName("main") {
@@ -124,12 +111,12 @@ graal {
 }
 
 dependencies {
-  implementation("io.rsocket.kotlin:rsocket-core-jvm:0.1.0.beta.2")
-  implementation("io.rsocket.kotlin:rsocket-transport-websocket-client-jvm:0.1.0.beta.2")
-  implementation("io.ktor:ktor-network-tls:1.3.2")
-//  implementation("io.ktor:ktor-http-cio:1.3.2")
-  implementation("io.ktor:ktor-client-okhttp:1.3.2")
-  implementation("io.ktor:ktor-client-core-jvm:1.3.2")
+  implementation(fileTree(mapOf("dir" to "lib", "include" to listOf("*.jar"))))
+//  implementation("io.rsocket.kotlin:rsocket-core-jvm:0.10.0-SNAPSHOT")
+//  implementation("io.rsocket.kotlin:rsocket-transport-websocket-client-jvm:0.10.0-SNAPSHOT")
+  implementation("io.ktor:ktor-network-tls:1.4.0")
+  implementation("io.ktor:ktor-client-okhttp:1.4.0")
+  implementation("io.ktor:ktor-client-core-jvm:1.4.0")
 
   implementation("io.rsocket:rsocket-core:1.0.2")
 
@@ -137,21 +124,27 @@ dependencies {
   implementation("com.squareup.okhttp3:okhttp:4.8.1")
   implementation("com.squareup.okio:okio:2.7.0")
   implementation("info.picocli:picocli:4.5.0")
-  implementation("org.jetbrains.kotlin:kotlin-reflect:1.3.72")
-  implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.3.72")
-  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.8")
-  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.3.8")
+  implementation("org.jetbrains.kotlin:kotlin-reflect:1.4.0")
+  implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.4.0")
+  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.9")
+  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.3.9")
   implementation("com.squareup.moshi:moshi:1.9.3")
   implementation("com.squareup.moshi:moshi-adapters:1.9.3")
   implementation("com.squareup.moshi:moshi-kotlin:1.9.3")
   implementation("org.slf4j:slf4j-jdk14:2.0.0-alpha1")
 
   kapt("info.picocli:picocli-codegen:4.5.0")
-  compileOnly("org.graalvm.nativeimage:svm:20.2.0")
+  compileOnly("org.graalvm.nativeimage:svm:20.2.0") {
+    // https://youtrack.jetbrains.com/issue/KT-29513
+    exclude(group= "org.graalvm.nativeimage")
+    exclude(group= "org.graalvm.truffle")
+    exclude(group= "org.graalvm.sdk")
+    exclude(group= "org.graalvm.compiler")
+  }
 
   testImplementation("org.junit.jupiter:junit-jupiter-api:5.5.2")
-  testImplementation("org.jetbrains.kotlin:kotlin-test:1.3.72")
-  testImplementation("org.jetbrains.kotlin:kotlin-test-junit:1.3.72")
+  testImplementation("org.jetbrains.kotlin:kotlin-test:1.4.0")
+  testImplementation("org.jetbrains.kotlin:kotlin-test-junit:1.4.0")
 
   testRuntime("org.junit.jupiter:junit-jupiter-engine:5.5.2")
 }
