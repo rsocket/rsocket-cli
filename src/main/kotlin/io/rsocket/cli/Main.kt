@@ -26,12 +26,15 @@ import io.netty.buffer.CompositeByteBuf
 import io.rsocket.kotlin.RSocket
 import io.rsocket.kotlin.core.RSocketClientSupport
 import io.rsocket.kotlin.core.rSocket
+import io.rsocket.kotlin.keepalive.KeepAlive
 import io.rsocket.kotlin.payload.Payload
 import io.rsocket.kotlin.payload.PayloadMimeType
 import io.rsocket.metadata.CompositeMetadataCodec
 import io.rsocket.metadata.TaggingMetadataCodec
 import io.rsocket.metadata.WellKnownMimeType
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.take
@@ -46,6 +49,8 @@ import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
 import java.util.function.Supplier
 import kotlin.system.exitProcess
+import kotlin.time.ExperimentalTime
+import kotlin.time.seconds
 
 /**
  * Simple command line tool to make a RSocket connection and send/receive elements.
@@ -103,7 +108,7 @@ class Main : Runnable {
   var timeout: Long? = null
 
   @Option(names = ["--keepalive"], description = ["Keepalive period"])
-  var keepalive: String? = null
+  var keepalive: Int? = null
 
   @Option(names = ["--requestn", "-r"], description = ["Request N credits"])
   var requestN = Integer.MAX_VALUE
@@ -241,9 +246,9 @@ class Main : Runnable {
       metadataPush -> client.metadataPush(inputPayload.data)
       requestResponse -> client.requestResponse(inputPayload)
         .also { showResponse(it) }
-      stream -> client.requestStream(inputPayload).take(requestN)
+      stream -> client.requestStream(inputPayload).request(requestN)
         .collect { showResponse(it) }
-      channel -> client.requestChannel(flowOf(inputPayload)).take(requestN)
+      channel -> client.requestChannel(flowOf(inputPayload)).request(requestN)
         .collect { showResponse(it) }
       else -> error("No operation to run")
     }
@@ -298,14 +303,23 @@ class Main : Runnable {
   }
 }
 
+private fun <T> Flow<T>.request(requestN: Int): Flow<T> {
+  return this.buffer(requestN).take(requestN)
+}
+
+@OptIn(ExperimentalTime::class)
 @KtorExperimentalAPI
-suspend fun buildClient(uri: String, dataFormat: String, metadataFormat: String): RSocket {
+suspend fun buildClient(uri: String, dataFormat: String, metadataFormat: String, keepAlive: Int? = null): RSocket {
   val engine: HttpClientEngineFactory<*> = OkHttp
 
   val client = HttpClient(engine) {
     install(WebSockets)
     install(RSocketClientSupport) {
       payloadMimeType = PayloadMimeType(dataFormat, metadataFormat)
+
+      if (keepAlive != null) {
+        this.keepAlive = KeepAlive(keepAlive.seconds)
+      }
     }
   }
 
