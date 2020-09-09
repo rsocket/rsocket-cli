@@ -112,9 +112,9 @@ graal {
 }
 
 dependencies {
-  implementation(fileTree(mapOf("dir" to "lib", "include" to listOf("*.jar"))))
-//  implementation("io.rsocket.kotlin:rsocket-core-jvm:0.10.0-SNAPSHOT")
-//  implementation("io.rsocket.kotlin:rsocket-transport-websocket-client-jvm:0.10.0-SNAPSHOT")
+//  implementation(fileTree(mapOf("dir" to "lib", "include" to listOf("*.jar"))))
+  implementation("io.rsocket.kotlin:rsocket-core-jvm:0.10.0-task/interactions-api-SNAPSHOT")
+  implementation("io.rsocket.kotlin:rsocket-transport-ktor-client:0.10.0-task/interactions-api-SNAPSHOT")
   implementation("io.ktor:ktor-network-tls:1.4.0")
   implementation("io.ktor:ktor-client-okhttp:1.4.0")
   implementation("io.ktor:ktor-client-core-jvm:1.4.0")
@@ -123,7 +123,7 @@ dependencies {
 
   implementation("com.github.yschimke:oksocial-output:5.7")
   implementation("com.squareup.okhttp3:okhttp:4.8.1")
-  implementation("com.squareup.okio:okio:2.7.0")
+  implementation("com.squareup.okio:okio:2.8.0")
   implementation("info.picocli:picocli:4.5.0")
   implementation("org.jetbrains.kotlin:kotlin-reflect:1.4.0")
   implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.4.0")
