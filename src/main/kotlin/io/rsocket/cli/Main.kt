@@ -162,7 +162,7 @@ class Main : Runnable {
     }
 
     if (!this::client.isInitialized) {
-      client = buildClient(uri, dataFormat!!, metadataFormat!!)
+      client = buildClient(uri, dataFormat!!, metadataFormat!!, keepalive)
       UrlCandidates.recordUrl(uri)
     }
 
