@@ -1,0 +1,9 @@
+{
+    "extensions": [
+		"vscjava.vscode-java-pack"
+    ],
+    "forwardPorts": [],
+    "settings": { 
+		"terminal.integrated.shell.linux": "/bin/zsh",
+	},
+}
