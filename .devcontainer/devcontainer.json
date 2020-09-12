@@ -1,9 +1,10 @@
 {
-    "extensions": [
-		"vscjava.vscode-java-pack"
-    ],
-    "forwardPorts": [],
-    "settings": { 
+  "extensions": [
+		"vscjava.vscode-java-pack",
+	  "richardwillis.vscode-gradle-extension-pack"  
+  ],
+  "forwardPorts": [],
+  "settings": { 
 		"terminal.integrated.shell.linux": "/bin/zsh",
 	},
 }
