@@ -257,7 +257,7 @@ class Main : Runnable {
   }
 
   companion object {
-    const val NAME = "reactivesocket-cli"
+    const val NAME = "rsocket-cli"
 
     var homeDir = System.getProperty("user.home")
     var settingsDir = File(homeDir, ".rsocket-cli")
