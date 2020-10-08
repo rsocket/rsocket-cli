@@ -8,7 +8,7 @@ plugins {
   application
   id("net.nemerosa.versioning") version "2.13.1"
   id("com.diffplug.spotless") version "5.1.0"
-  id("com.palantir.graal") version "0.7.1-15-g62b5090"
+  id("com.palantir.graal") version "0.7.1"
 }
 
 repositories {
@@ -16,6 +16,7 @@ repositories {
   mavenCentral()
   maven(url = "https://jitpack.io")
   maven(url = "https://oss.jfrog.org/oss-snapshot-local")
+  maven(url = "https://dl.bintray.com/kotlinx/kotlinx")
 }
 
 group = "com.github.yschimke"
@@ -112,29 +113,32 @@ graal {
 }
 
 dependencies {
-  implementation(fileTree(mapOf("dir" to "lib", "include" to listOf("*.jar"))))
-//  implementation("io.rsocket.kotlin:rsocket-core-jvm:0.10.0-SNAPSHOT")
-//  implementation("io.rsocket.kotlin:rsocket-transport-websocket-client-jvm:0.10.0-SNAPSHOT")
-  implementation("io.ktor:ktor-network-tls:1.4.0")
-  implementation("io.ktor:ktor-client-okhttp:1.4.0")
-  implementation("io.ktor:ktor-client-core-jvm:1.4.0")
+  implementation("io.rsocket.kotlin:rsocket-core-jvm:0.10.0-SNAPSHOT") {
+    exclude(group= "org.jetbrains.kotlin")
+    exclude(group= "org.jetbrains.kotlinx")
+  }
+  implementation("io.rsocket.kotlin:rsocket-transport-ktor-client:0.10.0-SNAPSHOT") {
+    exclude(group= "org.jetbrains.kotlin")
+    exclude(group= "org.jetbrains.kotlinx")
+  }
+  implementation("io.ktor:ktor-network-tls:1.4.1")
+  implementation("io.ktor:ktor-client-okhttp:1.4.1")
+  implementation("io.ktor:ktor-client-core-jvm:1.4.1")
 
   implementation("io.rsocket:rsocket-core:1.0.2")
 
-  implementation("com.github.yschimke:oksocial-output:5.7")
-  implementation("com.squareup.okhttp3:okhttp:4.8.1")
-  implementation("com.squareup.okio:okio:2.7.0")
-  implementation("info.picocli:picocli:4.5.0")
+  implementation("com.github.yschimke:oksocial-output:5.10")
+  implementation("com.squareup.okhttp3:okhttp:4.10.0-RC1")
+  implementation("com.squareup.okio:okio:2.9.0")
+  implementation("info.picocli:picocli:4.5.1")
   implementation("org.jetbrains.kotlin:kotlin-reflect:1.4.0")
   implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.4.0")
-  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.9")
-  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.3.9")
-  implementation("com.squareup.moshi:moshi:1.9.3")
-  implementation("com.squareup.moshi:moshi-adapters:1.9.3")
-  implementation("com.squareup.moshi:moshi-kotlin:1.9.3")
+  implementation("com.squareup.moshi:moshi:1.11.0")
+  implementation("com.squareup.moshi:moshi-adapters:1.11.0")
+  implementation("com.squareup.moshi:moshi-kotlin:1.11.0")
   implementation("org.slf4j:slf4j-jdk14:2.0.0-alpha1")
 
-  kapt("info.picocli:picocli-codegen:4.5.0")
+  kapt("info.picocli:picocli-codegen:4.5.1")
   compileOnly("org.graalvm.nativeimage:svm:20.2.0") {
     // https://youtrack.jetbrains.com/issue/KT-29513
     exclude(group= "org.graalvm.nativeimage")
