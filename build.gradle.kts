@@ -113,8 +113,14 @@ graal {
 }
 
 dependencies {
-  implementation("io.rsocket.kotlin:rsocket-core-jvm:0.10.0-SNAPSHOT")
-  implementation("io.rsocket.kotlin:rsocket-transport-websocket-client-jvm:0.10.0-SNAPSHOT")
+  implementation("io.rsocket.kotlin:rsocket-core-jvm:0.10.0-SNAPSHOT") {
+    exclude(group= "org.jetbrains.kotlin")
+    exclude(group= "org.jetbrains.kotlinx")
+  }
+  implementation("io.rsocket.kotlin:rsocket-transport-ktor-client:0.10.0-SNAPSHOT") {
+    exclude(group= "org.jetbrains.kotlin")
+    exclude(group= "org.jetbrains.kotlinx")
+  }
   implementation("io.ktor:ktor-network-tls:1.4.1")
   implementation("io.ktor:ktor-client-okhttp:1.4.1")
   implementation("io.ktor:ktor-client-core-jvm:1.4.1")
@@ -127,8 +133,6 @@ dependencies {
   implementation("info.picocli:picocli:4.5.1")
   implementation("org.jetbrains.kotlin:kotlin-reflect:1.4.0")
   implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.4.0")
-  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.9")
-  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.3.9")
   implementation("com.squareup.moshi:moshi:1.11.0")
   implementation("com.squareup.moshi:moshi-adapters:1.11.0")
   implementation("com.squareup.moshi:moshi-kotlin:1.11.0")

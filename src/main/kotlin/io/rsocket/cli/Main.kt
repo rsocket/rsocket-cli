@@ -26,7 +26,6 @@ import io.netty.buffer.CompositeByteBuf
 import io.rsocket.kotlin.RSocket
 import io.rsocket.kotlin.core.RSocketClientSupport
 import io.rsocket.kotlin.core.rSocket
-import io.rsocket.kotlin.flow.onRequest
 import io.rsocket.kotlin.payload.Payload
 import io.rsocket.kotlin.payload.PayloadMimeType
 import io.rsocket.metadata.CompositeMetadataCodec
@@ -244,9 +243,7 @@ class Main : Runnable {
         .also { showResponse(it) }
       stream -> client.requestStream(inputPayload).take(requestN)
         .collect { showResponse(it) }
-      channel -> client.requestChannel(flowOf(inputPayload).onRequest {
-        TODO("send next n requests")
-      }).take(requestN)
+      channel -> client.requestChannel(flowOf(inputPayload)).take(requestN)
         .collect { showResponse(it) }
       else -> error("No operation to run")
     }
