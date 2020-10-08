@@ -16,6 +16,7 @@ repositories {
   mavenCentral()
   maven(url = "https://jitpack.io")
   maven(url = "https://oss.jfrog.org/oss-snapshot-local")
+  maven(url = "https://dl.bintray.com/kotlinx/kotlinx")
 }
 
 group = "com.github.yschimke"
@@ -114,9 +115,9 @@ graal {
 dependencies {
   implementation("io.rsocket.kotlin:rsocket-core-jvm:0.10.0-SNAPSHOT")
   implementation("io.rsocket.kotlin:rsocket-transport-websocket-client-jvm:0.10.0-SNAPSHOT")
-  implementation("io.ktor:ktor-network-tls:1.4.0")
-  implementation("io.ktor:ktor-client-okhttp:1.4.0")
-  implementation("io.ktor:ktor-client-core-jvm:1.4.0")
+  implementation("io.ktor:ktor-network-tls:1.4.1")
+  implementation("io.ktor:ktor-client-okhttp:1.4.1")
+  implementation("io.ktor:ktor-client-core-jvm:1.4.1")
 
   implementation("io.rsocket:rsocket-core:1.0.2")
 
