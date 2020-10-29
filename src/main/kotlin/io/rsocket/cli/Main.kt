@@ -24,10 +24,14 @@ import io.netty.buffer.ByteBufAllocator
 import io.netty.buffer.ByteBufUtil
 import io.netty.buffer.CompositeByteBuf
 import io.rsocket.kotlin.RSocket
-import io.rsocket.kotlin.core.RSocketClientSupport
-import io.rsocket.kotlin.core.rSocket
+import io.rsocket.kotlin.core.RSocketConnector
+import io.rsocket.kotlin.keepalive.KeepAlive
+import io.rsocket.kotlin.logging.DefaultLoggerFactory
+import io.rsocket.kotlin.logging.NoopLogger
 import io.rsocket.kotlin.payload.Payload
 import io.rsocket.kotlin.payload.PayloadMimeType
+import io.rsocket.kotlin.transport.ktor.client.RSocketSupport
+import io.rsocket.kotlin.transport.ktor.client.rSocket
 import io.rsocket.metadata.CompositeMetadataCodec
 import io.rsocket.metadata.TaggingMetadataCodec
 import io.rsocket.metadata.WellKnownMimeType
@@ -46,6 +50,8 @@ import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
 import java.util.function.Supplier
 import kotlin.system.exitProcess
+import kotlin.time.ExperimentalTime
+import kotlin.time.seconds
 
 /**
  * Simple command line tool to make a RSocket connection and send/receive elements.
@@ -298,14 +304,22 @@ class Main : Runnable {
   }
 }
 
+@OptIn(ExperimentalTime::class)
 @KtorExperimentalAPI
-suspend fun buildClient(uri: String, dataFormat: String, metadataFormat: String): RSocket {
+suspend fun buildClient(uri: String, dataFormat: String, metadataFormat: String, debug: Boolean = false): RSocket {
   val engine: HttpClientEngineFactory<*> = OkHttp
 
   val client = HttpClient(engine) {
     install(WebSockets)
-    install(RSocketClientSupport) {
-      payloadMimeType = PayloadMimeType(dataFormat, metadataFormat)
+    install(RSocketSupport) {
+      connector = RSocketConnector {
+        loggerFactory = if (debug) DefaultLoggerFactory else NoopLogger
+
+        connectionConfig {
+          keepAlive = KeepAlive(5.seconds)
+          payloadMimeType = PayloadMimeType(dataFormat, metadataFormat)
+        }
+      }
     }
   }
 
