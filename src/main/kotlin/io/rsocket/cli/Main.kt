@@ -19,7 +19,9 @@ import io.ktor.client.engine.HttpClientEngineFactory
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.features.websocket.WebSockets
 import io.ktor.util.KtorExperimentalAPI
+import io.ktor.utils.io.core.ByteReadPacket
 import io.ktor.utils.io.core.readByteBuffer
+import io.ktor.utils.io.core.readBytes
 import io.netty.buffer.ByteBufAllocator
 import io.netty.buffer.ByteBufUtil
 import io.netty.buffer.CompositeByteBuf
@@ -28,6 +30,9 @@ import io.rsocket.kotlin.core.RSocketConnector
 import io.rsocket.kotlin.keepalive.KeepAlive
 import io.rsocket.kotlin.logging.DefaultLoggerFactory
 import io.rsocket.kotlin.logging.NoopLogger
+import io.rsocket.kotlin.metadata.CompositeMetadata
+import io.rsocket.kotlin.metadata.RoutingMetadata
+import io.rsocket.kotlin.metadata.toPacket
 import io.rsocket.kotlin.payload.Payload
 import io.rsocket.kotlin.payload.PayloadMimeType
 import io.rsocket.kotlin.transport.ktor.client.RSocketSupport
@@ -193,8 +198,8 @@ class Main : Runnable {
     when {
       setup == null -> Payload.Empty
       setup!!.startsWith("@") ->
-        Payload(expectedFile(setup!!.substring(1)).readBytes())
-      else -> Payload(setup!!)
+        Payload(ByteReadPacket(expectedFile(setup!!.substring(1)).readBytes()))
+      else -> Payload(ByteReadPacket(setup!!.toByteArray()))
     }
   }
 
@@ -216,11 +221,8 @@ class Main : Runnable {
 
   suspend fun buildMetadata(): ByteArray? = when {
     this.route != null -> {
-      val compositeByteBuf = CompositeByteBuf(ByteBufAllocator.DEFAULT, false, 1)
-      val routingMetadata = TaggingMetadataCodec.createRoutingMetadata(ByteBufAllocator.DEFAULT, listOf(route))
-      CompositeMetadataCodec.encodeAndAddMetadata(compositeByteBuf, ByteBufAllocator.DEFAULT,
-        WellKnownMimeType.MESSAGE_RSOCKET_ROUTING, routingMetadata.content)
-      ByteBufUtil.getBytes(compositeByteBuf)
+      // TODO cleanup
+      CompositeMetadata(RoutingMetadata(route!!)).toPacket().readBytes()
     }
     this.metadata != null -> {
       if (this.headers != null) {
@@ -230,13 +232,13 @@ class Main : Runnable {
       getInputFromSource(this.metadata, Supplier { ""; }).toByteArray(StandardCharsets.UTF_8)
     }
     this.headers != null -> jsonEncodeStringMap(headerMap(headers))
-    else -> ByteArray(0)
+    else -> null
   }
 
   private suspend fun singleInputPayload(): Payload {
     val inputBytes = input?.toByteArray() ?: byteArrayOf()
     val metadata = buildMetadata()
-    return Payload(inputBytes, metadata)
+    return Payload(ByteReadPacket(inputBytes), metadata?.let { ByteReadPacket(it) })
   }
 
   suspend fun run(client: RSocket) {
