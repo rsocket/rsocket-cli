@@ -25,6 +25,7 @@ import io.ktor.utils.io.core.readBytes
 import io.netty.buffer.ByteBufAllocator
 import io.netty.buffer.ByteBufUtil
 import io.netty.buffer.CompositeByteBuf
+import io.rsocket.kotlin.ExperimentalMetadataApi
 import io.rsocket.kotlin.RSocket
 import io.rsocket.kotlin.core.RSocketConnector
 import io.rsocket.kotlin.keepalive.KeepAlive
@@ -219,6 +220,7 @@ class Main : Runnable {
       else -> stringValue(source)
     }
 
+  @OptIn(ExperimentalMetadataApi::class)
   suspend fun buildMetadata(): ByteArray? = when {
     this.route != null -> {
       // TODO cleanup

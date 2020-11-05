@@ -39,7 +39,7 @@ tasks {
   withType(KotlinCompile::class) {
     kotlinOptions.jvmTarget = "1.8"
     kotlinOptions.allWarningsAsErrors = false
-    kotlinOptions.freeCompilerArgs = listOf("-Xjsr305=strict", "-Xjvm-default=enable")
+    kotlinOptions.freeCompilerArgs = listOf("-Xjsr305=strict", "-Xjvm-default=enable", "-Xopt-in=kotlin.RequiresOptIn")
   }
 }
 
