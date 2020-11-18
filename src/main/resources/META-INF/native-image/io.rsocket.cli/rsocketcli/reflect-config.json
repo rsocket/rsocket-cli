@@ -45,6 +45,13 @@
     ]
   },
   {
+    "name": "io.ktor.client.features.websocket.DefaultClientWebSocketSession",
+    "allPublicMethods": true,
+    "allDeclaredFields":true,
+    "allDeclaredMethods":true,
+    "allDeclaredConstructors":true
+  },
+  {
     "name": "io.rsocket.kotlin.RSocket",
     "allPublicMethods": true
   },
