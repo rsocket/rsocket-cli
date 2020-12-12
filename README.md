@@ -1,14 +1,15 @@
 # RSocket CLI
 
-## You should probably use rsc instead
-
-For general rsocket command line you probably want https://github.com/making/rsc
-
 ## Description
 
 Simple RSocket CLI focused on sending basic traffic to servers built using RSocket e.g. help debug a mobile <=> server integration issue. 
 
 Supports ws and wss URIs
+
+## Consider if you should use rsc instead
+
+For rsocket-java specfic testing, the command line you probably want is https://github.com/making/rsc .
+This library builds on https://github.com/rsocket/rsocket-kotlin .
 
 # Build Status
 
