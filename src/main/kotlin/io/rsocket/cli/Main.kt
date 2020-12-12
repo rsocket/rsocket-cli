@@ -43,6 +43,7 @@ import io.rsocket.metadata.TaggingMetadataCodec
 import io.rsocket.metadata.WellKnownMimeType
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.take
 import okio.ByteString.Companion.toByteString
@@ -253,7 +254,7 @@ class Main : Runnable {
         .also { showResponse(it) }
       stream -> client.requestStream(inputPayload).take(requestN)
         .collect { showResponse(it) }
-      channel -> client.requestChannel(flowOf(inputPayload)).take(requestN)
+      channel -> client.requestChannel(inputPayload, emptyFlow()).take(requestN)
         .collect { showResponse(it) }
       else -> error("No operation to run")
     }
