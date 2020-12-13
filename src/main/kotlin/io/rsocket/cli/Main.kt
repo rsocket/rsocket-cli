@@ -36,6 +36,8 @@ import io.rsocket.kotlin.metadata.RoutingMetadata
 import io.rsocket.kotlin.metadata.toPacket
 import io.rsocket.kotlin.payload.Payload
 import io.rsocket.kotlin.payload.PayloadMimeType
+import io.rsocket.kotlin.payload.buildPayload
+import io.rsocket.kotlin.payload.data
 import io.rsocket.kotlin.transport.ktor.client.RSocketSupport
 import io.rsocket.kotlin.transport.ktor.client.rSocket
 import io.rsocket.metadata.CompositeMetadataCodec
@@ -103,7 +105,7 @@ class Main : Runnable {
   @Option(names = ["--dataFormat"], description = ["Data Format"])
   var dataFormat: String? = null
 
-  @Option(names = ["--setup"], description = ["String input or @path/to/file for setup metadata"])
+  @Option(names = ["-s", "--setup"], description = ["String input or @path/to/file for setup metadata"])
   var setup: String? = null
 
   @Option(names = ["--route"], description = ["RSocket Route"])
@@ -170,7 +172,7 @@ class Main : Runnable {
     }
 
     if (!this::client.isInitialized) {
-      client = buildClient(uri, dataFormat!!, metadataFormat!!)
+      client = buildClient(uri, dataFormat!!, metadataFormat!!, parseSetupPayload())
       UrlCandidates.recordUrl(uri)
     }
 
@@ -197,11 +199,15 @@ class Main : Runnable {
   }
 
   private suspend fun parseSetupPayload(): Payload = withContext(Dispatchers.IO) {
+    val setup = setup
     when {
       setup == null -> Payload.Empty
-      setup!!.startsWith("@") ->
-        Payload(ByteReadPacket(expectedFile(setup!!.substring(1)).readBytes()))
-      else -> Payload(ByteReadPacket(setup!!.toByteArray()))
+      setup.startsWith("@") -> buildPayload {
+        data(expectedFile(setup!!.substring(1)).readBytes())
+      }
+      else -> buildPayload {
+        data(setup)
+      }
     }
   }
 
@@ -307,26 +313,4 @@ class Main : Runnable {
       }
     }
   }
-}
-
-@OptIn(ExperimentalTime::class)
-@KtorExperimentalAPI
-suspend fun buildClient(uri: String, dataFormat: String, metadataFormat: String, debug: Boolean = false): RSocket {
-  val engine: HttpClientEngineFactory<*> = OkHttp
-
-  val client = HttpClient(engine) {
-    install(WebSockets)
-    install(RSocketSupport) {
-      connector = RSocketConnector {
-        loggerFactory = if (debug) DefaultLoggerFactory else NoopLogger
-
-        connectionConfig {
-          keepAlive = KeepAlive(5.seconds)
-          payloadMimeType = PayloadMimeType(dataFormat, metadataFormat)
-        }
-      }
-    }
-  }
-
-  return client.rSocket(uri, uri.startsWith("wss"))
 }
