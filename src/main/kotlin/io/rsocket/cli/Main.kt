@@ -14,20 +14,12 @@
 package io.rsocket.cli
 
 import com.baulsupp.oksocial.output.*
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.HttpClientEngineFactory
-import io.ktor.client.engine.okhttp.OkHttp
-import io.ktor.client.features.websocket.WebSockets
 import io.ktor.util.KtorExperimentalAPI
 import io.ktor.utils.io.core.ByteReadPacket
 import io.ktor.utils.io.core.readByteBuffer
 import io.ktor.utils.io.core.readBytes
-import io.netty.buffer.ByteBufAllocator
-import io.netty.buffer.ByteBufUtil
-import io.netty.buffer.CompositeByteBuf
 import io.rsocket.kotlin.ExperimentalMetadataApi
 import io.rsocket.kotlin.RSocket
-import io.rsocket.kotlin.core.RSocketConnector
 import io.rsocket.kotlin.keepalive.KeepAlive
 import io.rsocket.kotlin.logging.DefaultLoggerFactory
 import io.rsocket.kotlin.logging.NoopLogger
@@ -38,15 +30,9 @@ import io.rsocket.kotlin.payload.Payload
 import io.rsocket.kotlin.payload.PayloadMimeType
 import io.rsocket.kotlin.payload.buildPayload
 import io.rsocket.kotlin.payload.data
-import io.rsocket.kotlin.transport.ktor.client.RSocketSupport
-import io.rsocket.kotlin.transport.ktor.client.rSocket
-import io.rsocket.metadata.CompositeMetadataCodec
-import io.rsocket.metadata.TaggingMetadataCodec
-import io.rsocket.metadata.WellKnownMimeType
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.emptyFlow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.take
 import okio.ByteString.Companion.toByteString
 import picocli.CommandLine
@@ -73,9 +59,6 @@ import kotlin.time.seconds
 class Main : Runnable {
   @Option(names = ["-H", "--header"], description = ["Custom header to pass to server"])
   var headers: List<String>? = null
-
-  @Option(names = ["-T", "--transport-header"], description = ["Custom header to pass to the transport"])
-  var transportHeader: List<String>? = null
 
   @Option(names = ["--stream"], description = ["Request Stream"])
   var stream: Boolean = false
@@ -118,7 +101,7 @@ class Main : Runnable {
   var timeout: Long? = null
 
   @Option(names = ["--keepalive"], description = ["Keepalive period"])
-  var keepalive: String? = null
+  var keepalive: Int? = null
 
   @Option(names = ["--requestn", "-r"], description = ["Request N credits"])
   var requestN = Integer.MAX_VALUE
@@ -172,11 +155,26 @@ class Main : Runnable {
     }
 
     if (!this::client.isInitialized) {
-      client = buildClient(uri, dataFormat!!, metadataFormat!!, parseSetupPayload())
+      val setupPayload = parseSetupPayload()
+      client = buildRSocket(uri, setupPayload)
       UrlCandidates.recordUrl(uri)
     }
 
     runQuery()
+  }
+
+  @OptIn(ExperimentalTime::class)
+  @KtorExperimentalAPI
+  private suspend fun buildRSocket(
+    uri: String,
+    setupPayload: Payload
+  ) = buildClient(uri) {
+    loggerFactory = if (debug) DefaultLoggerFactory else NoopLogger
+    connectionConfig {
+      setupPayload(setupPayload)
+      keepAlive = KeepAlive((keepalive ?: 5).seconds)
+      payloadMimeType = PayloadMimeType(dataFormat!!, metadataFormat!!)
+    }
   }
 
   private fun printCompletions() {
@@ -203,7 +201,7 @@ class Main : Runnable {
     when {
       setup == null -> Payload.Empty
       setup.startsWith("@") -> buildPayload {
-        data(expectedFile(setup!!.substring(1)).readBytes())
+        data(expectedFile(setup.substring(1)).readBytes())
       }
       else -> buildPayload {
         data(setup)
