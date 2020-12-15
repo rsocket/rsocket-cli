@@ -10,13 +10,12 @@ import io.ktor.network.sockets.*
 import io.ktor.util.*
 import io.rsocket.kotlin.RSocket
 import io.rsocket.kotlin.core.RSocketConnector
+import io.rsocket.kotlin.core.RSocketConnectorBuilder
 import io.rsocket.kotlin.keepalive.KeepAlive
 import io.rsocket.kotlin.logging.DefaultLoggerFactory
 import io.rsocket.kotlin.logging.NoopLogger
 import io.rsocket.kotlin.payload.Payload
 import io.rsocket.kotlin.payload.PayloadMimeType
-import io.rsocket.kotlin.payload.buildPayload
-import io.rsocket.kotlin.payload.data
 import io.rsocket.kotlin.transport.ktor.client.RSocketSupport
 import io.rsocket.kotlin.transport.ktor.client.rSocket
 import io.rsocket.kotlin.transport.ktor.clientTransport
@@ -24,51 +23,40 @@ import kotlinx.coroutines.Dispatchers
 import kotlin.time.ExperimentalTime
 import kotlin.time.seconds
 
-suspend fun buildClient(uri: String, dataFormat: String, metadataFormat: String, setupPayload: Payload, debug: Boolean = false): RSocket {
+suspend fun buildClient(
+  uri: String,
+  builder: RSocketConnectorBuilder.() -> Unit
+): RSocket {
   return if (uri.startsWith("tcp:")) {
-    buildTcpClient(uri, dataFormat, metadataFormat, setupPayload, debug)
+    buildTcpClient(uri, builder)
   } else {
-    buildWsClient(uri, dataFormat, metadataFormat, setupPayload, debug)
+    buildWsClient(uri, builder)
   }
 }
 
-@OptIn(ExperimentalTime::class)
-@KtorExperimentalAPI
-suspend fun buildTcpClient(uri: String, dataFormat: String, metadataFormat: String, setupPayload: Payload, debug: Boolean = false): RSocket {
+suspend fun buildTcpClient(
+  uri: String,
+  builder: RSocketConnectorBuilder.() -> Unit
+): RSocket {
   val socket = aSocket(ActorSelectorManager(Dispatchers.IO))
 
   val (hostname, port) = "tcp://([^:]+):(\\d+)".toRegex().matchEntire(uri)?.destructured
     ?: throw UsageException("bad uri format: '$uri'")
 
   val transport = socket.tcp().clientTransport(hostname, port.toInt())
-  return RSocketConnector() {
-    loggerFactory = if (debug) DefaultLoggerFactory else NoopLogger
-
-    connectionConfig {
-      setupPayload(setupPayload)
-      keepAlive = KeepAlive(5.seconds)
-      payloadMimeType = PayloadMimeType(dataFormat, metadataFormat)
-    }
-  }.connect(transport)
+  return RSocketConnector(builder).connect(transport)
 }
 
-@OptIn(ExperimentalTime::class)
-@KtorExperimentalAPI
-suspend fun buildWsClient(uri: String, dataFormat: String, metadataFormat: String, setupPayload: Payload, debug: Boolean = false): RSocket {
+suspend fun buildWsClient(
+  uri: String,
+  builder: RSocketConnectorBuilder.() -> Unit
+): RSocket {
   val engine: HttpClientEngineFactory<*> = OkHttp
 
   val client = HttpClient(engine) {
     install(WebSockets)
     install(RSocketSupport) {
-      connector = RSocketConnector {
-        loggerFactory = if (debug) DefaultLoggerFactory else NoopLogger
-        connectionConfig {
-          setupPayload(setupPayload)
-
-          keepAlive = KeepAlive(5.seconds)
-          payloadMimeType = PayloadMimeType(dataFormat, metadataFormat)
-        }
-      }
+      connector = RSocketConnector(builder)
     }
   }
 
