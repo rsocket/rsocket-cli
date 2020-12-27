@@ -2,8 +2,8 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.apache.tools.ant.taskdefs.condition.Os
 
 plugins {
-  kotlin("jvm") version "1.4.20-RC"
-  kotlin("kapt") version "1.4.20-RC"
+  kotlin("jvm") version "1.4.21"
+  kotlin("kapt") version "1.4.21"
   `maven-publish`
   application
   id("net.nemerosa.versioning") version "2.13.1"
@@ -112,23 +112,25 @@ graal {
 }
 
 dependencies {
+  implementation(platform("org.jetbrains.kotlin:kotlin-bom:1.4.21"))
+
   implementation("io.rsocket.kotlin:rsocket-core-jvm:0.12.0")
   implementation("io.rsocket.kotlin:rsocket-transport-ktor-client:0.12.0")
-  implementation("io.ktor:ktor-network-tls:1.4.3")
-  implementation("io.ktor:ktor-client-okhttp:1.4.3")
-  implementation("io.ktor:ktor-client-core-jvm:1.4.3")
+  implementation("io.ktor:ktor-network-tls:1.5.0")
+  implementation("io.ktor:ktor-client-okhttp:1.5.0")
+  implementation("io.ktor:ktor-client-core-jvm:1.5.0")
 
   implementation("io.rsocket:rsocket-core:1.1.0")
 
   // define a BOM and its version
   implementation(platform("com.squareup.okhttp3:okhttp-bom:4.10.0-RC1"))
 
-  implementation("com.github.yschimke:oksocial-output:5.10")
+  implementation("com.github.yschimke:oksocial-output:5.16")
   implementation("com.squareup.okhttp3:okhttp")
   implementation("com.squareup.okio:okio:2.9.0")
   implementation("info.picocli:picocli:4.5.2")
-  implementation("org.jetbrains.kotlin:kotlin-reflect:1.4.21")
-  implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.4.21")
+  implementation("org.jetbrains.kotlin:kotlin-reflect")
+  implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
   implementation("com.squareup.moshi:moshi:1.11.0")
   implementation("com.squareup.moshi:moshi-adapters:1.11.0")
   implementation("com.squareup.moshi:moshi-kotlin:1.11.0")
