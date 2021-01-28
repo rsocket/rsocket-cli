@@ -2,8 +2,8 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.apache.tools.ant.taskdefs.condition.Os
 
 plugins {
-  kotlin("jvm") version "1.4.20-RC"
-  kotlin("kapt") version "1.4.20-RC"
+  kotlin("jvm") version "1.4.30-RC"
+  kotlin("kapt") version "1.4.30-RC"
   `maven-publish`
   application
   id("net.nemerosa.versioning") version "2.13.1"
@@ -96,7 +96,7 @@ publishing {
 graal {
   mainClass("io.rsocket.cli.Main")
   outputName("rsocketcli")
-  graalVersion("20.3.0")
+  graalVersion("21.0.0")
   javaVersion("11")
 
   option("--enable-https")
@@ -114,9 +114,9 @@ graal {
 dependencies {
   implementation("io.rsocket.kotlin:rsocket-core-jvm:0.12.0")
   implementation("io.rsocket.kotlin:rsocket-transport-ktor-client:0.12.0")
-  implementation("io.ktor:ktor-network-tls:1.4.3")
-  implementation("io.ktor:ktor-client-okhttp:1.4.3")
-  implementation("io.ktor:ktor-client-core-jvm:1.4.3")
+  implementation("io.ktor:ktor-network-tls:1.5.0")
+  implementation("io.ktor:ktor-client-okhttp:1.5.0")
+  implementation("io.ktor:ktor-client-core-jvm:1.5.0")
 
   implementation("io.rsocket:rsocket-core:1.1.0")
 
@@ -127,15 +127,15 @@ dependencies {
   implementation("com.squareup.okhttp3:okhttp")
   implementation("com.squareup.okio:okio:2.9.0")
   implementation("info.picocli:picocli:4.5.2")
-  implementation("org.jetbrains.kotlin:kotlin-reflect:1.4.21")
-  implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.4.21")
+  implementation("org.jetbrains.kotlin:kotlin-reflect:1.4.30-RC")
+  implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.4.30-RC")
   implementation("com.squareup.moshi:moshi:1.11.0")
   implementation("com.squareup.moshi:moshi-adapters:1.11.0")
   implementation("com.squareup.moshi:moshi-kotlin:1.11.0")
   implementation("org.slf4j:slf4j-jdk14:2.0.0-alpha1")
 
   kapt("info.picocli:picocli-codegen:4.5.2")
-  compileOnly("org.graalvm.nativeimage:svm:20.3.0") {
+  compileOnly("org.graalvm.nativeimage:svm:21.0.0") {
     // https://youtrack.jetbrains.com/issue/KT-29513
     exclude(group= "org.graalvm.nativeimage")
     exclude(group= "org.graalvm.truffle")
@@ -144,8 +144,8 @@ dependencies {
   }
 
   testImplementation("org.junit.jupiter:junit-jupiter-api:5.7.0")
-  testImplementation("org.jetbrains.kotlin:kotlin-test:1.4.21")
-  testImplementation("org.jetbrains.kotlin:kotlin-test-junit:1.4.21")
+  testImplementation("org.jetbrains.kotlin:kotlin-test:1.4.30-RC")
+  testImplementation("org.jetbrains.kotlin:kotlin-test-junit:1.4.30-RC")
 
   testRuntime("org.junit.jupiter:junit-jupiter-engine:5.7.0")
 }
