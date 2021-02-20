@@ -18,8 +18,10 @@ import io.ktor.util.KtorExperimentalAPI
 import io.ktor.utils.io.core.ByteReadPacket
 import io.ktor.utils.io.core.readByteBuffer
 import io.ktor.utils.io.core.readBytes
+import io.rsocket.exceptions.ApplicationErrorException
 import io.rsocket.kotlin.ExperimentalMetadataApi
 import io.rsocket.kotlin.RSocket
+import io.rsocket.kotlin.RSocketError
 import io.rsocket.kotlin.keepalive.KeepAlive
 import io.rsocket.kotlin.logging.DefaultLoggerFactory
 import io.rsocket.kotlin.logging.NoopLogger
@@ -35,11 +37,13 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.take
 import okio.ByteString.Companion.toByteString
+import okio.ExperimentalFileSystem
+import okio.FileSystem
+import okio.Path.Companion.toPath
 import picocli.CommandLine
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
-import java.io.File
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
@@ -54,6 +58,7 @@ import kotlin.time.seconds
  * Currently limited in features, only supports a text/line based approach.
  */
 @KtorExperimentalAPI
+@OptIn(ExperimentalFileSystem::class)
 @Command(description = ["RSocket CLI command"],
   name = "rsocket-cli", mixinStandardHelpOptions = true, version = ["dev"])
 class Main : Runnable {
@@ -157,7 +162,7 @@ class Main : Runnable {
     if (!this::client.isInitialized) {
       val setupPayload = parseSetupPayload()
       client = buildRSocket(uri, setupPayload)
-      UrlCandidates.recordUrl(uri)
+      UrlCandidates().recordUrl(uri)
     }
 
     runQuery()
@@ -201,7 +206,7 @@ class Main : Runnable {
     when {
       setup == null -> Payload.Empty
       setup.startsWith("@") -> buildPayload {
-        data(expectedFile(setup.substring(1)).readBytes())
+        data(FileSystem.SYSTEM.read(expectedFile(setup.substring(1))) { readByteArray() })
       }
       else -> buildPayload {
         data(setup)
@@ -271,8 +276,8 @@ class Main : Runnable {
   companion object {
     const val NAME = "rsocket-cli"
 
-    var homeDir = System.getProperty("user.home")
-    var settingsDir = File(homeDir, ".rsocket-cli")
+    var homeDir = System.getProperty("user.home").toPath()
+    var settingsDir = homeDir / ".rsocket-cli"
 
     @JvmStatic
     fun main(vararg args: String) {
@@ -305,6 +310,9 @@ class Main : Runnable {
       } catch (ue: UsageException) {
         cmd.err.println(ue.message)
         exitProcess(cmd.commandSpec.exitCodeOnInvalidInput())
+      } catch (ae: RSocketError) {
+        cmd.err.println(ae.javaClass.simpleName + ": " + ae.message)
+        exitProcess(cmd.commandSpec.exitCodeOnExecutionException())
       } catch (ex: Exception) {
         ex.printStackTrace(cmd.err)
         exitProcess(cmd.commandSpec.exitCodeOnExecutionException())

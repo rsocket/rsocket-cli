@@ -5,7 +5,10 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.File
+import okio.ExperimentalFileSystem
+import okio.FileSystem
+import okio.Path
+import okio.Path.Companion.toPath
 import java.io.IOException
 import java.io.PrintWriter
 import java.io.StringWriter
@@ -21,10 +24,11 @@ import java.util.logging.LogManager
 import java.util.logging.LogRecord
 import java.util.regex.Pattern
 
-fun expectedFile(name: String): File {
-  val file = File(normalize(name))
+@OptIn(ExperimentalFileSystem::class)
+fun expectedFile(name: String): Path {
+  val file = normalize(name).toPath()
 
-  if (!file.isFile) {
+  if (!FileSystem.SYSTEM.exists(file)) {
     throw UsageException("file not found: $file")
   }
 
@@ -54,22 +58,25 @@ suspend fun headerMap(headers: List<String>?): Map<String, String> {
   return headerMap
 }
 
+@OptIn(ExperimentalFileSystem::class)
 private suspend fun headerFileMap(input: String): Map<out String, String> {
   return withContext(Dispatchers.IO) {
-    headerMap(inputFile(input).readLines())
+    headerMap(FileSystem.SYSTEM.read(inputFile(input)) { readUtf8() }.lines())
   }
 }
 
+@OptIn(ExperimentalFileSystem::class)
 fun stringValue(source: String): String = when {
   source.startsWith("@") -> try {
-    inputFile(source).readText()
+    FileSystem.SYSTEM.read(inputFile(source)) { readUtf8() }
   } catch (e: IOException) {
     throw UsageException(e.toString())
   }
   else -> source
 }
 
-fun inputFile(path: String): File = expectedFile(path.substring(1))
+@OptIn(ExperimentalFileSystem::class)
+fun inputFile(path: String): Path = expectedFile(path.substring(1))
 
 private val activeLoggers = mutableListOf<java.util.logging.Logger>()
 

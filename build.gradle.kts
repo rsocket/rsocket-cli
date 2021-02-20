@@ -2,8 +2,8 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.apache.tools.ant.taskdefs.condition.Os
 
 plugins {
-  kotlin("jvm") version "1.4.30-RC"
-  kotlin("kapt") version "1.4.30-RC"
+  kotlin("jvm") version "1.4.30"
+  kotlin("kapt") version "1.4.30"
   `maven-publish`
   application
   id("net.nemerosa.versioning") version "2.13.1"
@@ -125,10 +125,10 @@ dependencies {
 
   implementation("com.github.yschimke:oksocial-output:5.10")
   implementation("com.squareup.okhttp3:okhttp")
-  implementation("com.squareup.okio:okio:2.9.0")
+  implementation("com.squareup.okio:okio:3.0.0-alpha.1")
   implementation("info.picocli:picocli:4.5.2")
-  implementation("org.jetbrains.kotlin:kotlin-reflect:1.4.30-RC")
-  implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.4.30-RC")
+  implementation("org.jetbrains.kotlin:kotlin-reflect:1.4.30")
+  implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.4.30")
   implementation("com.squareup.moshi:moshi:1.11.0")
   implementation("com.squareup.moshi:moshi-adapters:1.11.0")
   implementation("com.squareup.moshi:moshi-kotlin:1.11.0")
@@ -144,8 +144,8 @@ dependencies {
   }
 
   testImplementation("org.junit.jupiter:junit-jupiter-api:5.7.0")
-  testImplementation("org.jetbrains.kotlin:kotlin-test:1.4.30-RC")
-  testImplementation("org.jetbrains.kotlin:kotlin-test-junit:1.4.30-RC")
+  testImplementation("org.jetbrains.kotlin:kotlin-test:1.4.30")
+  testImplementation("org.jetbrains.kotlin:kotlin-test-junit:1.4.30")
 
   testRuntime("org.junit.jupiter:junit-jupiter-engine:5.7.0")
 }
