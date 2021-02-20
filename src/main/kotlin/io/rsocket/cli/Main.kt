@@ -21,6 +21,7 @@ import io.ktor.utils.io.core.readBytes
 import io.rsocket.exceptions.ApplicationErrorException
 import io.rsocket.kotlin.ExperimentalMetadataApi
 import io.rsocket.kotlin.RSocket
+import io.rsocket.kotlin.RSocketError
 import io.rsocket.kotlin.keepalive.KeepAlive
 import io.rsocket.kotlin.logging.DefaultLoggerFactory
 import io.rsocket.kotlin.logging.NoopLogger
@@ -309,8 +310,8 @@ class Main : Runnable {
       } catch (ue: UsageException) {
         cmd.err.println(ue.message)
         exitProcess(cmd.commandSpec.exitCodeOnInvalidInput())
-      } catch (ae: ApplicationErrorException) {
-        cmd.err.println(ae.message)
+      } catch (ae: RSocketError) {
+        cmd.err.println(ae.javaClass.simpleName + ": " + ae.message)
         exitProcess(cmd.commandSpec.exitCodeOnExecutionException())
       } catch (ex: Exception) {
         ex.printStackTrace(cmd.err)
