@@ -19,7 +19,7 @@ _rsocket_cli() {
     {-T,--transport-header}='[Custom header to pass to the transport]' \
     {-H,--header}='[Custom header to pass to server]' \
     --request'[Request]' \
-    --stream'[Stram]' \
+    --stream'[Stream]' \
     --channel'[Channel]' \
     --fnf'[Fire And Forget]' \
     --metadataPush'[Metadata Push]' \
@@ -33,6 +33,7 @@ _rsocket_cli() {
     --ops='[Operation Count]' \
     --timeout='[Timeout seconds]' \
     --keepalive='[Keepalive seconds]' \
+    '--complete=[Complete options (url)]: :(url)' \
     {-r,--requestn}='[Request N]' \
     --resume'[Resume]' \
     {-h,--help}'[Show this help message and exit.]' \
