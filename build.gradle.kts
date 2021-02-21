@@ -135,7 +135,7 @@ dependencies {
   implementation("org.slf4j:slf4j-jdk14:2.0.0-alpha1")
 
   kapt("info.picocli:picocli-codegen:4.5.2")
-  compileOnly("org.graalvm.nativeimage:svm:21.0.0") {
+  compileOnly("org.graalvm.nativeimage:svm:21.0.0.2") {
     // https://youtrack.jetbrains.com/issue/KT-29513
     exclude(group= "org.graalvm.nativeimage")
     exclude(group= "org.graalvm.truffle")
