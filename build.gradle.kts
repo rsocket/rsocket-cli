@@ -95,7 +95,7 @@ publishing {
 
 graal {
   mainClass("io.rsocket.cli.Main")
-  outputName("rsocketcli")
+  outputName("rsocket-cli")
   graalVersion("21.0.0")
   javaVersion("11")
 
@@ -148,4 +148,24 @@ dependencies {
   testImplementation("org.jetbrains.kotlin:kotlin-test-junit:1.4.30")
 
   testRuntime("org.junit.jupiter:junit-jupiter-engine:5.7.0")
+}
+
+if (properties.containsKey("graalbuild")) {
+  val nativeImage = tasks["nativeImage"]
+
+  distributions {
+    val graal = create("graal") {
+      contents {
+        from("${rootProject.projectDir}") {
+          include("README.md", "LICENSE")
+        }
+        from("${rootProject.projectDir}/zsh") {
+          into("zsh")
+        }
+        into("bin") {
+          from(nativeImage)
+        }
+      }
+    }
+  }
 }
