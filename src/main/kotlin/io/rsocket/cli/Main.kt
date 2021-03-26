@@ -13,8 +13,10 @@
  */
 package io.rsocket.cli
 
-import com.baulsupp.oksocial.output.*
-import io.ktor.util.KtorExperimentalAPI
+import com.baulsupp.oksocial.output.ConsoleHandler
+import com.baulsupp.oksocial.output.SimpleResponse
+import com.baulsupp.oksocial.output.SimpleResponseExtractor
+import com.baulsupp.oksocial.output.UsageException
 import io.ktor.utils.io.core.ByteReadPacket
 import io.ktor.utils.io.core.readByteBuffer
 import io.ktor.utils.io.core.readBytes
@@ -49,6 +51,10 @@ import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
 import java.util.function.Supplier
 import kotlin.system.exitProcess
+import kotlin.text.isEmpty
+import kotlin.text.startsWith
+import kotlin.text.substring
+import kotlin.text.toByteArray
 import kotlin.time.ExperimentalTime
 import kotlin.time.seconds
 
@@ -57,7 +63,6 @@ import kotlin.time.seconds
  *
  * Currently limited in features, only supports a text/line based approach.
  */
-@KtorExperimentalAPI
 @OptIn(ExperimentalFileSystem::class)
 @Command(description = ["RSocket CLI command"],
   name = "rsocket-cli", mixinStandardHelpOptions = true, version = ["dev"])
@@ -169,7 +174,6 @@ class Main : Runnable {
   }
 
   @OptIn(ExperimentalTime::class)
-  @KtorExperimentalAPI
   private suspend fun buildRSocket(
     uri: String,
     setupPayload: Payload
@@ -233,7 +237,6 @@ class Main : Runnable {
   @OptIn(ExperimentalMetadataApi::class)
   suspend fun buildMetadata(): ByteArray? = when {
     this.route != null -> {
-      // TODO cleanup
       CompositeMetadata(RoutingMetadata(route!!)).toPacket().readBytes()
     }
     this.metadata != null -> {
