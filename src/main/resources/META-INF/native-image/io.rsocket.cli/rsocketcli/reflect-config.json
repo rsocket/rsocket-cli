@@ -28,23 +28,6 @@
     "fields" : [ { "name" : "top", "allowUnsafeAccess" : true } ]
   },
   {
-    "name": "io.ktor.utils.io.ByteBufferChannel",
-    "fields" : [
-      { "name" : "state", "allowUnsafeAccess" : true },
-      { "name" : "writeOp", "allowUnsafeAccess" : true },
-      { "name" : "readOp", "allowUnsafeAccess" : true },
-      { "name" : "closed", "allowUnsafeAccess" : true }
-    ]
-  },
-  {
-    "name": "io.ktor.utils.io.internal.RingBufferCapacity",
-    "fields" : [
-      { "name" : "availableForRead", "allowUnsafeAccess" : true },
-      { "name" : "availableForWrite", "allowUnsafeAccess" : true },
-      { "name" : "pendingToFlush", "allowUnsafeAccess" : true }
-    ]
-  },
-  {
     "name": "io.ktor.client.features.websocket.DefaultClientWebSocketSession",
     "allPublicMethods": true,
     "allDeclaredFields":true,
@@ -54,37 +37,6 @@
   {
     "name": "io.rsocket.kotlin.RSocket",
     "allPublicMethods": true
-  },
-  {
-    "name": "io.netty.buffer.AbstractByteBufAllocator",
-    "allPublicMethods": true,
-    "allDeclaredFields":true,
-    "allDeclaredMethods":true,
-    "allDeclaredConstructors":true
-  },
-  {
-    "name": "io.netty.util.internal.shaded.org.jctools.queues.MpscArrayQueueProducerIndexField",
-    "fields" : [ { "name" : "producerIndex", "allowUnsafeAccess" : true } ],
-    "allPublicMethods": true,
-    "allDeclaredFields":true,
-    "allDeclaredMethods":true,
-    "allDeclaredConstructors":true
-  },
-  {
-    "name": "io.netty.util.internal.shaded.org.jctools.queues.MpscArrayQueueProducerLimitField",
-    "fields" : [ { "name" : "producerLimit", "allowUnsafeAccess" : true } ],
-    "allPublicMethods": true,
-    "allDeclaredFields":true,
-    "allDeclaredMethods":true,
-    "allDeclaredConstructors":true
-  },
-  {
-    "name": "io.netty.util.internal.shaded.org.jctools.queues.MpscArrayQueueConsumerIndexField",
-    "fields" : [ { "name" : "consumerIndex", "allowUnsafeAccess" : true } ],
-    "allPublicMethods": true,
-    "allDeclaredFields":true,
-    "allDeclaredMethods":true,
-    "allDeclaredConstructors":true
   },
   {
     "name": "io.ktor.network.selector.InterestSuspensionsMap",
