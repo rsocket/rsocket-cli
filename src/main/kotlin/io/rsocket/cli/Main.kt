@@ -20,7 +20,6 @@ import com.baulsupp.oksocial.output.UsageException
 import io.ktor.utils.io.core.ByteReadPacket
 import io.ktor.utils.io.core.readByteBuffer
 import io.ktor.utils.io.core.readBytes
-import io.rsocket.exceptions.ApplicationErrorException
 import io.rsocket.kotlin.ExperimentalMetadataApi
 import io.rsocket.kotlin.RSocket
 import io.rsocket.kotlin.RSocketError
