@@ -16,6 +16,7 @@ repositories {
   mavenCentral()
   maven(url = "https://jitpack.io")
   maven(url = "https://dl.bintray.com/kotlinx/kotlinx")
+  maven(url = "https://oss.jfrog.org/artifactory/oss-snapshot-local/")
 }
 
 group = "com.github.yschimke"
@@ -112,16 +113,16 @@ graal {
 }
 
 dependencies {
-  implementation("io.rsocket.kotlin:rsocket-core-jvm:0.12.0")
-  implementation("io.rsocket.kotlin:rsocket-transport-ktor-client:0.12.0")
+  implementation("io.rsocket.kotlin:rsocket-core-jvm:0.13.0-SNAPSHOT")
+  implementation("io.rsocket.kotlin:rsocket-transport-ktor-client:0.13.0-SNAPSHOT")
   implementation("io.ktor:ktor-network-tls:1.5.0")
   implementation("io.ktor:ktor-client-okhttp:1.5.0")
   implementation("io.ktor:ktor-client-core-jvm:1.5.0")
 
   // define a BOM and its version
-  implementation(platform("com.squareup.okhttp3:okhttp-bom:4.10.0-RC1"))
+  implementation(platform("com.squareup.okhttp3:okhttp-bom:5.0.0-alpha.2"))
 
-  implementation("com.github.yschimke:oksocial-output:5.10")
+  implementation("com.github.yschimke:oksocial-output:6.1")
   implementation("com.squareup.okhttp3:okhttp")
   implementation("com.squareup.okio:okio:3.0.0-alpha.1")
   implementation("info.picocli:picocli:4.5.2")
