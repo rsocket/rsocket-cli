@@ -13,9 +13,9 @@
  */
 package io.rsocket.cli
 
-import com.baulsupp.oksocial.output.ConsoleHandler
-import com.baulsupp.oksocial.output.SimpleResponse
-import com.baulsupp.oksocial.output.SimpleResponseExtractor
+import com.baulsupp.oksocial.output.handler.ConsoleHandler
+import com.baulsupp.oksocial.output.responses.SimpleResponse
+import com.baulsupp.oksocial.output.responses.SimpleResponseExtractor
 import com.baulsupp.oksocial.output.UsageException
 import io.ktor.utils.io.core.ByteReadPacket
 import io.ktor.utils.io.core.readByteBuffer
