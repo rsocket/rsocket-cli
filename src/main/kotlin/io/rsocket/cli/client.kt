@@ -11,17 +11,10 @@ import io.ktor.util.*
 import io.rsocket.kotlin.RSocket
 import io.rsocket.kotlin.core.RSocketConnector
 import io.rsocket.kotlin.core.RSocketConnectorBuilder
-import io.rsocket.kotlin.keepalive.KeepAlive
-import io.rsocket.kotlin.logging.DefaultLoggerFactory
-import io.rsocket.kotlin.logging.NoopLogger
-import io.rsocket.kotlin.payload.Payload
-import io.rsocket.kotlin.payload.PayloadMimeType
+import io.rsocket.kotlin.transport.ktor.TcpClientTransport
 import io.rsocket.kotlin.transport.ktor.client.RSocketSupport
-import io.rsocket.kotlin.transport.ktor.client.rSocket
-import io.rsocket.kotlin.transport.ktor.clientTransport
+import io.rsocket.kotlin.transport.ktor.client.WebSocketClientTransport
 import kotlinx.coroutines.Dispatchers
-import kotlin.time.ExperimentalTime
-import kotlin.time.seconds
 
 suspend fun buildClient(
   uri: String,
@@ -34,6 +27,7 @@ suspend fun buildClient(
   }
 }
 
+@OptIn(InternalAPI::class)
 suspend fun buildTcpClient(
   uri: String,
   builder: RSocketConnectorBuilder.() -> Unit
@@ -43,7 +37,7 @@ suspend fun buildTcpClient(
   val (hostname, port) = "tcp://([^:]+):(\\d+)".toRegex().matchEntire(uri)?.destructured
     ?: throw UsageException("bad uri format: '$uri'")
 
-  val transport = socket.tcp().clientTransport(hostname, port.toInt())
+  val transport = TcpClientTransport(SelectorManager(), hostname, port.toInt())
   return RSocketConnector(builder).connect(transport)
 }
 
@@ -60,5 +54,6 @@ suspend fun buildWsClient(
     }
   }
 
-  return client.rSocket(uri, uri.startsWith("wss"))
+  val transport = WebSocketClientTransport(client, urlString = uri, secure = uri.startsWith("wss"))
+  return RSocketConnector(builder).connect(transport)
 }
