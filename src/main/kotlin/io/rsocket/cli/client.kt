@@ -37,7 +37,7 @@ suspend fun buildTcpClient(
   val (hostname, port) = "tcp://([^:]+):(\\d+)".toRegex().matchEntire(uri)?.destructured
     ?: throw UsageException("bad uri format: '$uri'")
 
-  val transport = TcpClientTransport(SelectorManager(), "127.0.0.1", 9000)
+  val transport = TcpClientTransport(SelectorManager(), hostname, port.toInt())
   return RSocketConnector(builder).connect(transport)
 }
 
@@ -54,6 +54,6 @@ suspend fun buildWsClient(
     }
   }
 
-  val transport = WebSocketClientTransport(client, "127.0.0.1", 9000, secure = uri.startsWith("wss"))
+  val transport = WebSocketClientTransport(client, urlString = uri, secure = uri.startsWith("wss"))
   return RSocketConnector(builder).connect(transport)
 }
