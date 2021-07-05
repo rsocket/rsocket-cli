@@ -54,6 +54,7 @@ import kotlin.text.isEmpty
 import kotlin.text.startsWith
 import kotlin.text.substring
 import kotlin.text.toByteArray
+import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 import kotlin.time.seconds
 
@@ -180,7 +181,7 @@ class Main : Runnable {
     loggerFactory = if (debug) DefaultLoggerFactory else NoopLogger
     connectionConfig {
       setupPayload(setupPayload)
-      keepAlive = KeepAlive((keepalive ?: 5).seconds)
+      keepAlive = KeepAlive(Duration.seconds(keepalive ?: 5))
       payloadMimeType = PayloadMimeType(dataFormat!!, metadataFormat!!)
     }
   }

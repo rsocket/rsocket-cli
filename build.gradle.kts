@@ -2,8 +2,8 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.apache.tools.ant.taskdefs.condition.Os
 
 plugins {
-  kotlin("jvm") version "1.4.31"
-  kotlin("kapt") version "1.4.31"
+  kotlin("jvm") version "1.5.20"
+  kotlin("kapt") version "1.5.20"
   `maven-publish`
   application
   id("net.nemerosa.versioning") version "2.13.1"
@@ -65,6 +65,8 @@ val jar = tasks["jar"] as org.gradle.jvm.tasks.Jar
 distributions {
   getByName("main") {
     contents {
+      duplicatesStrategy = DuplicatesStrategy.WARN
+
       from("${rootProject.projectDir}") {
         include("README.md", "LICENSE")
       }
@@ -73,9 +75,6 @@ distributions {
       }
       into("lib") {
         from(jar)
-      }
-      into("lib") {
-        from(configurations.runtimeClasspath)
       }
     }
   }
@@ -113,8 +112,9 @@ graal {
 }
 
 dependencies {
-  implementation("io.rsocket.kotlin:rsocket-core-jvm:0.13.0-SNAPSHOT")
-  implementation("io.rsocket.kotlin:rsocket-transport-ktor-client:0.13.0-SNAPSHOT")
+  implementation("io.rsocket.kotlin:rsocket-core-jvm:0.13.0")
+  implementation("io.rsocket.kotlin:rsocket-transport-ktor-client-jvm:0.13.0")
+  implementation("io.rsocket.kotlin:rsocket-transport-ktor-jvm:0.13.0")
   implementation("io.ktor:ktor-network-tls:1.5.0")
   implementation("io.ktor:ktor-client-okhttp:1.5.0")
   implementation("io.ktor:ktor-client-core-jvm:1.5.0")
@@ -126,27 +126,21 @@ dependencies {
   implementation("com.squareup.okhttp3:okhttp")
   implementation("com.squareup.okio:okio:3.0.0-alpha.1")
   implementation("info.picocli:picocli:4.5.2")
-  implementation("org.jetbrains.kotlin:kotlin-reflect:1.4.31")
-  implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.4.31")
+  implementation("org.jetbrains.kotlin:kotlin-reflect:1.5.20")
+  implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.5.20")
   implementation("com.squareup.moshi:moshi:1.11.0")
   implementation("com.squareup.moshi:moshi-adapters:1.11.0")
   implementation("com.squareup.moshi:moshi-kotlin:1.11.0")
   implementation("org.slf4j:slf4j-jdk14:2.0.0-alpha1")
 
   kapt("info.picocli:picocli-codegen:4.5.2")
-  compileOnly("org.graalvm.nativeimage:svm:21.0.0.2") {
-    // https://youtrack.jetbrains.com/issue/KT-29513
-    exclude(group= "org.graalvm.nativeimage")
-    exclude(group= "org.graalvm.truffle")
-    exclude(group= "org.graalvm.sdk")
-    exclude(group= "org.graalvm.compiler")
-  }
+  compileOnly("org.graalvm.nativeimage:svm:21.0.0.2")
 
   testImplementation("org.junit.jupiter:junit-jupiter-api:5.7.0")
-  testImplementation("org.jetbrains.kotlin:kotlin-test:1.4.31")
-  testImplementation("org.jetbrains.kotlin:kotlin-test-junit:1.4.31")
+  testImplementation("org.jetbrains.kotlin:kotlin-test:1.5.20")
+  testImplementation("org.jetbrains.kotlin:kotlin-test-junit:1.5.20")
 
-  testRuntime("org.junit.jupiter:junit-jupiter-engine:5.7.0")
+  testImplementation("org.junit.jupiter:junit-jupiter-engine:5.7.0")
 }
 
 if (properties.containsKey("graalbuild")) {
