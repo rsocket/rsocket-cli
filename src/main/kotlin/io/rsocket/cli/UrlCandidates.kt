@@ -4,11 +4,9 @@ import io.rsocket.cli.Main.Companion.settingsDir
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import okio.ExperimentalFileSystem
 import okio.FileSystem
 import okio.buffer
 
-@OptIn(ExperimentalFileSystem::class)
 internal class UrlCandidates constructor(val fileSystem: FileSystem = FileSystem.SYSTEM) : Iterable<String> {
   override fun iterator(): Iterator<String> {
     return runBlocking { knownUrls() }.iterator()

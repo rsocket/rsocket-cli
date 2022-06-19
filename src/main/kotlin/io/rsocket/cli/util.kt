@@ -1,11 +1,10 @@
 package io.rsocket.cli
 
-import com.baulsupp.oksocial.output.UsageException
+import com.baulsupp.schoutput.UsageException
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okio.ExperimentalFileSystem
 import okio.FileSystem
 import okio.Path
 import okio.Path.Companion.toPath
@@ -24,7 +23,6 @@ import java.util.logging.LogManager
 import java.util.logging.LogRecord
 import java.util.regex.Pattern
 
-@OptIn(ExperimentalFileSystem::class)
 fun expectedFile(name: String): Path {
   val file = normalize(name).toPath()
 
@@ -58,14 +56,12 @@ suspend fun headerMap(headers: List<String>?): Map<String, String> {
   return headerMap
 }
 
-@OptIn(ExperimentalFileSystem::class)
 private suspend fun headerFileMap(input: String): Map<out String, String> {
   return withContext(Dispatchers.IO) {
     headerMap(FileSystem.SYSTEM.read(inputFile(input)) { readUtf8() }.lines())
   }
 }
 
-@OptIn(ExperimentalFileSystem::class)
 fun stringValue(source: String): String = when {
   source.startsWith("@") -> try {
     FileSystem.SYSTEM.read(inputFile(source)) { readUtf8() }
@@ -75,7 +71,6 @@ fun stringValue(source: String): String = when {
   else -> source
 }
 
-@OptIn(ExperimentalFileSystem::class)
 fun inputFile(path: String): Path = expectedFile(path.substring(1))
 
 private val activeLoggers = mutableListOf<java.util.logging.Logger>()

@@ -13,10 +13,10 @@
  */
 package io.rsocket.cli
 
-import com.baulsupp.oksocial.output.handler.ConsoleHandler
-import com.baulsupp.oksocial.output.responses.SimpleResponse
-import com.baulsupp.oksocial.output.responses.SimpleResponseExtractor
-import com.baulsupp.oksocial.output.UsageException
+import com.baulsupp.schoutput.UsageException
+import com.baulsupp.schoutput.outputHandlerInstance
+import com.baulsupp.schoutput.responses.SimpleResponse
+import com.baulsupp.schoutput.responses.SimpleResponseExtractor
 import io.ktor.utils.io.core.ByteReadPacket
 import io.ktor.utils.io.core.readByteBuffer
 import io.ktor.utils.io.core.readBytes
@@ -24,8 +24,8 @@ import io.rsocket.kotlin.ExperimentalMetadataApi
 import io.rsocket.kotlin.RSocket
 import io.rsocket.kotlin.RSocketError
 import io.rsocket.kotlin.keepalive.KeepAlive
-import io.rsocket.kotlin.logging.DefaultLoggerFactory
 import io.rsocket.kotlin.logging.NoopLogger
+import io.rsocket.kotlin.logging.PrintLogger
 import io.rsocket.kotlin.metadata.CompositeMetadata
 import io.rsocket.kotlin.metadata.RoutingMetadata
 import io.rsocket.kotlin.metadata.toPacket
@@ -34,36 +34,27 @@ import io.rsocket.kotlin.payload.PayloadMimeType
 import io.rsocket.kotlin.payload.buildPayload
 import io.rsocket.kotlin.payload.data
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.take
 import okio.ByteString.Companion.toByteString
-import okio.ExperimentalFileSystem
 import okio.FileSystem
 import okio.Path.Companion.toPath
 import picocli.CommandLine
-import picocli.CommandLine.Command
-import picocli.CommandLine.Option
-import picocli.CommandLine.Parameters
+import picocli.CommandLine.*
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
 import java.util.function.Supplier
 import kotlin.system.exitProcess
-import kotlin.text.isEmpty
-import kotlin.text.startsWith
-import kotlin.text.substring
 import kotlin.text.toByteArray
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
-import kotlin.time.seconds
 
 /**
  * Simple command line tool to make a RSocket connection and send/receive elements.
  *
  * Currently limited in features, only supports a text/line based approach.
  */
-@OptIn(ExperimentalFileSystem::class)
 @Command(description = ["RSocket CLI command"],
   name = "rsocket-cli", mixinStandardHelpOptions = true, version = ["dev"])
 class Main : Runnable {
@@ -129,7 +120,7 @@ class Main : Runnable {
   lateinit var client: RSocket
 
   val outputHandler by lazy {
-    ConsoleHandler.instance(SimpleResponseExtractor)
+    outputHandlerInstance(SimpleResponseExtractor)
   }
 
   override fun run() {
@@ -178,7 +169,7 @@ class Main : Runnable {
     uri: String,
     setupPayload: Payload
   ) = buildClient(uri) {
-    loggerFactory = if (debug) DefaultLoggerFactory else NoopLogger
+    loggerFactory = if (debug) PrintLogger else NoopLogger
     connectionConfig {
       setupPayload(setupPayload)
       keepAlive = KeepAlive(Duration.seconds(keepalive ?: 5))
