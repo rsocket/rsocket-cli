@@ -1,6 +1,13 @@
 #!/bin/bash
 # This script will build the project.
 
+jdk_switcher use openjdk10
+# do stuff with OpenJDK 10
+wget https://github.com/sormuras/bach/raw/master/install-jdk.sh
+chmod +x $TRAVIS_BUILD_DIR/install-jdk.sh
+export JAVA_HOME=$HOME/openjdk17
+$TRAVIS_BUILD_DIR/install-jdk.sh -F 17 --target $JAVA_HOME
+
 if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
   echo -e "Build Pull Request #$TRAVIS_PULL_REQUEST => Branch [$TRAVIS_BRANCH]"
   ./gradlew -Prelease.useLastTag=true build
