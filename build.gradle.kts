@@ -2,21 +2,18 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.apache.tools.ant.taskdefs.condition.Os
 
 plugins {
-  kotlin("jvm") version "1.5.20"
-  kotlin("kapt") version "1.5.20"
+  kotlin("jvm") version "1.6.21"
+  kotlin("kapt") version "1.6.21"
   `maven-publish`
   application
-  id("net.nemerosa.versioning") version "2.13.1"
-  id("com.diffplug.spotless") version "5.1.0"
-  id("com.palantir.graal") version "0.7.2"
+  id("net.nemerosa.versioning") version "2.15.1"
+  id("com.diffplug.spotless") version "6.7.2"
+  id("com.palantir.graal") version "0.10.0"
 }
 
 repositories {
-  jcenter()
   mavenCentral()
   maven(url = "https://jitpack.io")
-  maven(url = "https://dl.bintray.com/kotlinx/kotlinx")
-  maven(url = "https://oss.jfrog.org/artifactory/oss-snapshot-local/")
 }
 
 group = "com.github.yschimke"
@@ -32,15 +29,15 @@ application {
 }
 
 java {
-  sourceCompatibility = JavaVersion.VERSION_1_8
-  targetCompatibility = JavaVersion.VERSION_1_8
+  sourceCompatibility = JavaVersion.VERSION_17
+  targetCompatibility = JavaVersion.VERSION_17
 }
 
 tasks {
   withType(KotlinCompile::class) {
-    kotlinOptions.jvmTarget = "1.8"
+    kotlinOptions.jvmTarget = "17"
     kotlinOptions.allWarningsAsErrors = false
-    kotlinOptions.freeCompilerArgs = listOf("-Xjsr305=strict", "-Xjvm-default=enable", "-Xopt-in=kotlin.RequiresOptIn")
+    kotlinOptions.freeCompilerArgs = listOf("-Xjsr305=strict", "-Xjvm-default=all", "-opt-in=kotlin.RequiresOptIn")
   }
 }
 
@@ -96,12 +93,11 @@ publishing {
 graal {
   mainClass("io.rsocket.cli.Main")
   outputName("rsocket-cli")
-  graalVersion("21.0.0")
-  javaVersion("11")
+  graalVersion("22.1.0")
+  javaVersion("17")
 
   option("--enable-https")
   option("--no-fallback")
-  option("--allow-incomplete-classpath")
 
   if (Os.isFamily(Os.FAMILY_WINDOWS)) {
     // May be possible without, but autodetection is problematic on Windows 10
@@ -112,35 +108,34 @@ graal {
 }
 
 dependencies {
-  implementation("io.rsocket.kotlin:rsocket-core-jvm:0.13.0")
-  implementation("io.rsocket.kotlin:rsocket-transport-ktor-client-jvm:0.13.0")
-  implementation("io.rsocket.kotlin:rsocket-transport-ktor-jvm:0.13.0")
-  implementation("io.ktor:ktor-network-tls:1.5.0")
-  implementation("io.ktor:ktor-client-okhttp:1.5.0")
-  implementation("io.ktor:ktor-client-core-jvm:1.5.0")
+  implementation("io.rsocket.kotlin:rsocket-core:0.15.4")
+  implementation("io.rsocket.kotlin:rsocket-transport-ktor-websocket-client:0.15.4")
+  implementation("io.rsocket.kotlin:rsocket-transport-ktor-tcp:0.15.4")
+  implementation("io.ktor:ktor-network-tls:2.0.2")
+  implementation("io.ktor:ktor-client-okhttp:2.0.2")
 
   // define a BOM and its version
-  implementation(platform("com.squareup.okhttp3:okhttp-bom:5.0.0-alpha.2"))
+  implementation(platform("com.squareup.okhttp3:okhttp-bom:5.0.0-alpha.8"))
 
-  implementation("com.github.yschimke:oksocial-output:6.1")
+  implementation("com.github.yschimke.schoutput:schoutput:0.9.2")
   implementation("com.squareup.okhttp3:okhttp")
-  implementation("com.squareup.okio:okio:3.0.0-alpha.1")
-  implementation("info.picocli:picocli:4.5.2")
-  implementation("org.jetbrains.kotlin:kotlin-reflect:1.5.20")
-  implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.5.20")
-  implementation("com.squareup.moshi:moshi:1.11.0")
-  implementation("com.squareup.moshi:moshi-adapters:1.11.0")
-  implementation("com.squareup.moshi:moshi-kotlin:1.11.0")
-  implementation("org.slf4j:slf4j-jdk14:2.0.0-alpha1")
+  implementation("com.squareup.okio:okio:3.1.0")
+  implementation("info.picocli:picocli:4.6.3")
+  implementation("org.jetbrains.kotlin:kotlin-reflect:1.6.21")
+  implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.6.21")
+  implementation("com.squareup.moshi:moshi:1.13.0")
+  implementation("com.squareup.moshi:moshi-adapters:1.13.0")
+  implementation("com.squareup.moshi:moshi-kotlin:1.13.0")
+  implementation("org.slf4j:slf4j-jdk14:2.0.0-alpha7")
 
-  kapt("info.picocli:picocli-codegen:4.5.2")
-  compileOnly("org.graalvm.nativeimage:svm:21.0.0.2")
+  kapt("info.picocli:picocli-codegen:4.6.3")
+  compileOnly("org.graalvm.nativeimage:svm:21.1.0")
 
-  testImplementation("org.junit.jupiter:junit-jupiter-api:5.7.0")
-  testImplementation("org.jetbrains.kotlin:kotlin-test:1.5.20")
-  testImplementation("org.jetbrains.kotlin:kotlin-test-junit:1.5.20")
+  testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.2")
+  testImplementation("org.jetbrains.kotlin:kotlin-test:1.6.21")
+  testImplementation("org.jetbrains.kotlin:kotlin-test-junit:1.6.21")
 
-  testImplementation("org.junit.jupiter:junit-jupiter-engine:5.7.0")
+  testImplementation("org.junit.jupiter:junit-jupiter-engine:5.8.2")
 }
 
 if (properties.containsKey("graalbuild")) {
