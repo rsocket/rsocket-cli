@@ -108,14 +108,11 @@ graal {
 }
 
 dependencies {
-  implementation("io.rsocket.kotlin:rsocket-core-jvm:0.15.4")
-  implementation("io.rsocket.kotlin:rsocket-transport-ktor:0.15.4")
-  implementation("io.rsocket.kotlin:rsocket-ktor-client:0.15.4")
+  implementation("io.rsocket.kotlin:rsocket-core:0.15.4")
   implementation("io.rsocket.kotlin:rsocket-transport-ktor-websocket-client:0.15.4")
   implementation("io.rsocket.kotlin:rsocket-transport-ktor-tcp:0.15.4")
   implementation("io.ktor:ktor-network-tls:2.0.2")
   implementation("io.ktor:ktor-client-okhttp:2.0.2")
-  implementation("io.ktor:ktor-client-core-jvm:2.0.2")
 
   // define a BOM and its version
   implementation(platform("com.squareup.okhttp3:okhttp-bom:5.0.0-alpha.8"))
